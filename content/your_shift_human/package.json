@@ -1,0 +1,9 @@
+{
+    "id": "your_shift_human",
+    "title": "Your Shift, Human",
+    "version": "0.1.0",
+    "creator": "Dagger",
+    "description": "Ваша смена, человек",
+    "dependencies": ["kompot"],
+    "license": "MIT"
+}
