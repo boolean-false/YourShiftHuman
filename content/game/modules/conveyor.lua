@@ -14,6 +14,10 @@ local function is_busy(x, y, z, except)
             if belt_item.x == x and belt_item.z == z then
                 return true
             end
+
+            if belt_item.p > 0 and belt_item.x + belt_item.dx == x and belt_item.z + belt_item.dz == z then
+                return true
+            end
         end
     end
     return false
