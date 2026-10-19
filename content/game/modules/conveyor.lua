@@ -72,8 +72,11 @@ function M.tick()
             belt_item.dx, belt_item.dz = dx, dz
             local nx, nz = x + dx, z + dz
             if block.get(nx, y, nz) ~= -1 then
-                local can_move = is_belt(nx, y, nz) and not is_busy(nx, y, nz, belt_item)
-                if can_move then
+                local is_sink = block.get(nx, y, nz) == block.index("game:sink")
+                -- приемщик забирает предмет с любой стороны, лента передаёт дальше
+                local can_move = (is_belt(nx, y, nz) or is_sink) and not is_busy(nx, y, nz, belt_item)
+
+                if can_move and not is_sink then
                     -- след секция принимает предмет сзади или сбоку
                     local next_dx, _, next_dz = block.get_Z(nx, y, nz)
                     can_move = not (next_dx == -dx and next_dz == -dz)
@@ -81,8 +84,13 @@ function M.tick()
                 if can_move then
                     belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                     if belt_item.p >= 1 then
-                        -- доводим до центра следующей секции, затем следуем по её направлению
-                        belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
+                        if is_sink then
+                            remove_visual(belt_item)
+                            table.remove(items, i)
+                        else
+                            -- доводим до центра следующей секции, затем следуем по её направлению
+                            belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
+                        end
                     end
                 else
                     belt_item.p = 0
