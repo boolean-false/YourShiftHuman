@@ -1,0 +1,25 @@
+{
+  "caption": "Конвейер",
+  "material": "base:metal",
+    "texture-faces": [
+        "metal",
+        "metal",
+        "metal",
+        "rust",
+        "metal",
+        "blue"
+    ],
+  "model": "aabb",
+  "hitbox": [
+    0,
+    0,
+    0,
+    1,
+    0.25,
+    1
+  ],
+  "rotation": "pane",
+  "light-passing": true,
+  "sky-light-passing": true,
+  "base:durability": 0.2
+}

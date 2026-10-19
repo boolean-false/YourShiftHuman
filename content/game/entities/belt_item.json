@@ -1,0 +1,9 @@
+{
+    "components": [],
+    "body-type": "static",
+    "hitbox": [0.05, 0.05, 0.05],
+    "solid": false,
+    "blocking": false,
+    "selectable": false,
+    "save": false
+}
