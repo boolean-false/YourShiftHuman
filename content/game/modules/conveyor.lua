@@ -1,5 +1,6 @@
 local M = {}
 local Press = require("game:press")
+local Utils = require("game:utils")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 local item_size = .5 -- Видимый размер предмета в блоках.
@@ -61,13 +62,11 @@ function M.tick()
             -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
         elseif not is_belt(x, y, z) then
             -- отлавливаем, что конвеер сломан и дропнем предмет
-            entities.spawn("base:drop", { x + .5, y + .5, z + .5 }, {
-                base__drop = { item = belt_item.item_name, count = 1 }
-            })
+            Utils.drop_item(x, y, z, belt_item.item_name)
             remove_visual(belt_item)
             table.remove(items, i)
         else
-            local dx, _, dz = block.get_Z(x, y, z)
+            local dx, dz = Utils.direction(x, y, z)
             if dx ~= belt_item.dx or dz ~= belt_item.dz then
                 -- После поворота секции начинаем движение от центра
                 belt_item.p = 0
@@ -86,8 +85,7 @@ function M.tick()
                     can_move = Press.can_accept(nx, y, nz, dx, dz, belt_item.item_name)
                 elseif can_move and not is_sink then
                     -- след секция принимает предмет сзади или сбоку
-                    local next_dx, _, next_dz = block.get_Z(nx, y, nz)
-                    can_move = not (next_dx == -dx and next_dz == -dz)
+                    can_move = not Utils.opposite_direction(nx, y, nz, dx, dz)
                 end
                 if can_move then
                     belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
