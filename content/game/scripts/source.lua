@@ -6,6 +6,10 @@ function on_block_tick(x, y, z, tps)
 
     if block.get(nx, y, nz) ~= block.index("game:conveyor") then return end
 
+    -- Глядим что конвеер не смотрит на источник
+    local next_dx, _, next_dz = block.get_Z(nx, y, nz)
+    if next_dx == -dx and next_dz == -dz then return end
+
     Conveyor.insert(nx, y, nz)
 end
 
