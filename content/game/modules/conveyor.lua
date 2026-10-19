@@ -34,7 +34,7 @@ function M.insert(x, y, z)
         y = y,
         z = z,
         dx = 0,
-        dz = 0, -- dx, dy напраление
+        dz = 0, -- dx, dz - направление движения к след секции
         p = 0, -- путь от центра секции до следующей от 0 до 1
     }
 
@@ -74,14 +74,14 @@ function M.tick()
             if block.get(nx, y, nz) ~= -1 then
                 local can_move = is_belt(nx, y, nz) and not is_busy(nx, y, nz, belt_item)
                 if can_move then
-                    -- пока сделал только прямую линию с одинаковыми направленями
+                    -- след секция принимает предмет сзади или сбоку
                     local next_dx, _, next_dz = block.get_Z(nx, y, nz)
-                    can_move = next_dx == dx and next_dz == dz
+                    can_move = not (next_dx == -dx and next_dz == -dz)
                 end
                 if can_move then
                     belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                     if belt_item.p >= 1 then
-                        -- Когда доехали, то след секция становится текущей
+                        -- доводим до центра следующей секции, затем следуем по её направлению
                         belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
                     end
                 else
