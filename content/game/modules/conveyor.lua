@@ -2,6 +2,7 @@ local M = {}
 local Press = require("game:press")
 local items = {}
 local speed = 1.5 -- Блоков в сек
+local item_size = .5 -- Видимый размер предмета в блоках.
 
 -- Проверяем, что в этой клетке уже конвеер
 local function is_belt(x, y, z)
@@ -114,14 +115,15 @@ function M.render()
         if is_belt(belt_item.x, belt_item.y, belt_item.z) then
             local position = {
                 belt_item.x + .5 + belt_item.dx * belt_item.p,
-                belt_item.y + .5,
+                belt_item.y + .25 + item_size / 2,
                 belt_item.z + .5 + belt_item.dz * belt_item.p
             }
             if not belt_item.entity or not entities.exists(belt_item.entity:get_uid()) then
                 -- Если модель есть, то просто меняем её позицию. Иначе создаем модельку
                 belt_item.entity = entities.spawn("game:belt_item", position)
                 belt_item.entity.skeleton:set_model(0, item.model_name(item.index(belt_item.item_name)))
-                belt_item.entity.transform:set_size({ .5, .5, .5 })
+                local scale = item_size / .2
+                belt_item.entity.transform:set_size({ scale, scale, scale })
             end
             belt_item.entity.transform:set_pos(position)
         else
