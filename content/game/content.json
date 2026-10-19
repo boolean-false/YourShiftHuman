@@ -4,6 +4,7 @@
   ],
   "items": [],
   "blocks": [
-    "conveyor"
+    "conveyor",
+    "source"
   ]
 }

@@ -1,0 +1,15 @@
+{
+    "caption": "Источник",
+    "material": "base:metal",
+    "texture-faces": [
+        "conveyor_side",
+        "conveyor_side",
+        "conveyor_side",
+        "green_lamp",
+        "conveyor_side",
+        "conveyor_side"
+    ],
+    "rotation": "pane",
+    "tick-interval": 20,
+    "base:durability": 0.2
+}
