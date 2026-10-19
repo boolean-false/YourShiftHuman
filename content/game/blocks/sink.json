@@ -1,0 +1,13 @@
+{
+    "caption": "Приемщик",
+    "material": "base:metal",
+    "texture-faces": [
+        "conveyor_side",
+        "conveyor_side",
+        "conveyor_side",
+        "red_lamp",
+        "conveyor_side",
+        "conveyor_side"
+    ],
+    "base:durability": 0.2
+}
