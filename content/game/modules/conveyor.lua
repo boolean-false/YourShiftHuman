@@ -1,0 +1,126 @@
+local M = {}
+local items = {}
+local speed = 1.5 -- Блоков в сек
+
+-- Проверяем, что в этой клетке уже конвеер
+local function is_belt(x, y, z)
+    return block.get(x, y, z) == block.index("game:conveyor")
+end
+
+-- Пока предмет едет, обе секции считаем занятыми
+local function is_busy(x, y, z, except)
+    for _, belt_item in ipairs(items) do
+        if belt_item ~= except and belt_item.y == y then
+            if belt_item.x == x and belt_item.z == z then
+                return true
+            end
+
+            if belt_item.p > 0 and belt_item.x + belt_item.dx == x and belt_item.z + belt_item.dz == z then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Добавляем предмет, если секция свободна
+function M.insert(x, y, z)
+    if not is_belt(x, y, z) or is_busy(x, y, z) then
+        return false
+    end
+
+    items[#items + 1] = {
+        x = x,
+        y = y,
+        z = z,
+        dx = 0,
+        dz = 0, -- dx, dy напраление
+        p = 0, -- путь от центра секции до следующей от 0 до 1
+    }
+
+    return true
+end
+
+local function remove_visual(belt_item)
+    if belt_item.entity and entities.exists(belt_item.entity:get_uid()) then
+        belt_item.entity:despawn()
+    end
+    belt_item.entity = nil
+end
+
+-- Двигаем предметы ТПС у нас 20, поэтому вызывается 20 раз в сек
+function M.tick()
+    for i = #items, 1, -1 do
+        local belt_item = items[i]
+        local x, y, z = belt_item.x, belt_item.y, belt_item.z
+        local id = block.get(x, y, z)
+        if id == -1 then
+            -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
+        elseif not is_belt(x, y, z) then
+            -- отлавливаем, что конвеер сломан и дропнем предмет
+            entities.spawn("base:drop", { x + .5, y + .5, z + .5 }, {
+                base__drop = { item = "base:stone.item", count = 1 }
+            })
+            remove_visual(belt_item)
+            table.remove(items, i)
+        else
+            local dx, _, dz = block.get_Z(x, y, z)
+            if dx ~= belt_item.dx or dz ~= belt_item.dz then
+                -- После поворота секции начинаем движение от центра
+                belt_item.p = 0
+            end
+            belt_item.dx, belt_item.dz = dx, dz
+            local nx, nz = x + dx, z + dz
+            if block.get(nx, y, nz) ~= -1 then
+                local can_move = is_belt(nx, y, nz) and not is_busy(nx, y, nz, belt_item)
+                if can_move then
+                    -- пока сделал только прямую линию с одинаковыми направленями
+                    local next_dx, _, next_dz = block.get_Z(nx, y, nz)
+                    can_move = next_dx == dx and next_dz == dz
+                end
+                if can_move then
+                    belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
+                    if belt_item.p >= 1 then
+                        -- Когда доехали, то след секция становится текущей
+                        belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
+                    end
+                else
+                    belt_item.p = 0
+                end
+            end
+        end
+    end
+end
+
+-- рендер предметов на конвеере
+function M.render()
+    for _, belt_item in ipairs(items) do
+        if is_belt(belt_item.x, belt_item.y, belt_item.z) then
+            local position = {
+                belt_item.x + .5 + belt_item.dx * belt_item.p,
+                belt_item.y + .5,
+                belt_item.z + .5 + belt_item.dz * belt_item.p
+            }
+            if not belt_item.entity or not entities.exists(belt_item.entity:get_uid()) then
+                -- Если модель есть, то просто меняем её позицию. Иначе создаем модельку
+                -- для примера пока просто камушек
+                belt_item.entity = entities.spawn("game:belt_item", position)
+                belt_item.entity.skeleton:set_model(0, item.model_name(item.index("base:stone.item")))
+                belt_item.entity.transform:set_size({ .5, .5, .5 })
+            end
+            belt_item.entity.transform:set_pos(position)
+        else
+            remove_visual(belt_item)
+        end
+    end
+end
+
+-- Пока что чистим просто при выходе из мира всю инфу и визуал
+function M.clear()
+    for _, belt_item in ipairs(items) do
+        remove_visual(belt_item)
+    end
+    items = {}
+end
+
+return M
