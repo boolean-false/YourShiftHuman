@@ -16,7 +16,7 @@ M.block_name = block_name
 
 -- пресс принимает один исходный предмет сзади
 function M.can_accept(x, y, z, dx, dz, item_name)
-    if not recipes[item_name] then
+    if presses[key(x, y, z)] or not recipes[item_name] then
         return false
     end
 
