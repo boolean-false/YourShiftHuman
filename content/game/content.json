@@ -6,6 +6,7 @@
   "blocks": [
     "conveyor",
     "source",
-    "sink"
+    "sink",
+    "press"
   ]
 }
