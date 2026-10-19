@@ -2,12 +2,12 @@
   "caption": "Конвейер",
   "material": "base:metal",
     "texture-faces": [
-        "metal",
-        "metal",
-        "metal",
-        "rust",
-        "metal",
-        "blue"
+        "conveyor_side",
+        "conveyor_side",
+        "conveyor_side",
+        "conveyor_top",
+        "conveyor_side",
+        "conveyor_side"
     ],
   "model": "aabb",
   "hitbox": [
