@@ -1,10 +1,7 @@
 local M = {}
+local Utils = require("game:utils")
 
 local presses = {}
-
-local function key(x, y, z)
-    return string.format("%d:%d:%d", x, y, z)
-end
 
 -- рецепты. Пока тестово
 local recipes = {
@@ -16,17 +13,16 @@ M.block_name = block_name
 
 -- пресс принимает один исходный предмет сзади
 function M.can_accept(x, y, z, dx, dz, item_name)
-    if presses[key(x, y, z)] or not recipes[item_name] then
+    if presses[Utils.key(x, y, z)] or not recipes[item_name] then
         return false
     end
 
-    local press_dx, _, press_dz = block.get_Z(x, y, z)
-    return press_dx == dx and press_dz == dz
+    return Utils.same_direction(x, y, z, dx, dz)
 end
 
 -- Сохраняем предмет внутри пресса и начинаем обработку.
 function M.accept(x, y, z, item_name)
-    presses[key(x, y, z)] = {
+    presses[Utils.key(x, y, z)] = {
         x = x,
         y = y,
         z = z,
@@ -47,9 +43,7 @@ function M.tick()
             -- Чанк выгружен
         elseif id ~= block.index(block_name) then
             -- При сносе возвращаем предмет, который находился внутри.
-            entities.spawn("base:drop", {x + .5, y + .5, z + .5}, {
-                base__drop = {item = press.item_name, count = 1}
-            })
+            Utils.drop_item(x, y, z, press.item_name)
             presses[position] = nil
         else
             if press.ticks < process_ticks then
@@ -59,12 +53,11 @@ function M.tick()
                 end
             end
             if press.ticks == process_ticks then
-                local dx, _, dz = block.get_Z(x, y, z)
+                local dx, dz = Utils.direction(x, y, z)
                 local nx, nz = x + dx, z + dz
                 if block.get(nx, y, nz) == block.index("game:conveyor") then
-                    local next_dx, _, next_dz = block.get_Z(nx, y, nz)
                     -- Готовый предмет ждёт внутри, пока выходная лента не освободится.
-                    if not (next_dx == -dx and next_dz == -dz) and
+                    if not Utils.opposite_direction(nx, y, nz, dx, dz) and
                             Conveyor.insert(nx, y, nz, press.item_name) then
                         presses[position] = nil
                     end
