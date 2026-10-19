@@ -1,9 +1,9 @@
 {
-    "id": "your_shift_human",
+    "id": "game",
     "title": "Your Shift, Human",
     "version": "0.1.0",
     "creator": "Dagger",
     "description": "Ваша смена, человек",
-    "dependencies": ["kompot"],
+    "dependencies": ["base", "kompot"],
     "license": "MIT"
 }

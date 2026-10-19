@@ -1,1 +1,9 @@
 .idea
+.vscode
+
+worlds/
+export/
+settings.toml
+controls.toml
+latest.log
+.vlauncher-revision
