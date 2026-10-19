@@ -1,4 +1,5 @@
 local M = {}
+local Press = require("game:press")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 
@@ -24,7 +25,7 @@ local function is_busy(x, y, z, except)
 end
 
 -- Добавляем предмет, если секция свободна
-function M.insert(x, y, z)
+function M.insert(x, y, z, item_name)
     if not is_belt(x, y, z) or is_busy(x, y, z) then
         return false
     end
@@ -33,6 +34,7 @@ function M.insert(x, y, z)
         x = x,
         y = y,
         z = z,
+        item_name = item_name,
         dx = 0,
         dz = 0, -- dx, dz - направление движения к след секции
         p = 0, -- путь от центра секции до следующей от 0 до 1
@@ -59,7 +61,7 @@ function M.tick()
         elseif not is_belt(x, y, z) then
             -- отлавливаем, что конвеер сломан и дропнем предмет
             entities.spawn("base:drop", { x + .5, y + .5, z + .5 }, {
-                base__drop = { item = "base:stone.item", count = 1 }
+                base__drop = { item = belt_item.item_name, count = 1 }
             })
             remove_visual(belt_item)
             table.remove(items, i)
@@ -71,12 +73,17 @@ function M.tick()
             end
             belt_item.dx, belt_item.dz = dx, dz
             local nx, nz = x + dx, z + dz
+
             if block.get(nx, y, nz) ~= -1 then
                 local is_sink = block.get(nx, y, nz) == block.index("game:sink")
-                -- приемщик забирает предмет с любой стороны, лента передаёт дальше
-                local can_move = (is_belt(nx, y, nz) or is_sink) and not is_busy(nx, y, nz, belt_item)
+                local is_press = block.get(nx, y, nz) == block.index(Press.block_name)
 
-                if can_move and not is_sink then
+                -- приемщик забирает предмет с любой стороны, лента передаёт дальше TODO костылище (временно)
+                local can_move = (is_belt(nx, y, nz) or is_sink or is_press) and not is_busy(nx, y, nz, belt_item)
+
+                if can_move and is_press then
+                    can_move = Press.can_accept(nx, y, nz, dx, dz, belt_item.item_name)
+                elseif can_move and not is_sink then
                     -- след секция принимает предмет сзади или сбоку
                     local next_dx, _, next_dz = block.get_Z(nx, y, nz)
                     can_move = not (next_dx == -dx and next_dz == -dz)
@@ -84,7 +91,8 @@ function M.tick()
                 if can_move then
                     belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                     if belt_item.p >= 1 then
-                        if is_sink then
+                        if is_sink or is_press then -- TODO костылище (временно)
+                            if is_press then Press.accept(nx, y, nz, belt_item.item_name) end
                             remove_visual(belt_item)
                             table.remove(items, i)
                         else
@@ -111,9 +119,8 @@ function M.render()
             }
             if not belt_item.entity or not entities.exists(belt_item.entity:get_uid()) then
                 -- Если модель есть, то просто меняем её позицию. Иначе создаем модельку
-                -- для примера пока просто камушек
                 belt_item.entity = entities.spawn("game:belt_item", position)
-                belt_item.entity.skeleton:set_model(0, item.model_name(item.index("base:stone.item")))
+                belt_item.entity.skeleton:set_model(0, item.model_name(item.index(belt_item.item_name)))
                 belt_item.entity.transform:set_size({ .5, .5, .5 })
             end
             belt_item.entity.transform:set_pos(position)

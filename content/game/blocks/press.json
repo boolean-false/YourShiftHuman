@@ -1,0 +1,14 @@
+{
+    "caption": "Пресс",
+    "material": "base:metal",
+    "texture-faces": [
+        "conveyor_side",
+        "conveyor_side",
+        "metal",
+        "rust",
+        "red_lamp",
+        "green_lamp"
+    ],
+    "rotation": "pane",
+    "base:durability": 0.2
+}

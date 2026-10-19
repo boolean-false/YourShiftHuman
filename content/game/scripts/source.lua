@@ -10,7 +10,7 @@ function on_block_tick(x, y, z, tps)
     local next_dx, _, next_dz = block.get_Z(nx, y, nz)
     if next_dx == -dx and next_dz == -dz then return end
 
-    Conveyor.insert(nx, y, nz)
+    Conveyor.insert(nx, y, nz, "base:red_lamp.item")
 end
 
 -- поворот с Ctrl + ПКМ
