@@ -3,5 +3,4 @@ app.load_content()
 
 while true do
     app.tick()
-
 end
