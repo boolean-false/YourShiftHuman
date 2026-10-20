@@ -12,6 +12,7 @@
     "build_wall",
     "build_locked",
     "splitter",
-    "merger"
+    "merger",
+    "filter"
   ]
 }
