@@ -18,7 +18,7 @@ function M.output(x, y, z, item_name)
         return nil
     end
     local dx, dz = Utils.direction(x, y, z)
-    return 0, -side
+    return dz * side, -dx * side
 end
 
 function M.is_output(x, y, z, dx, dz, item_name)
