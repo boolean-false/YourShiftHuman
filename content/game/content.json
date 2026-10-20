@@ -10,6 +10,7 @@
     "press",
     "build_floor",
     "build_wall",
-    "build_locked"
+    "build_locked",
+    "splitter"
   ]
 }
