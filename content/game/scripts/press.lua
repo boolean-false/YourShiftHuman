@@ -1,6 +1,10 @@
 local Utils = require("game:utils")
+local Conveyor = require("game:conveyor")
 
 -- Поворачиваем пресс так же, как источник и конвейер.
 function on_interact(x, y, z, player_id)
-    return Utils.rotate_on_ctrl(x, y, z)
+    if Utils.rotate_on_ctrl(x, y, z) then
+        return true
+    end
+    return false
 end
