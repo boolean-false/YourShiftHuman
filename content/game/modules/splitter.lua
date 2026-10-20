@@ -8,13 +8,17 @@ function M.is_output(x, y, z, dx, dz)
     return forward_x * dx + forward_z * dz == 0
 end
 
+-- Сначала пробуем очередной выход, затем второй. can_send чекает место впереди
 function M.choose_output(x, y, z, can_send)
     local dx, dz = Utils.direction(x, y, z)
     local sides = {{-dz, dx}, {dz, -dx}}
     local first = next_side[Utils.key(x, y, z)] or 1
-    local direction = sides[first]
-    if can_send(direction[1], direction[2]) then
-        return direction[1], direction[2], first
+    for i = 0, 1 do
+        local side = (first - 1 + i) % 2 + 1
+        local direction = sides[side]
+        if can_send(direction[1], direction[2]) then
+            return direction[1], direction[2], side
+        end
     end
 end
 
