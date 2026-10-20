@@ -3,6 +3,7 @@ local Press = require("game:press")
 local Utils = require("game:utils")
 local Splitter = require("game:splitter")
 local Merger = require("game:merger")
+local Filter = require("game:filter")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 local item_size = .5 -- Видимый размер предмета в блоках.
@@ -15,17 +16,23 @@ end
 -- Все транспортные блоки используют общий список предметов.
 local function is_transport(x, y, z)
     local id = block.get(x, y, z)
-    return id == block.index("game:conveyor") or id == block.index("game:splitter") or
-        id == block.index("game:merger")
+    return id == block.index("game:conveyor") or
+            id == block.index("game:splitter") or
+            id == block.index("game:merger") or
+            id == block.index("game:filter")
 end
 
 -- Проверяем, подаёт ли сосед предметы в эту секцию.
 local function feeds_from(x, y, z, offset_x, offset_z)
     local nx, nz = x + offset_x, z + offset_z
     local id = block.get(nx, y, nz)
-    if id == -1 then return nil end
+    if id == -1 then
+        return nil
+    end
     if id == block.index("game:splitter") then
         return Splitter.is_output(nx, y, nz, -offset_x, -offset_z)
+    elseif id == block.index("game:filter") then
+        return Filter.is_output(nx, y, nz, -offset_x, -offset_z)
     end
     if id ~= block.index("game:conveyor") and
             id ~= block.index("game:merger") and
@@ -38,7 +45,9 @@ end
 
 -- Вариант 0 - прямая, 1 - поворот налево, 2 0 направо.
 function M.update_shape(x, y, z)
-    if not is_belt(x, y, z) then return end
+    if not is_belt(x, y, z) then
+        return
+    end
     local dx, dz = Utils.direction(x, y, z)
     local right_x, right_z = dz, -dx
     local behind = feeds_from(x, y, z, -dx, -dz)
@@ -46,15 +55,23 @@ function M.update_shape(x, y, z)
     local left = feeds_from(x, y, z, -right_x, -right_z)
 
     -- Не меняем сохранённую форму, пока соседний чанк ещё загружается
-    if behind == nil or right == nil or left == nil then return end
+    if behind == nil or right == nil or left == nil then
+        return
+    end
 
     local variant = 0
     if not behind then
         -- Вход справа поворачивает поток налево, вход слева 0 направо
-        if right and not left then variant = 1 end
-        if left and not right then variant = 2 end
+        if right and not left then
+            variant = 1
+        end
+        if left and not right then
+            variant = 2
+        end
     end
-    if block.get_variant(x, y, z) ~= variant then block.set_variant(x, y, z, variant) end
+    if block.get_variant(x, y, z) ~= variant then
+        block.set_variant(x, y, z, variant)
+    end
 end
 
 -- После поворота обновляем также секции, которые соединены с этим блоком
@@ -85,19 +102,34 @@ end
 -- Есть ли у соседнего блока предмет, который он может передать в указанную сторону.
 local function input_ready(x, y, z, dx, dz)
     local id = block.get(x, y, z)
-    if id == -1 then return false end
+    if id == -1 then
+        return false
+    end
     local points_here = Utils.same_direction(x, y, z, dx, dz)
-    if id == block.index("game:source") then return points_here end
+    if id == block.index("game:source") then
+        return points_here
+    end
     if id == block.index(Press.block_name) then
         return points_here and Press.has_output(x, y, z)
     end
-    if not is_transport(x, y, z) then return false end
+    if not is_transport(x, y, z) then
+        return false
+    end
     if id == block.index("game:splitter") then
         points_here = Splitter.is_output(x, y, z, dx, dz)
+    elseif id == block.index("game:filter") then
+        points_here = Filter.is_output(x, y, z, dx, dz)
     end
-    if not points_here then return false end
+    if not points_here then
+        return false
+    end
     for _, belt_item in ipairs(items) do
         if belt_item.x == x and belt_item.y == y and belt_item.z == z then
+
+            if id == block.index("game:filter") and
+                    not Filter.is_output(x, y, z, dx, dz, belt_item.item_name) then
+                return false
+            end
             return belt_item.p == 0 or (belt_item.dx == dx and belt_item.dz == dz)
         end
     end
@@ -113,11 +145,17 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
         return not Utils.opposite_direction(x, y, z, dx, dz)
     elseif id == block.index("game:splitter") then
         return Utils.same_direction(x, y, z, dx, dz)
+    elseif id == block.index("game:filter") then
+        return Filter.can_accept(x, y, z, dx, dz, item_name)
     elseif id == block.index("game:merger") then
-        if not Merger.is_input(x, y, z, dx, dz) then return false end
+        if not Merger.is_input(x, y, z, dx, dz) then
+            return false
+        end
         -- Уже начатый переезд не прерываем появлением предмета на другом входе.
         if except and except.p > 0 and except.x + except.dx == x and
-            except.y == y and except.z + except.dz == z then return true end
+                except.y == y and except.z + except.dz == z then
+            return true
+        end
         return Merger.can_accept(x, y, z, dx, dz, function(offset_x, offset_z)
             return input_ready(x + offset_x, y, z + offset_z, -offset_x, -offset_z)
         end)
@@ -185,12 +223,14 @@ function M.tick()
                 dx, dz, side = Splitter.choose_output(x, y, z, function(out_x, out_z)
                     return can_receive(x + out_x, y, z + out_z, out_x, out_z, belt_item.item_name, belt_item)
                 end)
+            elseif id == block.index("game:filter") then
+                dx, dz = Filter.output(x, y, z, belt_item.item_name)
             else
                 dx, dz = Utils.direction(x, y, z)
             end
 
             if not dx then
-                -- Оба выхода разделителя заняты. Предмет не остается в центре
+                -- Нет доступного выхода. Предмет остаётся в центре
                 belt_item.p = 0
             else
                 if dx ~= belt_item.dx or dz ~= belt_item.dz then
@@ -207,12 +247,16 @@ function M.tick()
                     if can_move then
                         belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                         if belt_item.p >= 1 then
-                            if from_splitter then Splitter.sent(x, y, z, side) end
+                            if from_splitter then
+                                Splitter.sent(x, y, z, side)
+                            end
                             if block.get(nx, y, nz) == block.index("game:merger") then
                                 Merger.received(nx, y, nz, dx, dz)
                             end
                             if is_sink or is_press then
-                                if is_press then Press.accept(nx, y, nz, belt_item.item_name) end
+                                if is_press then
+                                    Press.accept(nx, y, nz, belt_item.item_name)
+                                end
                                 remove_visual(belt_item)
                                 table.remove(items, i)
                             else
