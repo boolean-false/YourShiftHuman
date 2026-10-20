@@ -19,6 +19,31 @@
     1
   ],
   "rotation": "pane",
+  "state-based": {
+    "bits": 2,
+    "variants": [
+      {
+        "texture-faces": [
+          "conveyor_side",
+          "conveyor_side",
+          "conveyor_side",
+          "conveyor_turn_left",
+          "conveyor_side",
+          "conveyor_side"
+        ]
+      },
+      {
+        "texture-faces": [
+          "conveyor_side",
+          "conveyor_side",
+          "conveyor_side",
+          "conveyor_turn_right",
+          "conveyor_side",
+          "conveyor_side"
+        ]
+      }
+    ]
+  },
   "light-passing": true,
   "sky-light-passing": true,
   "base:durability": 0.2

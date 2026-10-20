@@ -10,6 +10,49 @@ local function is_belt(x, y, z)
     return block.get(x, y, z) == block.index("game:conveyor")
 end
 
+-- Проверяем, подаёт ли сосед предметы в эту секцию.
+local function feeds_from(x, y, z, offset_x, offset_z)
+    local nx, nz = x + offset_x, z + offset_z
+    local id = block.get(nx, y, nz)
+    if id == -1 then return nil end
+    if id ~= block.index("game:conveyor") and
+            id ~= block.index("game:source") and
+            id ~= block.index(Press.block_name) then
+        return false
+    end
+    return Utils.same_direction(nx, y, nz, -offset_x, -offset_z)
+end
+
+-- Вариант 0 - прямая, 1 - поворот налево, 2 0 направо.
+function M.update_shape(x, y, z)
+    if not is_belt(x, y, z) then return end
+    local dx, dz = Utils.direction(x, y, z)
+    local right_x, right_z = dz, -dx
+    local behind = feeds_from(x, y, z, -dx, -dz)
+    local right = feeds_from(x, y, z, right_x, right_z)
+    local left = feeds_from(x, y, z, -right_x, -right_z)
+
+    -- Не меняем сохранённую форму, пока соседний чанк ещё загружается
+    if behind == nil or right == nil or left == nil then return end
+
+    local variant = 0
+    if not behind then
+        -- Вход справа поворачивает поток налево, вход слева 0 направо
+        if right and not left then variant = 1 end
+        if left and not right then variant = 2 end
+    end
+    if block.get_variant(x, y, z) ~= variant then block.set_variant(x, y, z, variant) end
+end
+
+-- После поворота обновляем также секции, которые соединены с этим блоком
+function M.update_nearby(x, y, z)
+    M.update_shape(x, y, z)
+    M.update_shape(x + 1, y, z)
+    M.update_shape(x - 1, y, z)
+    M.update_shape(x, y, z + 1)
+    M.update_shape(x, y, z - 1)
+end
+
 -- Пока предмет едет, обе секции считаем занятыми
 local function is_busy(x, y, z, except)
     for _, belt_item in ipairs(items) do
