@@ -2,6 +2,7 @@ local M = {}
 local Press = require("game:press")
 local Utils = require("game:utils")
 local Splitter = require("game:splitter")
+local Merger = require("game:merger")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 local item_size = .5 -- Видимый размер предмета в блоках.
@@ -11,9 +12,11 @@ local function is_belt(x, y, z)
     return block.get(x, y, z) == block.index("game:conveyor")
 end
 
--- На ленте и разделителе предметы движутся и отображаются одинаково
+-- Все транспортные блоки используют общий список предметов.
 local function is_transport(x, y, z)
-    return is_belt(x, y, z) or block.get(x, y, z) == block.index("game:splitter")
+    local id = block.get(x, y, z)
+    return id == block.index("game:conveyor") or id == block.index("game:splitter") or
+        id == block.index("game:merger")
 end
 
 -- Проверяем, подаёт ли сосед предметы в эту секцию.
@@ -25,6 +28,7 @@ local function feeds_from(x, y, z, offset_x, offset_z)
         return Splitter.is_output(nx, y, nz, -offset_x, -offset_z)
     end
     if id ~= block.index("game:conveyor") and
+            id ~= block.index("game:merger") and
             id ~= block.index("game:source") and
             id ~= block.index(Press.block_name) then
         return false
@@ -78,6 +82,28 @@ local function is_busy(x, y, z, except)
     return false
 end
 
+-- Есть ли у соседнего блока предмет, который он может передать в указанную сторону.
+local function input_ready(x, y, z, dx, dz)
+    local id = block.get(x, y, z)
+    if id == -1 then return false end
+    local points_here = Utils.same_direction(x, y, z, dx, dz)
+    if id == block.index("game:source") then return points_here end
+    if id == block.index(Press.block_name) then
+        return points_here and Press.has_output(x, y, z)
+    end
+    if not is_transport(x, y, z) then return false end
+    if id == block.index("game:splitter") then
+        points_here = Splitter.is_output(x, y, z, dx, dz)
+    end
+    if not points_here then return false end
+    for _, belt_item in ipairs(items) do
+        if belt_item.x == x and belt_item.y == y and belt_item.z == z then
+            return belt_item.p == 0 or (belt_item.dx == dx and belt_item.dz == dz)
+        end
+    end
+    return false
+end
+
 local function can_receive(x, y, z, dx, dz, item_name, except)
     local id = block.get(x, y, z)
     if id == -1 or is_busy(x, y, z, except) then
@@ -87,6 +113,14 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
         return not Utils.opposite_direction(x, y, z, dx, dz)
     elseif id == block.index("game:splitter") then
         return Utils.same_direction(x, y, z, dx, dz)
+    elseif id == block.index("game:merger") then
+        if not Merger.is_input(x, y, z, dx, dz) then return false end
+        -- Уже начатый переезд не прерываем появлением предмета на другом входе.
+        if except and except.p > 0 and except.x + except.dx == x and
+            except.y == y and except.z + except.dz == z then return true end
+        return Merger.can_accept(x, y, z, dx, dz, function(offset_x, offset_z)
+            return input_ready(x + offset_x, y, z + offset_z, -offset_x, -offset_z)
+        end)
     elseif id == block.index(Press.block_name) then
         return Press.can_accept(x, y, z, dx, dz, item_name)
     end
@@ -117,7 +151,11 @@ function M.feed(x, y, z, dx, dz, item_name)
     if not is_transport(x, y, z) or not can_receive(x, y, z, dx, dz, item_name) then
         return false
     end
-    return M.insert(x, y, z, item_name)
+    local inserted = M.insert(x, y, z, item_name)
+    if inserted and block.get(x, y, z) == block.index("game:merger") then
+        Merger.received(x, y, z, dx, dz)
+    end
+    return inserted
 end
 
 local function remove_visual(belt_item)
@@ -170,6 +208,9 @@ function M.tick()
                         belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                         if belt_item.p >= 1 then
                             if from_splitter then Splitter.sent(x, y, z, side) end
+                            if block.get(nx, y, nz) == block.index("game:merger") then
+                                Merger.received(nx, y, nz, dx, dz)
+                            end
                             if is_sink or is_press then
                                 if is_press then Press.accept(nx, y, nz, belt_item.item_name) end
                                 remove_visual(belt_item)
@@ -218,6 +259,7 @@ function M.clear()
     end
     items = {}
     Splitter.clear()
+    Merger.clear()
 end
 
 return M

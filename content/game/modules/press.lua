@@ -33,6 +33,13 @@ function M.accept(x, y, z, item_name)
 end
 
 local process_ticks = 40 -- Обработка 40 тиков ~ 2 сек
+
+-- Объединитель учитывает пресс в очереди только после завершения обработки.
+function M.has_output(x, y, z)
+    local press = presses[Utils.key(x, y, z)]
+    return press ~= nil and press.ticks == process_ticks
+end
+
 function M.tick()
     -- Получаем модуль здесь, чтобы конвеер и пресс не дергали друг друга по кругу)))
     local Conveyor = require("game:conveyor")
