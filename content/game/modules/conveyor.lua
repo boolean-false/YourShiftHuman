@@ -1,6 +1,7 @@
 local M = {}
 local Press = require("game:press")
 local Utils = require("game:utils")
+local Splitter = require("game:splitter")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 local item_size = .5 -- Видимый размер предмета в блоках.
@@ -10,11 +11,19 @@ local function is_belt(x, y, z)
     return block.get(x, y, z) == block.index("game:conveyor")
 end
 
+-- На ленте и разделителе предметы движутся и отображаются одинаково
+local function is_transport(x, y, z)
+    return is_belt(x, y, z) or block.get(x, y, z) == block.index("game:splitter")
+end
+
 -- Проверяем, подаёт ли сосед предметы в эту секцию.
 local function feeds_from(x, y, z, offset_x, offset_z)
     local nx, nz = x + offset_x, z + offset_z
     local id = block.get(nx, y, nz)
     if id == -1 then return nil end
+    if id == block.index("game:splitter") then
+        return Splitter.is_output(nx, y, nz, -offset_x, -offset_z)
+    end
     if id ~= block.index("game:conveyor") and
             id ~= block.index("game:source") and
             id ~= block.index(Press.block_name) then
@@ -69,9 +78,24 @@ local function is_busy(x, y, z, except)
     return false
 end
 
+local function can_receive(x, y, z, dx, dz, item_name, except)
+    local id = block.get(x, y, z)
+    if id == -1 or is_busy(x, y, z, except) then
+        return false
+    end
+    if id == block.index("game:conveyor") then
+        return not Utils.opposite_direction(x, y, z, dx, dz)
+    elseif id == block.index("game:splitter") then
+        return Utils.same_direction(x, y, z, dx, dz)
+    elseif id == block.index(Press.block_name) then
+        return Press.can_accept(x, y, z, dx, dz, item_name)
+    end
+    return id == block.index("game:sink")
+end
+
 -- Добавляем предмет, если секция свободна
 function M.insert(x, y, z, item_name)
-    if not is_belt(x, y, z) or is_busy(x, y, z) then
+    if not is_transport(x, y, z) or is_busy(x, y, z) then
         return false
     end
 
@@ -86,6 +110,14 @@ function M.insert(x, y, z, item_name)
     }
 
     return true
+end
+
+-- Источник и пресс подают предмет с указанной стороны на свободный белт
+function M.feed(x, y, z, dx, dz, item_name)
+    if not is_transport(x, y, z) or not can_receive(x, y, z, dx, dz, item_name) then
+        return false
+    end
+    return M.insert(x, y, z, item_name)
 end
 
 local function remove_visual(belt_item)
@@ -103,47 +135,53 @@ function M.tick()
         local id = block.get(x, y, z)
         if id == -1 then
             -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
-        elseif not is_belt(x, y, z) then
+        elseif not is_transport(x, y, z) then
             -- отлавливаем, что конвеер сломан и дропнем предмет
             Utils.drop_item(x, y, z, belt_item.item_name)
             remove_visual(belt_item)
             table.remove(items, i)
         else
-            local dx, dz = Utils.direction(x, y, z)
-            if dx ~= belt_item.dx or dz ~= belt_item.dz then
-                -- После поворота секции начинаем движение от центра
-                belt_item.p = 0
+            local dx, dz, side
+            local from_splitter = id == block.index("game:splitter")
+            if from_splitter then
+                dx, dz, side = Splitter.choose_output(x, y, z, function(out_x, out_z)
+                    return can_receive(x + out_x, y, z + out_z, out_x, out_z, belt_item.item_name, belt_item)
+                end)
+            else
+                dx, dz = Utils.direction(x, y, z)
             end
-            belt_item.dx, belt_item.dz = dx, dz
-            local nx, nz = x + dx, z + dz
 
-            if block.get(nx, y, nz) ~= -1 then
-                local is_sink = block.get(nx, y, nz) == block.index("game:sink")
-                local is_press = block.get(nx, y, nz) == block.index(Press.block_name)
-
-                -- приемщик забирает предмет с любой стороны, лента передаёт дальше TODO костылище (временно)
-                local can_move = (is_belt(nx, y, nz) or is_sink or is_press) and not is_busy(nx, y, nz, belt_item)
-
-                if can_move and is_press then
-                    can_move = Press.can_accept(nx, y, nz, dx, dz, belt_item.item_name)
-                elseif can_move and not is_sink then
-                    -- след секция принимает предмет сзади или сбоку
-                    can_move = not Utils.opposite_direction(nx, y, nz, dx, dz)
-                end
-                if can_move then
-                    belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
-                    if belt_item.p >= 1 then
-                        if is_sink or is_press then -- TODO костылище (временно)
-                            if is_press then Press.accept(nx, y, nz, belt_item.item_name) end
-                            remove_visual(belt_item)
-                            table.remove(items, i)
-                        else
-                            -- доводим до центра следующей секции, затем следуем по её направлению
-                            belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
-                        end
-                    end
-                else
+            if not dx then
+                -- Оба выхода разделителя заняты. Предмет не остается в центре
+                belt_item.p = 0
+            else
+                if dx ~= belt_item.dx or dz ~= belt_item.dz then
+                    -- После поворота секции начинаем движение от центра
                     belt_item.p = 0
+                end
+                belt_item.dx, belt_item.dz = dx, dz
+                local nx, nz = x + dx, z + dz
+
+                if block.get(nx, y, nz) ~= -1 then
+                    local is_sink = block.get(nx, y, nz) == block.index("game:sink")
+                    local is_press = block.get(nx, y, nz) == block.index(Press.block_name)
+                    local can_move = can_receive(nx, y, nz, dx, dz, belt_item.item_name, belt_item)
+                    if can_move then
+                        belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
+                        if belt_item.p >= 1 then
+                            if from_splitter then Splitter.sent(x, y, z, side) end
+                            if is_sink or is_press then
+                                if is_press then Press.accept(nx, y, nz, belt_item.item_name) end
+                                remove_visual(belt_item)
+                                table.remove(items, i)
+                            else
+                                -- доводим до центра следующей секции, затем следуем по её направлению
+                                belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
+                            end
+                        end
+                    else
+                        belt_item.p = 0
+                    end
                 end
             end
         end
@@ -153,7 +191,7 @@ end
 -- рендер предметов на конвеере
 function M.render()
     for _, belt_item in ipairs(items) do
-        if is_belt(belt_item.x, belt_item.y, belt_item.z) then
+        if is_transport(belt_item.x, belt_item.y, belt_item.z) then
             local position = {
                 belt_item.x + .5 + belt_item.dx * belt_item.p,
                 belt_item.y + .25 + item_size / 2,
@@ -179,6 +217,7 @@ function M.clear()
         remove_visual(belt_item)
     end
     items = {}
+    Splitter.clear()
 end
 
 return M

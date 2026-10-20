@@ -1,0 +1,18 @@
+{
+    "caption": "Разделитель",
+    "material": "base:metal",
+    "model": "aabb",
+    "hitbox": [0, 0, 0, 1, 0.25, 1],
+    "rotation": "pane",
+    "texture-faces": [
+        "conveyor_side",
+        "conveyor_side",
+        "conveyor_side",
+        "splitter",
+        "conveyor_side",
+        "conveyor_side"
+    ],
+    "light-passing": true,
+    "sky-light-passing": true,
+    "base:durability": 0.2
+}

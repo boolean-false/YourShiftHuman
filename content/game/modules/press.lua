@@ -55,12 +55,9 @@ function M.tick()
             if press.ticks == process_ticks then
                 local dx, dz = Utils.direction(x, y, z)
                 local nx, nz = x + dx, z + dz
-                if block.get(nx, y, nz) == block.index("game:conveyor") then
-                    -- Готовый предмет ждёт внутри, пока выходная лента не освободится.
-                    if not Utils.opposite_direction(nx, y, nz, dx, dz) and
-                            Conveyor.insert(nx, y, nz, press.item_name) then
-                        presses[position] = nil
-                    end
+                -- Готовый предмет ждёт внутри, пока выход не освободится
+                if Conveyor.feed(nx, y, nz, dx, dz, press.item_name) then
+                    presses[position] = nil
                 end
             end
         end
