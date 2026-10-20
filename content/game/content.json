@@ -7,6 +7,9 @@
     "conveyor",
     "source",
     "sink",
-    "press"
+    "press",
+    "build_floor",
+    "build_wall",
+    "build_locked"
   ]
 }
