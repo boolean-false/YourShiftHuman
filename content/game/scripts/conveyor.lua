@@ -9,6 +9,7 @@ function on_update(x, y, z) Conveyor.update_shape(x, y, z) end
 function on_interact(x, y, z, player_id)
     -- при нажатии пкм с котролом - вращяем по часовой
     if Utils.rotate_on_ctrl(x, y, z) then
+        Conveyor.update_nearby(x, y, z)
         return true
     end
 
