@@ -4,7 +4,7 @@ local models = {}
 local block_name = "game:assembler"
 
 function M.register(x, y, z)
-    if block.get(x, y, z) ~= block.index(block_name) then
+    if block.get(x, y, z) ~= block.index(block_name) or block.is_segment(x, y, z) then
         return
     end
     local key = Utils.key(x, y, z)
