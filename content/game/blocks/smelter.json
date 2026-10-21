@@ -1,0 +1,11 @@
+{
+    "caption": "Плавильня",
+    "material": "base:metal",
+    "model": "none",
+    "size": [2, 3, 2],
+    "hitbox": [0, 0, 0, 2, 2.2, 2],
+    "light-passing": true,
+    "sky-light-passing": true,
+    "rotation": "pane",
+    "base:durability": 0.2
+}
