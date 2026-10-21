@@ -1,4 +1,4 @@
 {
-    "models": ["press", "assembler"],
+    "models": ["press", "assembler", "smelter"],
     "animation": ["press_work"]
 }

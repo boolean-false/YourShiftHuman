@@ -5,6 +5,7 @@
     "sink",
     "press",
     "assembler",
+    "smelter",
     "build_floor",
     "build_wall",
     "build_locked",
@@ -16,6 +17,7 @@
   "entities": [
     "belt_item",
     "press_visual",
-    "assembler_visual"
+    "assembler_visual",
+    "smelter_visual"
   ]
 }

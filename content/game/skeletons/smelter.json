@@ -1,0 +1,24 @@
+{
+  "root": {
+    "offset": [
+      0,
+      -0.5,
+      0
+    ],
+    "nodes": [
+      {
+        "name": "body",
+        "model": "smelter.body"
+      },
+      {
+        "name": "fan",
+        "model": "smelter.fan",
+        "offset": [
+          0.43,
+          1.13,
+          -0.967
+        ]
+      }
+    ]
+  }
+}
