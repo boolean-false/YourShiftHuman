@@ -1,19 +1,21 @@
 {
-  "entities": [
-    "belt_item",
-    "press_visual"
-  ],
-  "items": ["press.item"],
   "blocks": [
     "conveyor",
     "source",
     "sink",
     "press",
+    "assembler",
     "build_floor",
     "build_wall",
     "build_locked",
     "splitter",
     "merger",
     "filter"
+  ],
+  "items": [],
+  "entities": [
+    "belt_item",
+    "press_visual",
+    "assembler_visual"
   ]
 }
