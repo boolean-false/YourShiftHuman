@@ -145,6 +145,10 @@ function M.render()
             ))
             model.entity.skeleton:reset_pose()
             local press = presses[key]
+            local track = animation.get_track("press_work")
+            if press and press.ticks > 0 and press.ticks < process_ticks and track then
+                track.func(model.entity.skeleton, (press.ticks / 20) % track.duration)
+            end
         end
     end
 end

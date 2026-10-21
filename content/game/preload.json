@@ -1,4 +1,4 @@
 {
     "models": ["press"],
-    "animation": []
+    "animation": ["press_work"]
 }
