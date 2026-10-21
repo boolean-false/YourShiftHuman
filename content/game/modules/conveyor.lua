@@ -33,11 +33,12 @@ local function feeds_from(x, y, z, offset_x, offset_z)
         return Splitter.is_output(nx, y, nz, -offset_x, -offset_z)
     elseif id == block.index("game:filter") then
         return Filter.is_output(nx, y, nz, -offset_x, -offset_z)
+    elseif id == block.index(Press.block_name) then
+        return Press.is_output(nx, y, nz, -offset_x, -offset_z)
     end
     if id ~= block.index("game:conveyor") and
             id ~= block.index("game:merger") and
-            id ~= block.index("game:source") and
-            id ~= block.index(Press.block_name) then
+            id ~= block.index("game:source") then
         return false
     end
     return Utils.same_direction(nx, y, nz, -offset_x, -offset_z)
@@ -110,7 +111,7 @@ local function input_ready(x, y, z, dx, dz)
         return points_here
     end
     if id == block.index(Press.block_name) then
-        return points_here and Press.has_output(x, y, z)
+        return Press.is_output(x, y, z, dx, dz) and Press.has_output(x, y, z)
     end
     if not is_transport(x, y, z) then
         return false
