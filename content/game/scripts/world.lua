@@ -1,7 +1,9 @@
 local Conveyor = require("game:conveyor")
 local Press = require("game:press")
+local Assembler = require("game:assembler")
 
 function on_world_open()
+    Assembler.clear()
     Conveyor.clear()
     Press.clear()
 end
@@ -12,6 +14,7 @@ function on_world_tick()
 end
 
 function on_world_quit()
+    Assembler.clear()
     Conveyor.clear()
     Press.clear()
 end
