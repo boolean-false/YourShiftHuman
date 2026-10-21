@@ -1,0 +1,29 @@
+{
+  "root": {
+    "offset": [
+      0,
+      -0.5,
+      0
+    ],
+    "nodes": [
+      {
+        "name": "body",
+        "model": "press.body",
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "ram",
+        "model": "press.ram",
+        "offset": [
+          0.0,
+          0.79,
+          -0.45
+        ]
+      }
+    ]
+  }
+}

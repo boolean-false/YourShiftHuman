@@ -1,0 +1,10 @@
+@configure fps 24 duration 0.5
+
+@move bone ram by y curve linear {
+	@key frame 0 value 0
+	@key frame 2 value 0
+	@key frame 5 value -0.22
+	@key frame 7 value -0.22
+	@key frame 11 value 0
+	@key frame 12 value 0
+}

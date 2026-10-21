@@ -1,4 +1,8 @@
 local Conveyor = require("game:conveyor")
+local Press = require("game:press")
 
--- Нужно только для обновления модели предметов каждый кадр
-function on_hud_render() Conveyor.render() end
+-- Обновляем модели предметов и анимацию пресса каждый кадр.
+function on_hud_render()
+    Conveyor.render()
+    Press.render()
+end

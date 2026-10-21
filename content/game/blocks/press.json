@@ -1,14 +1,11 @@
 {
     "caption": "Пресс",
     "material": "base:metal",
-    "texture-faces": [
-        "conveyor_side",
-        "conveyor_side",
-        "metal",
-        "rust",
-        "red_lamp",
-        "green_lamp"
-    ],
+    "model": "none",
+    "size": [2, 3, 2],
+    "hitbox": [0, 0, 0, 2, 2.2, 2],
+    "light-passing": true,
+    "sky-light-passing": true,
     "rotation": "pane",
     "base:durability": 0.2
 }

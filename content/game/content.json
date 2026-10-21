@@ -1,8 +1,9 @@
 {
   "entities": [
-    "belt_item"
+    "belt_item",
+    "press_visual"
   ],
-  "items": [],
+  "items": ["press.item"],
   "blocks": [
     "conveyor",
     "source",
