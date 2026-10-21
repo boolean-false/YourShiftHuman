@@ -1,4 +1,11 @@
 {
+  "entities": [
+    "belt_item",
+    "press_visual",
+    "assembler_visual",
+    "smelter_visual"
+  ],
+  "items": [],
   "blocks": [
     "conveyor",
     "source",
@@ -12,12 +19,5 @@
     "splitter",
     "merger",
     "filter"
-  ],
-  "items": [],
-  "entities": [
-    "belt_item",
-    "press_visual",
-    "assembler_visual",
-    "smelter_visual"
   ]
 }
