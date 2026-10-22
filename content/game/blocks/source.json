@@ -1,14 +1,11 @@
 {
-    "caption": "Источник",
+    "caption": "Пункт доставки",
     "material": "base:metal",
-    "texture-faces": [
-        "conveyor_side",
-        "conveyor_side",
-        "conveyor_side",
-        "green_lamp",
-        "conveyor_side",
-        "conveyor_side"
-    ],
+    "model": "none",
+    "size": [1, 2, 1],
+    "hitbox": [0, 0, 0, 1, 1.7, 1],
+    "light-passing": true,
+    "sky-light-passing": true,
     "rotation": "pane",
     "tick-interval": 20,
     "base:durability": 0.2

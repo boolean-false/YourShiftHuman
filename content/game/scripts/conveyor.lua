@@ -13,6 +13,6 @@ function on_interact(x, y, z, player_id)
         return true
     end
 
-    Conveyor.insert(x, y, z, "base:red_lamp.item")
+    Conveyor.insert(x, y, z, "ore")
     return true
 end

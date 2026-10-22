@@ -33,11 +33,4 @@ function M.rotate_on_ctrl(x, y, z)
     return true
 end
 
--- Дроп предмета из сломанного блока
-function M.drop_item(x, y, z, item_name)
-    entities.spawn("base:drop", { x + .5, y + .5, z + .5 }, {
-        base__drop = { item = item_name, count = 1 }
-    })
-end
-
 return M

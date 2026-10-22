@@ -3,7 +3,8 @@
     "belt_item",
     "press_visual",
     "assembler_visual",
-    "smelter_visual"
+    "smelter_visual",
+    "source_visual"
   ],
   "items": [],
   "blocks": [

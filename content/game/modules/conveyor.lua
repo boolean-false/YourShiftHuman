@@ -1,12 +1,21 @@
 local M = {}
 local Press = require("game:press")
+local Smelter = require("game:smelter")
+local Source = require("game:source")
+local Products = require("game:products")
 local Utils = require("game:utils")
 local Splitter = require("game:splitter")
 local Merger = require("game:merger")
 local Filter = require("game:filter")
 local items = {}
 local speed = 1.5 -- Блоков в сек
-local item_size = .5 -- Видимый размер предмета в блоках.
+
+-- Оба станка принимают продукцию через свои порты.
+local function processor_at(x, y, z)
+    local id = block.get(x, y, z)
+    if id == block.index(Press.block_name) then return Press end
+    if id == block.index(Smelter.block_name) then return Smelter end
+end
 
 -- Проверяем, что в этой клетке уже конвеер
 local function is_belt(x, y, z)
@@ -33,12 +42,13 @@ local function feeds_from(x, y, z, offset_x, offset_z)
         return Splitter.is_output(nx, y, nz, -offset_x, -offset_z)
     elseif id == block.index("game:filter") then
         return Filter.is_output(nx, y, nz, -offset_x, -offset_z)
-    elseif id == block.index(Press.block_name) then
-        return Press.is_output(nx, y, nz, -offset_x, -offset_z)
+    elseif id == block.index(Source.block_name) then
+        return Source.is_output(nx, y, nz, -offset_x, -offset_z)
     end
+    local processor = processor_at(nx, y, nz)
+    if processor then return processor.is_output(nx, y, nz, -offset_x, -offset_z) end
     if id ~= block.index("game:conveyor") and
-            id ~= block.index("game:merger") and
-            id ~= block.index("game:source") then
+            id ~= block.index("game:merger") then
         return false
     end
     return Utils.same_direction(nx, y, nz, -offset_x, -offset_z)
@@ -108,10 +118,11 @@ local function input_ready(x, y, z, dx, dz)
     end
     local points_here = Utils.same_direction(x, y, z, dx, dz)
     if id == block.index("game:source") then
-        return points_here
+        return Source.is_output(x, y, z, dx, dz)
     end
-    if id == block.index(Press.block_name) then
-        return Press.is_output(x, y, z, dx, dz) and Press.has_output(x, y, z)
+    local processor = processor_at(x, y, z)
+    if processor then
+        return processor.is_output(x, y, z, dx, dz) and processor.has_output(x, y, z)
     end
     if not is_transport(x, y, z) then
         return false
@@ -160,15 +171,15 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
         return Merger.can_accept(x, y, z, dx, dz, function(offset_x, offset_z)
             return input_ready(x + offset_x, y, z + offset_z, -offset_x, -offset_z)
         end)
-    elseif id == block.index(Press.block_name) then
-        return Press.can_accept(x, y, z, dx, dz, item_name)
     end
+    local processor = processor_at(x, y, z)
+    if processor then return processor.can_accept(x, y, z, dx, dz, item_name) end
     return id == block.index("game:sink")
 end
 
 -- Добавляем предмет, если секция свободна
 function M.insert(x, y, z, item_name)
-    if not is_transport(x, y, z) or is_busy(x, y, z) then
+    if not Products[item_name] or not is_transport(x, y, z) or is_busy(x, y, z) then
         return false
     end
 
@@ -185,7 +196,7 @@ function M.insert(x, y, z, item_name)
     return true
 end
 
--- Источник и пресс подают предмет с указанной стороны на свободный белт
+-- Доставка и станки подают продукцию на свободную ленту.
 function M.feed(x, y, z, dx, dz, item_name)
     if not is_transport(x, y, z) or not can_receive(x, y, z, dx, dz, item_name) then
         return false
@@ -213,8 +224,7 @@ function M.tick()
         if id == -1 then
             -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
         elseif not is_transport(x, y, z) then
-            -- отлавливаем, что конвеер сломан и дропнем предмет
-            Utils.drop_item(x, y, z, belt_item.item_name)
+            -- При сносе ленты убираем её продукцию вместе с моделью.
             remove_visual(belt_item)
             table.remove(items, i)
         else
@@ -243,7 +253,7 @@ function M.tick()
 
                 if block.get(nx, y, nz) ~= -1 then
                     local is_sink = block.get(nx, y, nz) == block.index("game:sink")
-                    local is_press = block.get(nx, y, nz) == block.index(Press.block_name)
+                    local processor = processor_at(nx, y, nz)
                     local can_move = can_receive(nx, y, nz, dx, dz, belt_item.item_name, belt_item)
                     if can_move then
                         belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
@@ -254,9 +264,9 @@ function M.tick()
                             if block.get(nx, y, nz) == block.index("game:merger") then
                                 Merger.received(nx, y, nz, dx, dz)
                             end
-                            if is_sink or is_press then
-                                if is_press then
-                                    Press.accept(nx, y, nz, belt_item.item_name)
+                            if is_sink or processor then
+                                if processor then
+                                    processor.accept(nx, y, nz, belt_item.item_name)
                                 end
                                 remove_visual(belt_item)
                                 table.remove(items, i)
@@ -279,16 +289,15 @@ function M.render()
     for _, belt_item in ipairs(items) do
         if is_transport(belt_item.x, belt_item.y, belt_item.z) then
             local position = {
-                belt_item.x + .5 + belt_item.dx * belt_item.p,
-                belt_item.y + .25 + item_size / 2,
-                belt_item.z + .5 + belt_item.dz * belt_item.p
+                -- Экспорт VCM уже содержит сдвиг центра на .5 по X и Z.
+                belt_item.x + belt_item.dx * belt_item.p,
+                belt_item.y + .25,
+                belt_item.z + belt_item.dz * belt_item.p
             }
             if not belt_item.entity or not entities.exists(belt_item.entity:get_uid()) then
                 -- Если модель есть, то просто меняем её позицию. Иначе создаем модельку
                 belt_item.entity = entities.spawn("game:belt_item", position)
-                belt_item.entity.skeleton:set_model(0, item.model_name(item.index(belt_item.item_name)))
-                local scale = item_size / .2
-                belt_item.entity.transform:set_size({ scale, scale, scale })
+                belt_item.entity.skeleton:set_model(0, Products[belt_item.item_name].model)
             end
             belt_item.entity.transform:set_pos(position)
         else

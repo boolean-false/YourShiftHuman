@@ -3,8 +3,11 @@ local Utils = require("game:utils")
 
 -- TODO Временно -1 налево, 1 направо
 local routes = {
-    ["base:red_lamp.item"] = -1,
-    ["base:green_lamp.item"] = 1
+    ore = -1,
+    ingot = 1,
+    gear = 1,
+    rod = 1,
+    gearbox = 1
 }
 
 -- Принимаем предметы только через задний проход...

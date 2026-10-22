@@ -1,0 +1,11 @@
+{
+    "components": [],
+    "body-type": "static",
+    "hitbox": [0.01, 0.01, 0.01],
+    "solid": false,
+    "blocking": false,
+    "selectable": false,
+    "save": false,
+    "skeleton-name": "game:delivery",
+    "lighting-mode": "solid"
+}

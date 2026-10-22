@@ -1,0 +1,6 @@
+@configure fps 24 duration 1
+
+@rotate bone fan by z curve linear {
+	@key frame 0 value 0
+	@key frame 24 value 360
+}
