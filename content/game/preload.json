@@ -1,3 +1,4 @@
 {
-    "animation": ["press_work"]
+    "models": ["item_ore", "item_ingot", "item_gear", "item_rod", "item_gearbox"],
+    "animation": ["press_work", "smelter_work"]
 }
