@@ -24,13 +24,4 @@ function M.opposite_direction(x, y, z, dx, dz)
     return M.same_direction(x, y, z, -dx, -dz)
 end
 
--- Поворот при детекте удержания контрола
-function M.rotate_on_ctrl(x, y, z)
-    if not input.is_pressed("key:left-ctrl") then
-        return false
-    end
-    block.set_rotation(x, y, z, (block.get_rotation(x, y, z) + 1) % 4)
-    return true
-end
-
 return M
