@@ -13,6 +13,7 @@ function on_world_open()
 end
 
 function on_world_tick()
+    Smelter.tick()
     Press.tick()
     Conveyor.tick()
 end
