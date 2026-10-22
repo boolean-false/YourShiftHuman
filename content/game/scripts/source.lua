@@ -21,12 +21,3 @@ function on_block_tick(x, y, z, tps)
     local dx, dz = Utils.direction(x, y, z)
     Conveyor.feed(x + dx, y, z + dz, dx, dz, "ore")
 end
-
-function on_interact(x, y, z, player_id)
-    x, y, z = block.seek_origin(x, y, z)
-    if Utils.rotate_on_ctrl(x, y, z) then
-        Conveyor.update_nearby(x, y, z)
-        return true
-    end
-    return false
-end
