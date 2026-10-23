@@ -103,4 +103,25 @@ function M.update(dt, allow_pointer)
     camera:look_at({ smooth_x, M.y + 0.6, smooth_z })
 end
 
+-- Луч курсора пересекает плоскость ленты
+function M.ray(mx, my, height)
+    if not camera then
+        return nil
+    end
+    local view = gui.get_viewport()
+    local nx, ny = 2 * mx / view[1] - 1, 1 - 2 * my / view[2]
+    local ty = math.tan(math.rad(camera:get_fov()) * camera:get_zoom() / 2)
+    local tx = ty * view[1] / view[2]
+    local front, right, up = camera:get_front(), camera:get_right(), camera:get_up()
+    local position = camera:get_pos()
+    local dx = front[1] + right[1] * nx * tx + up[1] * ny * ty
+    local dy = front[2] + right[2] * nx * tx + up[2] * ny * ty
+    local dz = front[3] + right[3] * nx * tx + up[3] * ny * ty
+    if dy >= -.001 then
+        return nil
+    end
+    local t = (M.y + (height or .23) - position[2]) / dy
+    return position[1] + dx * t, position[3] + dz * t
+end
+
 return M

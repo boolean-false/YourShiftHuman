@@ -1,0 +1,42 @@
+@bone name "body" move (0, -0.5, 0) {
+    @box from (-0.4925, 0.0075, -0.5) to (-0.4475, 0.0525, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (south) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (east) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (west) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (top) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (bottom) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+    }
+    @box from (0.4475, 0.0075, -0.5) to (0.4925, 0.0525, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (south) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (east) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (west) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (top) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (bottom) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+    }
+    @box from (-0.5, 0.0075, -0.4925) to (0.5, 0.0525, -0.4475) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (south) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (east) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (west) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (top) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (bottom) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+    }
+    @box from (-0.5, 0.0075, 0.4475) to (0.5, 0.0525, 0.4925) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (south) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (east) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (west) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (top) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (bottom) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+    }
+    @box from (0.255, 0.03, -0.06) to (0.405, 0.09, 0.06) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (south) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (east) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (west) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (top) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+        @part tags (bottom) texture "blocks:colors" region (0.2734375, 0.0390625, 0.4609375, 0.2265625)
+    }
+}

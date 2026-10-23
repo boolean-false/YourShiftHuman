@@ -1,5 +1,6 @@
 local M = {}
 local Camera = require("game:camera")
+local Hover = require("game:hover")
 
 local function floor_at(x, y, z)
     for py = math.floor(y), math.max(0, math.floor(y) - 64), -1 do
@@ -26,6 +27,7 @@ local function hide_player()
 end
 
 function M.open(pid)
+    Hover.close()
     M.pid = pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
@@ -70,17 +72,26 @@ end
 
 function M.update()
     if not M.opened or hud.is_paused() or menu.page ~= "" then
+        Hover.hide()
         return
     end
     if not hud.is_open("game:view_input") then
         if hud.is_inventory_open() then
+            Hover.hide()
             return
         end
         hud.show_overlay("game:view_input", false)
     end
     hide_player()
     local mouse = input.get_mouse_pos()
-    Camera.update(math.min(.1, time.delta()), not (mouse[1] < 356 and mouse[2] < 160))
+    local over_ui = mouse[1] < 356 and mouse[2] < 160
+    Camera.update(math.min(.1, time.delta()), not over_ui)
+    local view = gui.get_viewport()
+    if over_ui or mouse[1] < 0 or mouse[2] < 0 or mouse[1] >= view[1] or mouse[2] >= view[2] then
+        Hover.hide()
+    else
+        Hover.update()
+    end
     player.set_pos(M.pid, Camera.x, Camera.y + 2, Camera.z)
     player.set_camera(M.pid, M.camera)
 end
@@ -90,6 +101,7 @@ function M.close()
         return
     end
     M.opened = false
+    Hover.close()
     hud.close("game:view")
     hud.close("game:view_input")
     if M.hotbar_parent and M.hotbar_parent.exists then
