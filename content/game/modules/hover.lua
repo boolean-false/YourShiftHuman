@@ -2,6 +2,11 @@ local M = {}
 local Camera = require("game:camera")
 local cursor
 
+local sizes = {
+    ["game:press"] = 2,
+    ["game:smelter"] = 2,
+    ["game:assembler"] = 2
+}
 
 function M.hide()
     M.cell = nil
@@ -27,6 +32,11 @@ function M.update()
     end
     M.cell = { x = x, y = y, z = z }
     local size, rotation = 1, 0
+    if block.name(id):sub(1, 5) == "game:" then
+        x, y, z = block.seek_origin(x, y, z)
+        size = sizes[block.name(id)] or 1
+        rotation = block.get_rotation(x, y, z)
+    end
     local right_x, _, right_z = block.get_X(x, y, z)
     local dx, _, dz = block.get_Z(x, y, z)
     local half = (size - 1) / 2
