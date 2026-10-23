@@ -1,6 +1,7 @@
 local M = {}
 local Camera = require("game:camera")
 local Hover = require("game:hover")
+local disabled_bindings = {}
 
 local function floor_at(x, y, z)
     for py = math.floor(y), math.max(0, math.floor(y) - 64), -1 do
@@ -26,9 +27,10 @@ local function hide_player()
     end
 end
 
-function M.open(pid)
+-- Включаем вид сверху из текущей позиции обычного игрока.
+local function enter()
     Hover.close()
-    M.pid = pid
+    local pid = M.pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
     M.previous_camera = player.get_camera(pid)
@@ -38,6 +40,10 @@ function M.open(pid)
         M.body_visible = avatar.skeleton:is_visible()
     end
     M.camera = Camera.open(x, floor_at(x, y, z), z)
+    -- Сохранение мира могло оставить активной камеру сверху.
+    if M.previous_camera == nil or M.previous_camera == M.camera then
+        M.previous_camera = cameras.get("core:first-person"):get_index()
+    end
     player.set_camera(pid, M.camera)
     Camera.update(0, false)
     hide_player()
@@ -45,6 +51,7 @@ function M.open(pid)
         if name:match("^movement%.") or name:match("^player%.") or name:match("^camera%.") or
                 name == "hud.inventory" or name == "hud.chat" or name == "kompot.gallery" then
             input.set_enabled(name, false)
+            disabled_bindings[#disabled_bindings + 1] = name
         end
     end
     local bar = gui.root["hud.hotbar"]
@@ -60,14 +67,6 @@ function M.open(pid)
         gui.close_menu()
     end
     gui.set_active_frame("core:main")
-    input.add_callback("key:escape", function()
-        if hud.is_paused() then
-            hud.resume()
-        else
-            hud.pause()
-        end
-        return true
-    end, nil, true)
 end
 
 function M.update()
@@ -96,7 +95,7 @@ function M.update()
     player.set_camera(M.pid, M.camera)
 end
 
-function M.close()
+local function leave()
     if not M.opened then
         return
     end
@@ -121,6 +120,31 @@ function M.close()
     end
     player.set_camera(M.pid, M.previous_camera)
     player.set_pos(M.pid, unpack(M.position))
+end
+
+function M.open(pid)
+    M.pid = pid
+    M.active = true
+    enter()
+
+    input.add_callback("key:f10", function()
+        time.post_runnable(function()
+            if not M.active or hud.is_paused() or menu.page ~= "" then return end
+            if M.opened then leave() else enter() end
+        end)
+        return true
+    end, nil, true)
+
+    input.add_callback("key:escape", function()
+        if not M.opened then return false end
+        if hud.is_paused() then hud.resume() else hud.pause() end
+        return true
+    end, nil, true)
+end
+
+function M.close()
+    M.active = false
+    leave()
 end
 
 return M
