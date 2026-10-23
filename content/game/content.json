@@ -4,7 +4,8 @@
     "press_visual",
     "assembler_visual",
     "smelter_visual",
-    "source_visual"
+    "source_visual",
+    "build_cursor"
   ],
   "items": [],
   "blocks": [
