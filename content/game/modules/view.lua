@@ -120,6 +120,8 @@ local function leave()
     end
     player.set_camera(M.pid, M.previous_camera)
     player.set_pos(M.pid, unpack(M.position))
+    for _, name in ipairs(disabled_bindings) do input.set_enabled(name, true) end
+    disabled_bindings = {}
 end
 
 function M.open(pid)
