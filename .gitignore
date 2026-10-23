@@ -7,3 +7,5 @@ settings.toml
 controls.toml
 latest.log
 .vlauncher-revision
+content/contour
+config/contour/
