@@ -68,6 +68,23 @@ function M.update(dt, allow_pointer)
                 MAX_DISTANCE
         )
 
+        -- смещение при зажатом колесике
+        if input.is_pressed("mouse:middle") then
+            local delta = input.get_mouse_delta()
+            local shift = key("left-shift") == 1 or key("right-shift") == 1
+
+            if shift then
+                -- шифт скм
+                M.yaw = (M.yaw - delta[1] * MOUSE_SENSITIVITY)
+                        % (2 * math.pi)
+            else
+                -- скм перемещение
+                local scale = M.distance / gui.get_viewport()[2]
+
+                M.x = M.x - (rx * delta[1] - fx * delta[2]) * scale
+                M.z = M.z - (rz * delta[1] - fz * delta[2]) * scale
+            end
+        end
     end
 
     local t = 1 - math.exp(-SMOOTH_SPEED * dt)
