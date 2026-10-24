@@ -34,6 +34,8 @@ local function enter()
     M.left_down = input.is_pressed("mouse:left")
     M.right_down = input.is_pressed("mouse:right")
     M.rotate_down = input.is_pressed("key:r")
+    M.delete_down = input.is_pressed("key:delete")
+    M.backspace_down = input.is_pressed("key:backspace")
     local pid = M.pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
@@ -80,8 +82,11 @@ function M.update()
     local cancel = right and not M.right_down
     M.left_down, M.right_down = left, right
     local rotate = input.is_pressed("key:r")
+    local delete = input.is_pressed("key:delete")
+    local backspace = input.is_pressed("key:backspace")
     local rotate_pressed = rotate and not M.rotate_down
-    M.rotate_down = rotate
+    local delete_pressed = (delete and not M.delete_down) or (backspace and not M.backspace_down)
+    M.rotate_down, M.delete_down, M.backspace_down = rotate, delete, backspace
 
     if not M.opened or hud.is_paused() or menu.page ~= "" then
         Hover.hide()
@@ -100,7 +105,9 @@ function M.update()
     if cancel then
         Hover.clear_selection()
     end
-    if rotate_pressed then
+    if delete_pressed then
+        Actions.remove()
+    elseif rotate_pressed then
         Actions.rotate(M.pid)
     end
 

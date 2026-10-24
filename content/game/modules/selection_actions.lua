@@ -108,4 +108,25 @@ function M.rotate(pid)
     update_belts(object, rotation)
 end
 
+function M.remove()
+    local object = selected()
+    if not object then
+        return
+    end
+    local rotation = block.get_rotation(object.x, object.y, object.z)
+    local ok, why = can_rotate(object, object.x, object.z, rotation)
+    if not ok then
+        Hover.message = why;
+        return
+    end
+    clear_flows()
+    local controller = controllers[block.name(object.id)]
+    if controller then
+        controller.remove_model(object.x, object.y, object.z)
+    end
+    block.set(object.x, object.y, object.z, block.index("core:air"), 0)
+    update_belts(object, rotation)
+    Hover.clear_selection()
+end
+
 return M
