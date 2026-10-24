@@ -91,6 +91,7 @@ function M.rotate(pid)
         return
     end
     Hover.message = nil
+    clear_flows()
     if x == object.x and z == object.z then
         block.set_rotation(x, object.y, z, rotation)
     else
