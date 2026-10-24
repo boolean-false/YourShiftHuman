@@ -1,6 +1,7 @@
 local M = {}
 local Camera = require("game:camera")
 local Hover = require("game:hover")
+local Actions = require("game:selection_actions")
 local disabled_bindings = {}
 
 local function floor_at(x, y, z)
@@ -32,6 +33,9 @@ local function enter()
     Hover.close()
     M.left_down = input.is_pressed("mouse:left")
     M.right_down = input.is_pressed("mouse:right")
+    M.rotate_down = input.is_pressed("key:r")
+    M.delete_down = input.is_pressed("key:delete")
+    M.backspace_down = input.is_pressed("key:backspace")
     local pid = M.pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
@@ -42,7 +46,7 @@ local function enter()
         M.body_visible = avatar.skeleton:is_visible()
     end
     M.camera = Camera.open(x, floor_at(x, y, z), z)
-    -- Сохранение мира могло оставить активной камеру сверху.
+
     if M.previous_camera == nil or M.previous_camera == M.camera then
         M.previous_camera = cameras.get("core:first-person"):get_index()
     end
@@ -77,6 +81,12 @@ function M.update()
     local clicked = left and not M.left_down
     local cancel = right and not M.right_down
     M.left_down, M.right_down = left, right
+    local rotate = input.is_pressed("key:r")
+    local delete = input.is_pressed("key:delete")
+    local backspace = input.is_pressed("key:backspace")
+    local rotate_pressed = rotate and not M.rotate_down
+    local delete_pressed = (delete and not M.delete_down) or (backspace and not M.backspace_down)
+    M.rotate_down, M.delete_down, M.backspace_down = rotate, delete, backspace
 
     if not M.opened or hud.is_paused() or menu.page ~= "" then
         Hover.hide()
@@ -94,6 +104,11 @@ function M.update()
 
     if cancel then
         Hover.clear_selection()
+    end
+    if delete_pressed then
+        Actions.remove()
+    elseif rotate_pressed then
+        Actions.rotate(M.pid)
     end
 
     local mouse = input.get_mouse_pos()

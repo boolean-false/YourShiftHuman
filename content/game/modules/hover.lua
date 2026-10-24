@@ -30,10 +30,12 @@ end
 
 function M.clear_selection()
     M.selected = nil
+    M.message = nil
 end
 
 function M.caption()
-    return M.selected and block.caption(M.selected.id) or "Ничего не выбрано"
+    local caption = M.selected and block.caption(M.selected.id) or "Ничего не выбрано"
+    return caption .. (M.message and " · " .. M.message or "")
 end
 
 function M.hide()
@@ -64,6 +66,7 @@ function M.update(clicked)
     M.cell = { x = x, y = y, z = z }
 
     if clicked then
+        M.message = nil
         M.selected = object_at(x, y, z)
     end
     if M.selected then
