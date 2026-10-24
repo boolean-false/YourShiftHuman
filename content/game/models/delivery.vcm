@@ -7,7 +7,7 @@
         @part tags (top) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
         @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
     }
-    @box from (-0.5, 0.24375, -0.5) to (0.5, 0.2525, 0.5) origin (0, 0, 0) {
+    @box from (-0.5, 0.24375, -0.5) to (0.5, 0.2525, 0.5) origin (0, 0, 0) rotate (0, 0.707106781187, 0, 0.707106781187) {
         @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
         @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
         @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
