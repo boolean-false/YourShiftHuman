@@ -3,10 +3,38 @@ local Camera = require("game:camera")
 local cursor
 
 local sizes = {
+    ["game:source"] = 1,
+    ["game:conveyor"] = 1,
+    ["game:sink"] = 1,
+    ["game:splitter"] = 1,
+    ["game:merger"] = 1,
+    ["game:filter"] = 1,
     ["game:press"] = 2,
     ["game:smelter"] = 2,
     ["game:assembler"] = 2
 }
+
+local function object_at(x, y, z)
+    local id = block.get(x, y, z)
+    if id == -1 or not sizes[block.name(id)] then
+        return nil
+    end
+    x, y, z = block.seek_origin(x, y, z)
+    return {
+        x = x,
+        y = y,
+        z = z,
+        id = id
+    }
+end
+
+function M.clear_selection()
+    M.selected = nil
+end
+
+function M.caption()
+    return M.selected and block.caption(M.selected.id) or "Ничего не выбрано"
+end
 
 function M.hide()
     M.cell = nil
@@ -16,7 +44,10 @@ function M.hide()
 end
 
 -- Наводимся на клетку пола
-function M.update()
+function M.update(clicked)
+    if M.selected and block.get(M.selected.x, M.selected.y, M.selected.z) ~= M.selected.id then
+        M.clear_selection()
+    end
     local mouse = input.get_mouse_pos()
     local x, z = Camera.ray(mouse[1], mouse[2], .23)
     if not x then
@@ -31,6 +62,15 @@ function M.update()
         return
     end
     M.cell = { x = x, y = y, z = z }
+
+    if clicked then
+        M.selected = object_at(x, y, z)
+    end
+    if M.selected then
+        x, y, z = M.selected.x, M.selected.y, M.selected.z
+        id = M.selected.id
+    end
+
     local size, rotation = 1, 0
     if block.name(id):sub(1, 5) == "game:" then
         x, y, z = block.seek_origin(x, y, z)
@@ -58,6 +98,7 @@ function M.close()
     end
     cursor = nil
     M.cell = nil
+    M.clear_selection()
 end
 
 return M

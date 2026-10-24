@@ -1,5 +1,6 @@
 local K = require("kompot:kompot")
 local UI = require("kompot:ui")
+local Hover = require("game:hover")
 local handle
 
 function on_open()
@@ -9,6 +10,8 @@ function on_open()
         content = function()
             K.Column({ modifier = K.M:padding(8) }, function()
                 UI.Panel({ title = "Пам Пам Пам", width = 340 }, function()
+                    local caption = K.poll(function() return Hover.caption() end)
+                    K.Text(caption)
                 end)
             end)
         end

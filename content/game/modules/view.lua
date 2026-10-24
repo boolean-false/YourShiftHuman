@@ -30,6 +30,8 @@ end
 -- Включаем вид сверху из текущей позиции обычного игрока.
 local function enter()
     Hover.close()
+    M.left_down = input.is_pressed("mouse:left")
+    M.right_down = input.is_pressed("mouse:right")
     local pid = M.pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
@@ -70,6 +72,12 @@ local function enter()
 end
 
 function M.update()
+    local left = input.is_pressed("mouse:left")
+    local right = input.is_pressed("mouse:right")
+    local clicked = left and not M.left_down
+    local cancel = right and not M.right_down
+    M.left_down, M.right_down = left, right
+
     if not M.opened or hud.is_paused() or menu.page ~= "" then
         Hover.hide()
         return
@@ -81,7 +89,13 @@ function M.update()
         end
         hud.show_overlay("game:view_input", false)
     end
+
     hide_player()
+
+    if cancel then
+        Hover.clear_selection()
+    end
+
     local mouse = input.get_mouse_pos()
     local over_ui = mouse[1] < 356 and mouse[2] < 160
     Camera.update(math.min(.1, time.delta()), not over_ui)
@@ -89,7 +103,7 @@ function M.update()
     if over_ui or mouse[1] < 0 or mouse[2] < 0 or mouse[1] >= view[1] or mouse[2] >= view[2] then
         Hover.hide()
     else
-        Hover.update()
+        Hover.update(clicked and not right)
     end
     player.set_pos(M.pid, Camera.x, Camera.y + 2, Camera.z)
     player.set_camera(M.pid, M.camera)
@@ -120,7 +134,9 @@ local function leave()
     end
     player.set_camera(M.pid, M.previous_camera)
     player.set_pos(M.pid, unpack(M.position))
-    for _, name in ipairs(disabled_bindings) do input.set_enabled(name, true) end
+    for _, name in ipairs(disabled_bindings) do
+        input.set_enabled(name, true)
+    end
     disabled_bindings = {}
 end
 
@@ -131,15 +147,27 @@ function M.open(pid)
 
     input.add_callback("key:f10", function()
         time.post_runnable(function()
-            if not M.active or hud.is_paused() or menu.page ~= "" then return end
-            if M.opened then leave() else enter() end
+            if not M.active or hud.is_paused() or menu.page ~= "" then
+                return
+            end
+            if M.opened then
+                leave()
+            else
+                enter()
+            end
         end)
         return true
     end, nil, true)
 
     input.add_callback("key:escape", function()
-        if not M.opened then return false end
-        if hud.is_paused() then hud.resume() else hud.pause() end
+        if not M.opened then
+            return false
+        end
+        if hud.is_paused() then
+            hud.resume()
+        else
+            hud.pause()
+        end
         return true
     end, nil, true)
 end
