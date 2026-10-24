@@ -116,6 +116,10 @@ function M.create(config)
         end
     end
 
+    function machine.clear_process()
+        processing = {}
+    end
+
     function machine.clear()
         for _, model in pairs(models) do
             machine.remove_model(model.x, model.y, model.z)
