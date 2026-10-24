@@ -5,6 +5,9 @@ local Smelter = require("game:smelter")
 local Source = require("game:source")
 
 function on_world_open()
+    world.set_day_time(.5)
+    world.set_day_time_speed(0)
+
     Source.clear()
     Smelter.clear()
     Assembler.clear()
