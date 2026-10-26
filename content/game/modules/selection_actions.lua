@@ -4,6 +4,7 @@ local Conveyor = require("game:conveyor")
 local Press = require("game:press")
 local Smelter = require("game:smelter")
 local Assembler = require("game:assembler")
+local Filter = require("game:filter")
 
 local controllers = {
     ["game:press"] = Press,
@@ -43,6 +44,18 @@ function M.set_press_recipe(recipe)
     end
 
     if Press.set_recipe(object.x, object.y, object.z, recipe) then
+        M.clear_flows()
+        Hover.message = nil
+    end
+end
+
+function M.cycle_filter()
+    local object = selected()
+    if not object or object.id ~= block.index("game:filter") then
+        return
+    end
+    local index = Filter.get_type(object.x, object.y, object.z) % #Filter.parts + 1
+    if Filter.set_type(object.x, object.y, object.z, index) then
         M.clear_flows()
         Hover.message = nil
     end

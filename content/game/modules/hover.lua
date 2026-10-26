@@ -31,13 +31,13 @@ end
 function M.clear_selection()
     M.selected = nil
     M.message = nil
-    M.press_open = false
-    M.press_closed = false
+    M.dialog_open = false
+    M.dialog_closed = false
 end
 
-function M.close_press()
-    M.press_open = false
-    M.press_closed = true
+function M.close_dialog()
+    M.dialog_open = false
+    M.dialog_closed = true
 end
 
 function M.caption()
@@ -107,7 +107,9 @@ function M.update(clicked)
     if clicked then
         M.message = nil
         M.selected = object_at(x, y, z)
-        M.press_open = M.selected ~= nil and M.selected.id == block.index("game:press")
+        M.dialog_open = M.selected ~= nil and
+                (M.selected.id == block.index("game:press") or
+                        M.selected.id == block.index("game:filter"))
     end
     if M.selected then
         x, y, z = M.selected.x, M.selected.y, M.selected.z
