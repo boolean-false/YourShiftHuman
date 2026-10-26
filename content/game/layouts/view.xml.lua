@@ -1,23 +1,38 @@
 local K = require("kompot:kompot")
 local UI = require("kompot:ui")
 local Hover = require("game:hover")
+local Build = require("game:build")
 local handle
 
 function on_open()
     handle = K.mount({
         target = document.root,
         theme = UI.DEFAULT,
+        interactive = true,
         content = function()
             K.Column({ modifier = K.M:padding(8) }, function()
                 UI.Panel({ title = "Пам Пам Пам", width = 340 }, function()
-                    local caption = K.poll(function() return Hover.caption() end)
-                    K.Text(caption)
+                    local tool = K.poll(function() return Build.tool or 0 end)
+                    K.Column({ spacing = 4 }, function()
+                        for i, block_name in ipairs(Build.tools) do
+                            local index = i
+                            UI.Button({
+                                text = i .. " " .. block.caption(block.index(block_name)),
+                                selected = tool == i,
+                                modifier = K.M:fill_max_width(),
+                                on_click = function() Build.choose(index) end
+                            })
+                        end
+                        K.Text(K.poll(function() return Build.tool and Build.caption() or Hover.caption() end))
+                    end)
                 end)
             end)
         end
     })
+    Build.ui_handle = handle
 end
 
 function on_close()
+    Build.ui_handle = nil
     if handle then handle:dispose(); handle = nil end
 end

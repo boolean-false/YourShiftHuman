@@ -28,7 +28,7 @@ local function selected()
     return object
 end
 
-local function clear_flows()
+function M.clear_flows()
     Conveyor.clear()
     Press.clear_process()
     Smelter.clear_process()
@@ -91,7 +91,7 @@ function M.rotate(pid)
         return
     end
     Hover.message = nil
-    clear_flows()
+    M.clear_flows()
     if x == object.x and z == object.z then
         block.set_rotation(x, object.y, z, rotation)
     else
@@ -119,7 +119,7 @@ function M.remove()
         Hover.message = why;
         return
     end
-    clear_flows()
+    M.clear_flows()
     local controller = controllers[block.name(object.id)]
     if controller then
         controller.remove_model(object.x, object.y, object.z)

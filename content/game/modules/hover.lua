@@ -1,6 +1,6 @@
 local M = {}
 local Camera = require("game:camera")
-local cursor
+local cursors = {}
 
 local sizes = {
     ["game:source"] = 1,
@@ -40,9 +40,41 @@ end
 
 function M.hide()
     M.cell = nil
-    if cursor and entities.exists(cursor:get_uid()) then
-        cursor.skeleton:set_visible(false)
+    for _, cursor in ipairs(cursors) do
+        if entities.exists(cursor:get_uid()) then
+            cursor.skeleton:set_visible(false)
+        end
     end
+end
+
+local function show(index, position, size, rotation, valid)
+    local cursor = cursors[index]
+    if not cursor or not entities.exists(cursor:get_uid()) then
+        cursor = entities.spawn("game:build_cursor", position)
+        cursor.skeleton:set_interpolated(false)
+        cursors[index] = cursor
+    end
+    cursor.skeleton:set_color(valid and { .5, 1.8, 1.4 } or { 2, .3, .2 })
+    cursor.skeleton:set_visible(true)
+    cursor.transform:set_pos(position)
+    cursor.transform:set_size({ size, 1, size })
+    cursor.transform:set_rot(mat4.rotate({ 0, 1, 0 }, rotation * 90 - 90))
+end
+
+local function hide_from(index)
+    for i = index, #cursors do
+        if entities.exists(cursors[i]:get_uid()) then
+            cursors[i].skeleton:set_visible(false)
+        end
+    end
+end
+
+-- Рамки пути временные
+function M.preview(cells, rotation, valid)
+    for i, cell in ipairs(cells) do
+        show(i, { cell.x + .5, cell.y + .8, cell.z + .5 }, 1, rotation, valid)
+    end
+    hide_from(#cells + 1)
 end
 
 -- Наводимся на клетку пола
@@ -84,22 +116,17 @@ function M.update(clicked)
     local dx, _, dz = block.get_Z(x, y, z)
     local half = (size - 1) / 2
     local position = { x + .5 + (right_x + dx) * half, Camera.y + .8, z + .5 + (right_z + dz) * half }
-    if not cursor or not entities.exists(cursor:get_uid()) then
-        cursor = entities.spawn("game:build_cursor", position)
-        cursor.skeleton:set_interpolated(false)
-        cursor.skeleton:set_color({ .5, 1.8, 1.4 })
-    end
-    cursor.skeleton:set_visible(true)
-    cursor.transform:set_pos(position)
-    cursor.transform:set_size({ size, 1, size })
-    cursor.transform:set_rot(mat4.rotate({ 0, 1, 0 }, rotation * 90 - 90))
+    show(1, position, size, rotation, true)
+    hide_from(2)
 end
 
 function M.close()
-    if cursor and entities.exists(cursor:get_uid()) then
-        cursor:despawn()
+    for _, cursor in ipairs(cursors) do
+        if entities.exists(cursor:get_uid()) then
+            cursor:despawn()
+        end
     end
-    cursor = nil
+    cursors = {}
     M.cell = nil
     M.clear_selection()
 end

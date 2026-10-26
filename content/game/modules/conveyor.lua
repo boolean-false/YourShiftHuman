@@ -13,8 +13,12 @@ local speed = 1.5 -- Блоков в сек
 -- Оба станка принимают продукцию через свои порты.
 local function processor_at(x, y, z)
     local id = block.get(x, y, z)
-    if id == block.index(Press.block_name) then return Press end
-    if id == block.index(Smelter.block_name) then return Smelter end
+    if id == block.index(Press.block_name) then
+        return Press
+    end
+    if id == block.index(Smelter.block_name) then
+        return Smelter
+    end
 end
 
 -- Проверяем, что в этой клетке уже конвеер
@@ -46,7 +50,9 @@ local function feeds_from(x, y, z, offset_x, offset_z)
         return Source.is_output(nx, y, nz, -offset_x, -offset_z)
     end
     local processor = processor_at(nx, y, nz)
-    if processor then return processor.is_output(nx, y, nz, -offset_x, -offset_z) end
+    if processor then
+        return processor.is_output(nx, y, nz, -offset_x, -offset_z)
+    end
     if id ~= block.index("game:conveyor") and
             id ~= block.index("game:merger") then
         return false
@@ -173,8 +179,34 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
         end)
     end
     local processor = processor_at(x, y, z)
-    if processor then return processor.can_accept(x, y, z, dx, dz, item_name) end
+    if processor then
+        return processor.can_accept(x, y, z, dx, dz, item_name)
+    end
     return id == block.index("game:sink")
+end
+
+-- Проверяем расположение входа
+function M.is_input(x, y, z, dx, dz)
+    local id = block.get(x, y, z)
+    if id == -1 then
+        return false
+    end
+    if id == block.index("game:sink") then
+        return true
+    end
+    if id == block.index("game:merger") then
+        return Merger.is_input(x, y, z, dx, dz)
+    end
+    if id == block.index("game:splitter") or id == block.index("game:filter") then
+        return Utils.same_direction(x, y, z, dx, dz)
+    end
+    local processor = processor_at(x, y, z)
+    if processor then
+        local px, py, pz = processor.port(x, y, z, false)
+        local ox, oy, oz = block.seek_origin(x, y, z)
+        return x == px and y == py and z == pz and Utils.same_direction(ox, oy, oz, dx, dz)
+    end
+    return false
 end
 
 -- Добавляем предмет, если секция свободна

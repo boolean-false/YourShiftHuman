@@ -2,7 +2,9 @@ local M = {}
 local Camera = require("game:camera")
 local Hover = require("game:hover")
 local Actions = require("game:selection_actions")
+local Build = require("game:build")
 local disabled_bindings = {}
+local tool_keys = {}
 
 local function floor_at(x, y, z)
     for py = math.floor(y), math.max(0, math.floor(y) - 64), -1 do
@@ -30,12 +32,17 @@ end
 
 -- Включаем вид сверху из текущей позиции обычного игрока.
 local function enter()
+    Build.cancel()
     Hover.close()
     M.left_down = input.is_pressed("mouse:left")
     M.right_down = input.is_pressed("mouse:right")
     M.rotate_down = input.is_pressed("key:r")
     M.delete_down = input.is_pressed("key:delete")
     M.backspace_down = input.is_pressed("key:backspace")
+    for i = 1, #Build.tools do
+        tool_keys[i] = input.is_pressed("key:" .. i)
+    end
+
     local pid = M.pid
     local x, y, z = player.get_pos(pid)
     M.position = { x, y, z }
@@ -87,13 +94,23 @@ function M.update()
     local rotate_pressed = rotate and not M.rotate_down
     local delete_pressed = (delete and not M.delete_down) or (backspace and not M.backspace_down)
     M.rotate_down, M.delete_down, M.backspace_down = rotate, delete, backspace
+    local tool_pressed
+    for i = 1, #Build.tools do
+        local down = input.is_pressed("key:" .. i)
+        if down and not tool_keys[i] then
+            tool_pressed = i
+        end
+        tool_keys[i] = down
+    end
 
     if not M.opened or hud.is_paused() or menu.page ~= "" then
+        Build.cancel_path()
         Hover.hide()
         return
     end
     if not hud.is_open("game:view_input") then
         if hud.is_inventory_open() then
+            Build.cancel_path()
             Hover.hide()
             return
         end
@@ -102,23 +119,34 @@ function M.update()
 
     hide_player()
 
+    if tool_pressed then
+        Build.choose(tool_pressed)
+    end
     if cancel then
+        Build.cancel()
         Hover.clear_selection()
     end
-    if delete_pressed then
+    if delete_pressed and not Build.tool then
         Actions.remove()
     elseif rotate_pressed then
-        Actions.rotate(M.pid)
+        if Build.tool then
+            Build.rotate()
+        else
+            Actions.rotate(M.pid)
+        end
     end
 
     local mouse = input.get_mouse_pos()
-    local over_ui = mouse[1] < 356 and mouse[2] < 160
+    local over_ui = Build.ui_handle and Build.ui_handle:is_over(mouse[1], mouse[2]) or false
     Camera.update(math.min(.1, time.delta()), not over_ui)
     local view = gui.get_viewport()
     if over_ui or mouse[1] < 0 or mouse[2] < 0 or mouse[1] >= view[1] or mouse[2] >= view[2] then
+        Build.pointer(nil, left, true, M.pid)
         Hover.hide()
     else
-        Hover.update(clicked and not right)
+        Hover.update(clicked and not right and not Build.tool)
+        Build.pointer(Hover.cell, left and not right, Hover.cell == nil, M.pid)
+        Build.preview(Hover.cell)
     end
     player.set_pos(M.pid, Camera.x, Camera.y + 2, Camera.z)
     player.set_camera(M.pid, M.camera)
@@ -129,6 +157,7 @@ local function leave()
         return
     end
     M.opened = false
+    Build.cancel()
     Hover.close()
     hud.close("game:view")
     hud.close("game:view_input")
@@ -180,6 +209,9 @@ function M.open(pid)
         end
         if hud.is_paused() then
             hud.resume()
+        elseif Build.tool or Hover.selected then
+            Build.cancel()
+            Hover.clear_selection()
         else
             hud.pause()
         end
