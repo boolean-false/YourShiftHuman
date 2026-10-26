@@ -162,15 +162,57 @@ local function commit(cells, pid)
     M.message = nil
 end
 
-function M.pointer(cell, down, blocked, pid)
-    local clicked = down and not M.down
-    M.down = down
-    if not M.tool or blocked or not cell then
+local function extend(cell)
+    local last = M.path[#M.path]
+    if not last then
+        M.path[1] = { x = cell.x, y = cell.y, z = cell.z }
         return
     end
-    if clicked then
-        M.message = nil
-        commit({ cell }, pid)
+    local steps = 0
+    while (last.x ~= cell.x or last.z ~= cell.z) and steps < 64 do
+        steps = steps + 1
+        local x, z = last.x, last.z
+        if math.abs(cell.x - x) >= math.abs(cell.z - z) then
+            x = x + (cell.x > x and 1 or -1)
+        else
+            z = z + (cell.z > z and 1 or -1)
+        end
+        local previous = M.path[#M.path - 1]
+        if previous and previous.x == x and previous.z == z then
+            table.remove(M.path)
+        else
+            M.path[#M.path + 1] = { x = x, y = cell.y, z = z }
+        end
+        last = M.path[#M.path]
+    end
+end
+
+function M.pointer(cell, down, blocked, pid)
+    local clicked = down and not M.down
+    local released = not down and M.down
+    M.down = down
+    if not M.tool then
+        return
+    end
+    if not blocked and cell then
+        if M.tool == 1 then
+            if clicked then
+                M.message = nil;
+                M.cancel_path()
+            end
+            if down and (clicked or #M.path > 0) then
+                extend(cell)
+            end
+        elseif clicked then
+            M.message = nil
+            commit({ cell }, pid)
+        end
+    end
+    if released and #M.path > 0 then
+        if not blocked then
+            commit(M.path, pid)
+        end
+        M.cancel_path()
     end
 end
 
