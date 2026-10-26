@@ -18,7 +18,7 @@ function on_block_removed(x, y, z)
 end
 
 function on_block_tick(x, y, z, tps)
-    if block.is_segment(x, y, z) then
+    if Production.paused or block.is_segment(x, y, z) then
         return
     end
     local dx, dz = Utils.direction(x, y, z)
