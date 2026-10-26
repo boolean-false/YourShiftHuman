@@ -1,6 +1,7 @@
 local M = {}
 local Press = require("game:press")
 local Smelter = require("game:smelter")
+local Assembler = require("game:assembler")
 local Source = require("game:source")
 local Products = require("game:products")
 local Utils = require("game:utils")
@@ -10,14 +11,20 @@ local Filter = require("game:filter")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 
--- Оба станка принимают продукцию через свои порты.
+-- Станки принимают продукцию через свои порты.
 local function processor_at(x, y, z)
     local id = block.get(x, y, z)
+
     if id == block.index(Press.block_name) then
         return Press
     end
+
     if id == block.index(Smelter.block_name) then
         return Smelter
+    end
+
+    if id == block.index(Assembler.block_name) then
+        return Assembler
     end
 end
 
@@ -202,9 +209,7 @@ function M.is_input(x, y, z, dx, dz)
     end
     local processor = processor_at(x, y, z)
     if processor then
-        local px, py, pz = processor.port(x, y, z, false)
-        local ox, oy, oz = block.seek_origin(x, y, z)
-        return x == px and y == py and z == pz and Utils.same_direction(ox, oy, oz, dx, dz)
+        return processor.is_input(x, y, z, dx, dz)
     end
     return false
 end

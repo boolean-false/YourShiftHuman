@@ -23,6 +23,7 @@ function on_world_tick()
     end
     Smelter.tick()
     Press.tick()
+    Assembler.tick()
     Conveyor.tick()
 end
 

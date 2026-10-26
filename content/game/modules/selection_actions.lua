@@ -32,6 +32,7 @@ function M.clear_flows()
     Conveyor.clear()
     Press.clear_process()
     Smelter.clear_process()
+    Assembler.clear_process()
 end
 
 function M.set_press_recipe(recipe)

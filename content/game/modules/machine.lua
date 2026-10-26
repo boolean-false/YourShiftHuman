@@ -10,16 +10,39 @@ function M.create(config)
     local process_ticks = config.process_ticks or 20
 
     -- Координаты порта считаем от главного блока с учётом поворота
-    function machine.port(x, y, z, output)
+    function machine.port(x, y, z, output, second)
         x, y, z = block.seek_origin(x, y, z)
         if block.get(x, y, z) ~= block.index(config.block_name) then
             return nil
         end
         local right_x, _, right_z = block.get_X(x, y, z)
         local dx, dz = Utils.direction(x, y, z)
-        local side = size - 1
-        local forward = output and side or 0
+        local side = second and 0 or size - 1
+        local forward = output and size - 1 or 0
         return x + right_x * side + dx * forward, y, z + right_z * side + dz * forward
+    end
+
+    function machine.is_input(x, y, z, dx, dz)
+        local ox, oy, oz = block.seek_origin(x, y, z)
+
+        if not Utils.same_direction(ox, oy, oz, dx, dz) then
+            return false
+        end
+
+        local px, py, pz = machine.port(x, y, z, false)
+
+        if x == px and y == py and z == pz then
+            return true
+        end
+
+        if config.two_inputs then
+            px, py, pz = machine.port(x, y, z, false, true)
+            return x == px and
+                    y == py and
+                    z == pz
+        end
+
+        return false
     end
 
     function machine.is_output(x, y, z, dx, dz)
@@ -116,6 +139,9 @@ function M.create(config)
                 model.entity.transform:set_rot(mat4.rotate({ 0, 1, 0 }, block.get_rotation(x, y, z) * 90 - 90))
                 model.entity.skeleton:reset_pose()
                 local state = processing[key]
+                if config.get_process then
+                    state = config.get_process(x, y, z)
+                end
                 local track = config.animation and animation.get_track(config.animation)
                 if state and state.ticks > 0 and state.ticks < process_ticks and track then
                     track.func(model.entity.skeleton, (state.ticks / 20) % track.duration)

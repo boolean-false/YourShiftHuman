@@ -1,0 +1,17 @@
+@configure fps 24 duration 2
+
+@move bone tool by x curve linear {
+	@key frame 0 value -0.3125
+	@key frame 12 value 0.3125
+	@key frame 24 value 0.3125
+	@key frame 36 value -0.3125
+	@key frame 48 value -0.3125
+}
+
+@move bone tool by y curve linear {
+	@key frame 0 value 0
+	@key frame 12 value -0.075
+	@key frame 24 value 0
+	@key frame 36 value -0.075
+	@key frame 48 value 0
+}
