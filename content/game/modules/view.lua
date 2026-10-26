@@ -3,6 +3,7 @@ local Camera = require("game:camera")
 local Hover = require("game:hover")
 local Actions = require("game:selection_actions")
 local Build = require("game:build")
+local Production = require("game:production")
 local disabled_bindings = {}
 local tool_keys = {}
 
@@ -39,6 +40,7 @@ local function enter()
     M.rotate_down = input.is_pressed("key:r")
     M.delete_down = input.is_pressed("key:delete")
     M.backspace_down = input.is_pressed("key:backspace")
+    M.space_down = input.is_pressed("key:space")
     for i = 1, #Build.tools do
         tool_keys[i] = input.is_pressed("key:" .. i)
     end
@@ -94,6 +96,9 @@ function M.update()
     local rotate_pressed = rotate and not M.rotate_down
     local delete_pressed = (delete and not M.delete_down) or (backspace and not M.backspace_down)
     M.rotate_down, M.delete_down, M.backspace_down = rotate, delete, backspace
+    local space = input.is_pressed("key:space")
+    local space_pressed = space and not M.space_down
+    M.space_down = space
     local tool_pressed
     for i = 1, #Build.tools do
         local down = input.is_pressed("key:" .. i)
@@ -119,6 +124,9 @@ function M.update()
 
     hide_player()
 
+    if space_pressed then
+        Production.toggle()
+    end
     if tool_pressed then
         Build.choose(tool_pressed)
     end

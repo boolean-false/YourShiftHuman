@@ -2,6 +2,7 @@ local K = require("kompot:kompot")
 local UI = require("kompot:ui")
 local Hover = require("game:hover")
 local Build = require("game:build")
+local Production = require("game:production")
 local handle
 
 function on_open()
@@ -13,14 +14,20 @@ function on_open()
             K.Column({ modifier = K.M:padding(8) }, function()
                 UI.Panel({ title = "Пам Пам Пам", width = 340 }, function()
                     local tool = K.poll(function() return Build.tool or 0 end)
+                    local paused = K.poll(function() return Production.paused end)
                     K.Column({ spacing = 4 }, function()
+                        if paused then
+                            K.Text("ПАЗУЗА")
+                        end
                         for i, block_name in ipairs(Build.tools) do
                             local index = i
                             UI.Button({
                                 text = i .. " " .. block.caption(block.index(block_name)),
                                 selected = tool == i,
                                 modifier = K.M:fill_max_width(),
-                                on_click = function() Build.choose(index) end
+                                on_click = function()
+                                    if not input.is_pressed("key:space") then Build.choose(index) end
+                                end
                             })
                         end
                         K.Text(K.poll(function() return Build.tool and Build.caption() or Hover.caption() end))
