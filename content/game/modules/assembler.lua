@@ -79,6 +79,7 @@ function M.tick()
                 local dx, dz = Utils.direction(x, y, z)
                 if Conveyor.feed(px + dx, py, pz + dz, dx, dz, "gearbox") then
                     state.ready = false
+                    state.ticks = 0
                 end
             end
         end
