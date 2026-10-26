@@ -34,6 +34,19 @@ function M.clear_flows()
     Smelter.clear_process()
 end
 
+function M.set_press_recipe(recipe)
+    local object = selected()
+
+    if not object or object.id ~= block.index(Press.block_name) then
+        return
+    end
+
+    if Press.set_recipe(object.x, object.y, object.z, recipe) then
+        M.clear_flows()
+        Hover.message = nil
+    end
+end
+
 local function corner(object, rotation)
     local sx, _, sz = block.get_size(object.id)
     local rx, _, rz = block.get_X(object.id, rotation)

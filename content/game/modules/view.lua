@@ -124,6 +124,23 @@ function M.update()
 
     hide_player()
 
+    if Hover.press_closed then
+        Hover.press_closed = false
+        Hover.hide()
+        return
+    end
+    if Hover.press_open then
+        local object = Hover.selected
+        if not object or block.get(object.x, object.y, object.z) ~= object.id then
+            Hover.clear_selection()
+        elseif cancel then
+            Hover.close_press()
+        end
+        Build.cancel_path()
+        Hover.hide()
+        return
+    end
+
     if space_pressed then
         Production.toggle()
     end
@@ -217,6 +234,8 @@ function M.open(pid)
         end
         if hud.is_paused() then
             hud.resume()
+        elseif Hover.press_open then
+            Hover.close_press()
         elseif Build.tool or Hover.selected then
             Build.cancel()
             Hover.clear_selection()

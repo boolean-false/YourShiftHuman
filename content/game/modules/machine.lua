@@ -37,8 +37,16 @@ function M.create(config)
 
     function machine.accept(x, y, z, item_name)
         x, y, z = block.seek_origin(x, y, z)
+        local output = recipes[item_name]
+        if config.get_output then
+            output = config.get_output(x, y, z, item_name)
+        end
         processing[Utils.key(x, y, z)] = {
-            x = x, y = y, z = z, output = recipes[item_name], ticks = 0
+            x = x,
+            y = y,
+            z = z,
+            output = output,
+            ticks = 0
         }
     end
 
