@@ -7,6 +7,7 @@ local Assembler = require("game:assembler")
 local Filter = require("game:filter")
 local Delivery = require("game:delivery")
 local Mission = require("game:mission")
+local Production = require("game:production")
 
 local controllers = {
     ["game:press"] = Press,
@@ -15,6 +16,9 @@ local controllers = {
 }
 
 local function selected()
+    if Mission.completed then
+        return nil
+    end
     local object = Hover.selected
     if not object then
         return nil
@@ -27,11 +31,23 @@ local function selected()
 end
 
 function M.clear_flows()
+    Mission.reset_check()
     Delivery.clear()
     Conveyor.clear()
     Press.clear_process()
     Smelter.clear_process()
     Assembler.clear_process()
+end
+
+function M.next_mission()
+    if not Mission.advance() then
+        return
+    end
+    local Build = require("game:build")
+    Build.cancel()
+    Hover.clear_selection()
+    M.clear_flows()
+    Production.paused = true
 end
 
 function M.set_press_recipe(recipe)

@@ -4,6 +4,7 @@ local Hover = require("game:hover")
 local Actions = require("game:selection_actions")
 local Build = require("game:build")
 local Production = require("game:production")
+local Mission = require("game:mission")
 local disabled_bindings = {}
 local tool_keys = {}
 
@@ -123,6 +124,13 @@ function M.update()
     end
 
     hide_player()
+
+    if Mission.completed then
+        Build.cancel()
+        Hover.clear_selection()
+        Hover.hide()
+        return
+    end
 
     if Hover.dialog_closed then
         Hover.dialog_closed = false

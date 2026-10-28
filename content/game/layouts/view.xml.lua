@@ -26,6 +26,9 @@ function on_open()
                         local paused = K.poll(function()
                             return Production.paused
                         end)
+                        local completed = K.poll(function()
+                            return Mission.completed
+                        end)
                         K.Column({ spacing = 4 }, function()
                             if paused then
                                 K.Text("ПАЗУЗА")
@@ -35,7 +38,7 @@ function on_open()
                                 UI.Button({
                                     text = i .. " " .. block.caption(block.index(block_name)),
                                     selected = tool == i,
-                                    enabled = Mission.available(block_name),
+                                    enabled = not completed and Mission.available(block_name),
                                     modifier = K.M:fill_max_width(),
                                     on_click = function()
                                         if not input.is_pressed("key:space") then

@@ -5,8 +5,10 @@ local Smelter = require("game:smelter")
 local Source = require("game:source")
 local Production = require("game:production")
 local Delivery = require("game:delivery")
+local Mission = require("game:mission")
 
 function on_world_open()
+    Mission.open()
     Delivery.clear()
     Production.paused = true
     world.set_day_time(.5)
@@ -20,7 +22,7 @@ function on_world_open()
 end
 
 function on_world_tick()
-    if Production.paused then
+    if Production.paused or Mission.completed then
         return
     end
     Delivery.tick()
@@ -28,6 +30,7 @@ function on_world_tick()
     Press.tick()
     Assembler.tick()
     Conveyor.tick()
+    Mission.tick()
 end
 
 function on_world_quit()

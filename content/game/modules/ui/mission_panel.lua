@@ -3,6 +3,7 @@ local UI = require("kompot:ui")
 local Mission = require("game:mission")
 local Products = require("game:products")
 local Delivery = require("game:delivery")
+local Actions = require("game:selection_actions")
 local parts = { "gear", "rod", "gearbox" }
 
 return K.component(function()
@@ -20,6 +21,22 @@ return K.component(function()
                                 .. mission.goals[part] .. " шт/мин"
                     end))
                 end
+            end
+
+            K.Text(K.poll(function()
+                return Mission.status()
+            end))
+
+            local completed = K.poll(function()
+                return Mission.completed
+            end)
+
+            if completed and not Mission.is_last() then
+                UI.Button({
+                    text = "Следующее задание",
+                    modifier = K.M:fill_max_width(),
+                    on_click = Actions.next_mission
+                })
             end
         end)
     end)
