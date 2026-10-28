@@ -23,6 +23,7 @@ function on_world_tick()
     if Production.paused then
         return
     end
+    Delivery.tick()
     Smelter.tick()
     Press.tick()
     Assembler.tick()
