@@ -46,8 +46,10 @@ function M.open()
     if not file.isfile(path) then
         return
     end
-    local data = json.parse(file.read(path))
-    if type(data) ~= "table" or data.version ~= 1 then
+    local ok, data = pcall(function()
+        return json.parse(file.read(path))
+    end)
+    if not ok or type(data) ~= "table" or data.version ~= 1 then
         return
     end
     if type(data.index) ~= "number" or not Missions[data.index] or
