@@ -5,6 +5,7 @@ local Press = require("game:press")
 local Smelter = require("game:smelter")
 local Assembler = require("game:assembler")
 local Filter = require("game:filter")
+local Delivery = require("game:delivery")
 
 local controllers = {
     ["game:press"] = Press,
@@ -30,6 +31,7 @@ local function selected()
 end
 
 function M.clear_flows()
+    Delivery.clear()
     Conveyor.clear()
     Press.clear_process()
     Smelter.clear_process()

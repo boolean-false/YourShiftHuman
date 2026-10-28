@@ -4,6 +4,7 @@ local Smelter = require("game:smelter")
 local Assembler = require("game:assembler")
 local Source = require("game:source")
 local Products = require("game:products")
+local Delivery = require("game:delivery")
 local Utils = require("game:utils")
 local Splitter = require("game:splitter")
 local Merger = require("game:merger")
@@ -304,6 +305,8 @@ function M.tick()
                             if is_sink or processor then
                                 if processor then
                                     processor.accept(nx, y, nz, belt_item.item_name)
+                                elseif is_sink then
+                                    Delivery.receive(belt_item.item_name)
                                 end
                                 remove_visual(belt_item)
                                 table.remove(items, i)

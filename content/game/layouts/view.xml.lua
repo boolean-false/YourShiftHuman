@@ -5,6 +5,7 @@ local Build = require("game:build")
 local Production = require("game:production")
 local PressDialog = require("game:ui/press_dialog")
 local FilterDialog = require("game:ui/filter_dialog")
+local DeliveryPanel = require("game:ui/delivery_panel")
 local handle
 
 function on_open()
@@ -14,7 +15,7 @@ function on_open()
         interactive = true,
         content = function()
 
-            K.Column({ modifier = K.M:padding(8) }, function()
+            K.Column({ spacing = 8, modifier = K.M:padding(8) }, function()
                 UI.Panel({ title = "Пам Пам Пам", width = 340 }, function()
                     local tool = K.poll(function()
                         return Build.tool or 0
@@ -44,6 +45,7 @@ function on_open()
                         end))
                     end)
                 end)
+                DeliveryPanel()
             end)
 
             FilterDialog()
