@@ -266,10 +266,10 @@ function M.tick()
             remove_visual(belt_item)
             table.remove(items, i)
         else
-            local dx, dz, side
+            local dx, dz, slot
             local from_splitter = id == block.index("game:splitter")
             if from_splitter then
-                dx, dz, side = Splitter.choose_output(x, y, z, function(out_x, out_z)
+                dx, dz, slot = Splitter.choose_output(x, y, z, function(out_x, out_z)
                     return can_receive(x + out_x, y, z + out_z, out_x, out_z, belt_item.item_name, belt_item)
                 end)
             elseif id == block.index("game:filter") then
@@ -297,7 +297,7 @@ function M.tick()
                         belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
                         if belt_item.p >= 1 then
                             if from_splitter then
-                                Splitter.sent(x, y, z, side)
+                                Splitter.sent(x, y, z, slot)
                             end
                             if block.get(nx, y, nz) == block.index("game:merger") then
                                 Merger.received(nx, y, nz, dx, dz)

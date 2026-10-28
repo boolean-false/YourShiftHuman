@@ -5,6 +5,7 @@ local Build = require("game:build")
 local Production = require("game:production")
 local PressDialog = require("game:ui/press_dialog")
 local FilterDialog = require("game:ui/filter_dialog")
+local SplitterDialog = require("game:ui/splitter_dialog")
 local DeliveryPanel = require("game:ui/delivery_panel")
 local MissionPanel = require("game:ui/mission_panel")
 local Mission = require("game:mission")
@@ -59,6 +60,7 @@ function on_open()
 
             FilterDialog()
             PressDialog()
+            SplitterDialog()
 
         end
     })

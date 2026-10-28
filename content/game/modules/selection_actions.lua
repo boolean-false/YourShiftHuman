@@ -5,6 +5,7 @@ local Press = require("game:press")
 local Smelter = require("game:smelter")
 local Assembler = require("game:assembler")
 local Filter = require("game:filter")
+local Splitter = require("game:splitter")
 local Delivery = require("game:delivery")
 local Mission = require("game:mission")
 local Production = require("game:production")
@@ -70,6 +71,17 @@ function M.cycle_filter()
     end
     local index = Filter.get_type(object.x, object.y, object.z) % #Filter.parts + 1
     if Filter.set_type(object.x, object.y, object.z, index) then
+        M.clear_flows()
+        Hover.message = nil
+    end
+end
+
+function M.set_splitter_ratio(index)
+    local object = selected()
+    if not object or object.id ~= block.index("game:splitter") then
+        return
+    end
+    if Splitter.set_ratio(object.x, object.y, object.z, index) then
         M.clear_flows()
         Hover.message = nil
     end
