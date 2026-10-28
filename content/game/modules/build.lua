@@ -2,6 +2,7 @@ local Hover = require("game:hover")
 local Conveyor = require("game:conveyor")
 local Actions = require("game:selection_actions")
 local Utils = require("game:utils")
+local Mission = require("game:mission")
 
 local M = {
     rotation = 1,
@@ -33,6 +34,10 @@ function M.choose(index)
     if hud.is_paused() or menu.page ~= "" then
         return
     end
+    if not Mission.available(M.tools[index]) then
+        Hover.message = "Этот транспорт недоступен в задании"
+        return
+    end
     if M.tool == index then
         M.tool = nil
     else
@@ -54,12 +59,17 @@ function M.caption()
     end
     local caption = block.caption(block.index(M.tools[M.tool]))
     local message = M.message or M.reason
-    if message then caption = caption .. " · " .. message end
+    if message then
+        caption = caption .. " · " .. message
+    end
     return caption
 end
 
 -- Проверяем весь путь до изменения мира, чтоб не строить его частично
 local function can_place(cells)
+    if not Mission.available(M.tools[M.tool]) then
+        return false, "Этот транспорт недоступен в задании"
+    end
     local belt = block.index(M.tools[1])
     local seen = {}
     for i, cell in ipairs(cells) do
@@ -108,10 +118,15 @@ local function path_rotations(cells)
         elseif previous then
             dx, dz = cell.x - previous.x, cell.z - previous.z
         end
-        if dx > 0 then rotation = 1
-        elseif dx < 0 then rotation = 3
-        elseif dz > 0 then rotation = 0
-        elseif dz < 0 then rotation = 2 end
+        if dx > 0 then
+            rotation = 1
+        elseif dx < 0 then
+            rotation = 3
+        elseif dz > 0 then
+            rotation = 0
+        elseif dz < 0 then
+            rotation = 2
+        end
 
         if not next_cell and not existing then
             local count, port_rotation = 0, rotation
@@ -122,7 +137,9 @@ local function path_rotations(cells)
                     port_rotation = turn
                 end
             end
-            if count == 1 then rotation = port_rotation end
+            if count == 1 then
+                rotation = port_rotation
+            end
         end
         result[i] = rotation
     end

@@ -6,6 +6,7 @@ local Smelter = require("game:smelter")
 local Assembler = require("game:assembler")
 local Filter = require("game:filter")
 local Delivery = require("game:delivery")
+local Mission = require("game:mission")
 
 local controllers = {
     ["game:press"] = Press,
@@ -20,11 +21,6 @@ local function selected()
     end
     if block.get(object.x, object.y, object.z) ~= object.id then
         Hover.clear_selection()
-        return nil
-    end
-    local name = block.name(object.id)
-    if name == "game:source" or name == "game:sink" then
-        Hover.message = "Оборудование закреплено"
         return nil
     end
     return object
@@ -106,7 +102,14 @@ end
 
 function M.rotate(pid)
     local object = selected()
-    if not object or block.get_rotation_profile(object.id) ~= "pane" then
+    if not object then
+        return
+    end
+    if Mission.locked(block.name(object.id)) then
+        Hover.message = "Оборудование закреплено"
+        return
+    end
+    if block.get_rotation_profile(object.id) ~= "pane" then
         return
     end
     local old = block.get_rotation(object.x, object.y, object.z)
@@ -140,6 +143,10 @@ end
 function M.remove()
     local object = selected()
     if not object then
+        return
+    end
+    if Mission.locked(block.name(object.id)) then
+        Hover.message = "Оборудование закреплено"
         return
     end
     local rotation = block.get_rotation(object.x, object.y, object.z)
