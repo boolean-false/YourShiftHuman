@@ -33,7 +33,12 @@ function on_world_tick()
     Mission.tick()
 end
 
+function on_world_save()
+    Mission.save()
+end
+
 function on_world_quit()
+    Mission.save()
     Delivery.clear()
     Source.clear()
     Smelter.clear()

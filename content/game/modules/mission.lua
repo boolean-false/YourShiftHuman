@@ -41,6 +41,31 @@ end
 function M.open()
     M.index = 1
     M.reset_check()
+
+    local path = pack.data_file("game", "mission.json")
+    if not file.isfile(path) then
+        return
+    end
+    local data = json.parse(file.read(path))
+    if type(data) ~= "table" or data.version ~= 1 then
+        return
+    end
+    if type(data.index) ~= "number" or not Missions[data.index] or
+            type(data.completed) ~= "boolean" then
+        return
+    end
+    M.index = data.index
+    M.completed = data.completed
+end
+
+-- Сохраняем только задание и результат
+function M.save()
+    local path = pack.data_file("game", "mission.json")
+    file.write(path, json.tostring({
+        version = 1,
+        index = M.index,
+        completed = M.completed
+    }))
 end
 
 function M.is_last()
