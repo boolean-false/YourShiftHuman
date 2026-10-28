@@ -22,6 +22,7 @@ function M.set_ratio(x, y, z, index)
         return false
     end
     block.set_user_bits(x, y, z, 0, 2, index - 1)
+    next_slot[Utils.key(x, y, z)] = nil
     return true
 end
 
