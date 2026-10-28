@@ -9,6 +9,7 @@ local SplitterDialog = require("game:ui/splitter_dialog")
 local DeliveryPanel = require("game:ui/delivery_panel")
 local MissionPanel = require("game:ui/mission_panel")
 local Mission = require("game:mission")
+local Actions = require("game:selection_actions")
 local handle
 
 function on_open()
@@ -48,6 +49,16 @@ function on_open()
                                     end
                                 })
                             end
+                            UI.Button({
+                                text = "Очистить потоки",
+                                enabled = not completed,
+                                modifier = K.M:fill_max_width(),
+                                on_click = function()
+                                    if not input.is_pressed("key:space") then
+                                        Actions.flush()
+                                    end
+                                end
+                            })
                             K.Text(K.poll(function()
                                 return Build.tool and Build.caption() or Hover.caption()
                             end))

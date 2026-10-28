@@ -40,6 +40,16 @@ function M.clear_flows()
     Assembler.clear_process()
 end
 
+function M.flush()
+    if Mission.completed or hud.is_paused() or menu.page ~= "" then
+        return
+    end
+    local Build = require("game:build")
+    Build.cancel_path()
+    M.clear_flows()
+    Hover.message = nil
+end
+
 function M.next_mission()
     if not Mission.advance() then
         return
