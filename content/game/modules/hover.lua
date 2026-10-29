@@ -115,7 +115,8 @@ function M.update(clicked)
         M.dialog_open = M.selected ~= nil and
                 (M.selected.id == block.index("game:press") or
                         M.selected.id == block.index("game:filter") or
-                        M.selected.id == block.index("game:splitter"))
+                        M.selected.id == block.index("game:splitter") or
+                        M.selected.id == block.index("game:sink"))
     end
     if M.selected then
         x, y, z = M.selected.x, M.selected.y, M.selected.z

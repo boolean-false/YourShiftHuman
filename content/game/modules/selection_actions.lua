@@ -10,6 +10,8 @@ local Delivery = require("game:delivery")
 local Mission = require("game:mission")
 local Production = require("game:production")
 local Room = require("game:room")
+local Sink = require("game:sink")
+local Session = require("game:session")
 
 local controllers = {
     ["game:press"] = Press,
@@ -95,6 +97,17 @@ function M.set_splitter_ratio(index)
         return
     end
     if Splitter.set_ratio(object.x, object.y, object.z, index) then
+        M.clear_flows()
+        Hover.message = nil
+    end
+end
+
+function M.cycle_sink()
+    if not Session.editing or Session.busy then return end
+    local object = selected()
+    if not object or object.id ~= block.index("game:sink") then return end
+    local index = Sink.get_type(object.x, object.y, object.z) % #Sink.types + 1
+    if Sink.set_type(object.x, object.y, object.z, index) then
         M.clear_flows()
         Hover.message = nil
     end
