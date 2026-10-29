@@ -58,8 +58,10 @@ end
 
 function M.open()
     M.busy, M.request, M.message = false, nil, nil
+    M.menu_open, M.had_world, M.pause_open = false, true, false
+    M.menu_blocked = false
     M.managed = world.get_generator() == "game:room"
-    M.editing = M.managed
+    M.editing = M.managed and pack.is_installed("editor")
     M.index = valid_index(world.get_seed()) and world.get_seed() or 1
     local marker = read_json("world:data/game/play.json")
     if marker and marker.version == 1 and valid_index(marker.index) then
@@ -70,18 +72,22 @@ function M.open()
 end
 
 function M.queue(action, index)
-    if M.busy or not M.managed then
+    if M.busy or (world.is_open() and not M.managed) then
         return false
     end
+    index = index or M.index
     if not valid_index(index) then
         return false
     end
-    if action ~= "play" and action ~= "edit" and action ~= "export" then
+    if action ~= "play" and action ~= "edit" and action ~= "export" and action ~= "continue" and
+            action ~= "menu" and action ~= "editor_menu" and action ~= "quit" and action ~= "save" then
         return false
     end
-    if action == "export" and (not M.editing or index ~= M.index) then
+    if (action == "export" or action == "save") and (not M.editing or index ~= M.index) then
         return false
     end
+    if (action == "edit" or action == "editor_menu" or action == "export" or action == "save") and
+            not pack.is_installed("editor") then return false end
     if action == "play" and not M.has_level(index) then
         M.message = "Уровень ещё не сохранён"
         return false
@@ -96,11 +102,60 @@ local function close_world(app)
     if not world.is_open() then
         return
     end
-    require("game:view").close()
+    if M.editing then
+        require("editor:editor").close()
+    else
+        require("game:view").close()
+    end
     app.close_world(true)
+    -- При выходе движок выгружает контент. Меню тоже нужны наши модули и Kompot.
+    if not app.is_content_loaded() then
+        app.load_content()
+    end
 end
 
-local function copy_level(index, destination)
+local function pause_layout()
+    return M.editing and "editor:menu" or "game:pause_menu"
+end
+
+function M.show_pause()
+    local layout = pause_layout()
+    if M.busy or hud.is_open(layout) then
+        return
+    end
+    local Production = require("game:production")
+    M.pause_restore = Production.paused
+    Production.paused = true
+    M.pause_open, M.pause_time = true, 0
+    hud.show_overlay(layout, false)
+end
+
+function M.close_pause()
+    M.pause_open = false
+end
+
+function M.update_pause()
+    local layout = pause_layout()
+    M.menu_blocked = hud.is_open(layout)
+    if not M.menu_blocked then
+        return
+    end
+    if not M.pause_open then
+        M.pause_time = M.pause_time + time.delta()
+        if M.pause_time >= .2 then
+            hud.close(layout)
+        end
+    end
+end
+
+function M.resume()
+    if not M.busy then
+        require("game:production").paused = M.pause_restore
+    end
+    M.pause_open = false
+end
+
+function M.copy_level(index, destination)
     local source = author_folder(index)
     if file.isfile(source .. "/world.json") then
         copy_folder(source, destination)
@@ -116,17 +171,14 @@ local function copy_level(index, destination)
     end
 end
 
-local function open_editor(app, index)
-    local name = tostring(index)
-    if file.isfile(author_folder(index) .. "/world.json") then
-        app.open_world(name)
-    elseif file.isfile("game:levels/" .. index .. ".zip") then
-        copy_level(index, author_folder(index))
-        app.open_world(name)
-    else
-        app.new_world(name, name, "game:room")
-        app.save_world()
+-- В игровой копии редактор не нужен, даже если исходник сохраняли вместе с ним.
+function M.strip_editor(folder)
+    local path = file.join(folder, "packs.list")
+    local packs = {}
+    for _, id in ipairs(file.readlines(path)) do
+        if not id:match("^%s*editor%s*$") then packs[#packs + 1] = id end
     end
+    file.write(path, table.concat(packs, "\n") .. "\n")
 end
 
 local function start_level(app, index)
@@ -137,7 +189,8 @@ local function start_level(app, index)
         end
         file.remove_tree(work_folder)
     end
-    copy_level(index, work_folder)
+    M.copy_level(index, work_folder)
+    M.strip_editor(work_folder)
     file.mkdirs(work_folder .. "/data/game")
     file.write(work_folder .. "/data/game/play.json", json.tostring({ version = 1, index = index }))
     file.write(work_folder .. "/data/game/mission.json", json.tostring({
@@ -147,36 +200,88 @@ local function start_level(app, index)
     app.open_world(work_name)
 end
 
-function M.start(app)
+local function resume_level(app)
     local profile = read_json(profile_path())
     local index = profile and profile.version == 1 and valid_index(profile.index) and profile.index or 1
     local marker = read_json(work_folder .. "/data/game/play.json")
     if marker and marker.version == 1 and marker.index == index and file.isfile(work_folder .. "/world.json") then
+        M.strip_editor(work_folder)
         app.open_world(work_name)
     elseif M.has_level(index) then
         start_level(app, index)
     else
-        open_editor(app, index)
+        M.message = "Уровень не готов"
+        M.start(app)
     end
+end
+
+function M.can_continue()
+    local profile = read_json(profile_path())
+    local index = profile and profile.version == 1 and valid_index(profile.index) and profile.index or 1
+    local marker = read_json(work_folder .. "/data/game/play.json")
+    return (marker and marker.version == 1 and marker.index == index and
+            file.isfile(work_folder .. "/world.json")) or M.has_level(index)
+end
+
+function M.has_progress()
+    local profile = read_json(profile_path())
+    local marker = read_json(work_folder .. "/data/game/play.json")
+    return profile and profile.version == 1 and valid_index(profile.index) and marker and
+            marker.version == 1 and marker.index == profile.index and file.isfile(work_folder .. "/world.json") or false
+end
+
+function M.start(app)
+    if not app.is_content_loaded() then
+        app.load_content()
+    end
+    local current = require("game:session")
+    current.menu_open, current.had_world = true, false
+    current.managed, current.editing, current.busy = false, false, false
+    current.menu_page = "main"
+    menu:reset()
+    menu.page = "shift_main"
+    gui.set_active_frame("core:main")
 end
 
 function M.update(app)
     local request = M.request
     if not request then
+        if M.had_world and not world.is_open() then
+            M.start(app)
+        end
         return
     end
     M.request = nil
+    if request.action == "save" then
+        app.save_world()
+        M.message, M.busy = "Сохранено", false
+        return
+    end
     if request.action == "export" then
         close_world(app)
-        file.mkdirs("export:levels")
-        file.create_zip(author_folder(request.index), "export:levels/" .. request.index .. ".zip")
-        open_editor(app, request.index)
+        require("editor:worlds").export(request.index)
+        require("editor:worlds").open(app, request.index)
         require("game:session").message = "Сохранено в export/levels/" .. request.index .. ".zip"
         return
     end
     close_world(app)
-    if request.action == "edit" then
-        open_editor(app, request.index)
+    M.had_world = false
+    if request.action == "menu" or request.action == "editor_menu" then
+        M.start(app)
+        if request.action == "editor_menu" then
+            require("game:session").menu_page = "editor"
+        end
+        return
+    elseif request.action == "quit" then
+        app.quit()
+        return
+    end
+    M.menu_open = false
+    gui.close_menu()
+    if request.action == "continue" then
+        resume_level(app)
+    elseif request.action == "edit" then
+        require("editor:worlds").open(app, request.index)
     else
         start_level(app, request.index)
     end

@@ -111,7 +111,7 @@ function M.update()
         tool_keys[i] = down
     end
 
-    if not M.opened or hud.is_paused() or menu.page ~= "" then
+    if not M.opened or Session.menu_blocked or Session.busy or hud.is_paused() or menu.page ~= "" then
         Build.cancel_path()
         Hover.hide()
         return
@@ -232,36 +232,20 @@ function M.open(pid)
         end
         player.set_camera(pid, cameras.get("core:first-person"):get_index())
     end
-    if not Session.editing then
-        enter()
-        if Session.managed then
-            local area = Room.area()
-            M.camera = Camera.open(area.width / 2, Room.floor + 1, area.depth / 2)
-            Camera.distance = area.width > 26 and 58 or area.width >= 22 and 44 or 38
-            Camera.update(0, false)
-            player.set_pos(pid, Camera.x, Camera.y + 2, Camera.z)
-        end
+    enter()
+    if Session.managed then
+        local area = Room.area()
+        M.camera = Camera.open(area.width / 2, Room.floor + 1, area.depth / 2)
+        Camera.distance = area.width > 26 and 58 or area.width >= 22 and 44 or 38
+        Camera.update(0, false)
+        player.set_pos(pid, Camera.x, Camera.y + 2, Camera.z)
     end
 
-    input.add_callback("key:f10", function()
-        time.post_runnable(function()
-            if not M.active or hud.is_paused() or menu.page ~= "" then
-                return
-            end
-            if M.opened then
-                leave()
-            else
-                enter()
-            end
-        end)
-        return true
-    end, nil, true)
-
     input.add_callback("key:escape", function()
-        if not M.opened then
-            return false
-        end
-        if hud.is_paused() then
+        if not M.active or not M.opened then return false end
+        if hud.is_open("game:pause_menu") then
+            Session.close_pause()
+        elseif hud.is_paused() then
             hud.resume()
         elseif Hover.dialog_open then
             Hover.close_dialog()
@@ -269,7 +253,7 @@ function M.open(pid)
             Build.cancel()
             Hover.clear_selection()
         else
-            hud.pause()
+            Session.show_pause()
         end
         return true
     end, nil, true)
@@ -277,6 +261,7 @@ end
 
 function M.close()
     M.active = false
+    if hud.is_open("game:pause_menu") then hud.close("game:pause_menu") end
     leave()
 end
 

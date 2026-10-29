@@ -6,7 +6,7 @@ local Production = require("game:production")
 local EquipmentDialogs = require("game:ui/equipment_dialogs")
 local DeliveryPanel = require("game:ui/delivery_panel")
 local MissionPanel = require("game:ui/mission_panel")
-local SessionPanel = require("game:ui/session_panel")
+local Session = require("game:session")
 local Mission = require("game:mission")
 local Actions = require("game:selection_actions")
 local handle
@@ -20,7 +20,7 @@ function on_open()
 
             K.Row({ spacing = 8, modifier = K.M:padding(8) }, function()
                 K.Column({ spacing = 8 }, function()
-                    UI.Panel({ title = "Пам Пам Пам", width = 340 }, function()
+                    UI.Panel({ title = "Транспорт", width = 340 }, function()
                         local tool = K.poll(function()
                             return Build.tool or 0
                         end)
@@ -34,6 +34,12 @@ function on_open()
                             if paused then
                                 K.Text("ПАЗУЗА")
                             end
+                            UI.Button({
+                                text = "Меню",
+                                on_click = function()
+                                    if not input.is_pressed("key:space") then Session.show_pause() end
+                                end
+                            })
                             for i, block_name in ipairs(Build.tools) do
                                 local index = i
                                 UI.Button({
@@ -64,11 +70,9 @@ function on_open()
                         end)
                     end)
                     DeliveryPanel()
-                    SessionPanel()
                 end)
                 MissionPanel()
             end)
-
 
             EquipmentDialogs()
 

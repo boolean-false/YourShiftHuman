@@ -24,7 +24,7 @@ function on_world_open()
 end
 
 function on_world_tick()
-    if Production.paused or Mission.completed then
+    if Session.editing or Production.paused or Mission.completed then
         return
     end
     Delivery.tick()

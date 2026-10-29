@@ -4,14 +4,18 @@ local Assembler = require("game:assembler")
 local Smelter = require("game:smelter")
 local Source = require("game:source")
 local View = require("game:view")
+local Session = require("game:session")
 
 function on_hud_open()
-    View.open(hud.get_player())
+    if not Session.editing then View.open(hud.get_player()) end
 end
 
 -- Обновляем модели продукции и оборудования каждый кадр.
 function on_hud_render()
-    View.update()
+    if not Session.editing then
+        Session.update_pause()
+        View.update()
+    end
     Conveyor.render()
     Press.render()
     Assembler.render()
@@ -20,5 +24,5 @@ function on_hud_render()
 end
 
 function on_hud_close()
-    View.close()
+    if not Session.editing then View.close() end
 end
