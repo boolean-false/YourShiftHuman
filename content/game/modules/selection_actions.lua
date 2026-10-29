@@ -57,7 +57,6 @@ function M.next_mission()
     local Build = require("game:build")
     Build.cancel()
     Hover.clear_selection()
-    M.clear_flows()
     Production.paused = true
 end
 

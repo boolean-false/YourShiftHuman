@@ -6,8 +6,10 @@ local Source = require("game:source")
 local Production = require("game:production")
 local Delivery = require("game:delivery")
 local Mission = require("game:mission")
+local Session = require("game:session")
 
 function on_world_open()
+    Session.open()
     Mission.open()
     Delivery.clear()
     Production.paused = true

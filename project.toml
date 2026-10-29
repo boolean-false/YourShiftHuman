@@ -1,4 +1,4 @@
 title = "Your Shift, Human"
 name = "your_shift_human"
-base_packs = ["base", "kompot", "game"]
-permissions = []
+base_packs = ["base", "kompot", "game", "contour"]
+permissions = ["write-to-user"]

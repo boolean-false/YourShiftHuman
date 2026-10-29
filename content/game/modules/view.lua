@@ -5,6 +5,8 @@ local Actions = require("game:selection_actions")
 local Build = require("game:build")
 local Production = require("game:production")
 local Mission = require("game:mission")
+local Session = require("game:session")
+local Room = require("game:room")
 local disabled_bindings = {}
 local tool_keys = {}
 
@@ -190,6 +192,7 @@ local function leave()
         return
     end
     M.opened = false
+    Production.paused = true
     Build.cancel()
     Hover.close()
     hud.close("game:view")
@@ -220,7 +223,25 @@ end
 function M.open(pid)
     M.pid = pid
     M.active = true
-    enter()
+    -- У сохранённого исходника мог остаться вид сверху. Возвращаем обычного игрока.
+    if Session.managed then
+        local avatar = entities.get(player.get_entity(pid))
+        if avatar then
+            avatar.rigidbody:set_enabled(true)
+            avatar.skeleton:set_visible(true)
+        end
+        player.set_camera(pid, cameras.get("core:first-person"):get_index())
+    end
+    if not Session.editing then
+        enter()
+        if Session.managed then
+            local area = Room.area()
+            M.camera = Camera.open(area.width / 2, Room.floor + 1, area.depth / 2)
+            Camera.distance = area.width > 26 and 58 or area.width >= 22 and 44 or 38
+            Camera.update(0, false)
+            player.set_pos(pid, Camera.x, Camera.y + 2, Camera.z)
+        end
+    end
 
     input.add_callback("key:f10", function()
         time.post_runnable(function()

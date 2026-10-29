@@ -1,6 +1,7 @@
 local Missions = require("game:missions")
 local Delivery = require("game:delivery")
 local Production = require("game:production")
+local Session = require("game:session")
 
 local M = {
     index = 1,
@@ -39,8 +40,11 @@ function M.reset_check()
 end
 
 function M.open()
-    M.index = 1
+    M.index = Session.managed and Session.index or 1
     M.reset_check()
+    if Session.editing then
+        return
+    end
 
     local path = pack.data_file("game", "mission.json")
     if not file.isfile(path) then
@@ -56,6 +60,9 @@ function M.open()
             type(data.completed) ~= "boolean" then
         return
     end
+    if Session.managed and data.index ~= Session.index then
+        return
+    end
     M.index = data.index
     M.completed = data.completed
 end
@@ -68,6 +75,7 @@ function M.save()
         index = M.index,
         completed = M.completed
     }))
+    Session.save_progress(M.index, M.completed)
 end
 
 function M.is_last()
@@ -78,13 +86,11 @@ function M.advance()
     if not M.completed or M.is_last() then
         return false
     end
-    M.index = M.index + 1
-    M.reset_check()
-    return true
+    return Session.queue("play", M.index + 1)
 end
 
 function M.tick()
-    if M.completed then
+    if M.completed or Session.editing then
         return
     end
     M.ticks = M.ticks + 1
@@ -115,6 +121,9 @@ function M.tick()
 end
 
 function M.status()
+    if Session.editing then
+        return "Редактор"
+    end
     if M.completed then
         return M.is_last() and "Все задания выполнены" or "Выполнено"
     end
