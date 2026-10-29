@@ -1,0 +1,12 @@
+{
+  "id": "editor",
+  "title": "Your Shift, Human Editor",
+  "version": "0.1.0",
+  "creator": "Dagger",
+  "description": "Редактор уровней",
+  "dependencies": [
+    "game",
+    "kompot"
+  ],
+  "license": "MIT"
+}

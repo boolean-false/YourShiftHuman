@@ -1,6 +1,10 @@
 local Conveyor = require("game:conveyor")
 local Smelter = require("game:smelter")
 
+function on_interact(x, y, z)
+    return events.emit("game:block_settings", x, y, z) or false
+end
+
 local function update_ports(x, y, z)
     local ix, iy, iz = Smelter.port(x, y, z, false)
     local ox, oy, oz = Smelter.port(x, y, z, true)

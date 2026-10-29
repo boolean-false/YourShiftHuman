@@ -1,6 +1,10 @@
 local Conveyor = require("game:conveyor")
 local Press = require("game:press")
 
+function on_interact(x, y, z)
+    return events.emit("game:block_settings", x, y, z) or false
+end
+
 -- Обновляем форму лент возле входа и выхода
 local function update_ports(x, y, z)
     local ix, iy, iz = Press.port(x, y, z, false)
