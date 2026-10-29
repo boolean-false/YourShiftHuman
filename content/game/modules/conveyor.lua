@@ -5,6 +5,7 @@ local Assembler = require("game:assembler")
 local Source = require("game:source")
 local Products = require("game:products")
 local Delivery = require("game:delivery")
+local Room = require("game:room")
 local Utils = require("game:utils")
 local Splitter = require("game:splitter")
 local Merger = require("game:merger")
@@ -163,6 +164,9 @@ local function input_ready(x, y, z, dx, dz)
 end
 
 local function can_receive(x, y, z, dx, dz, item_name, except)
+    if not Room.contains(x, y, z) then
+        return false
+    end
     local id = block.get(x, y, z)
     if id == -1 or is_busy(x, y, z, except) then
         return false
@@ -259,7 +263,9 @@ function M.tick()
         local belt_item = items[i]
         local x, y, z = belt_item.x, belt_item.y, belt_item.z
         local id = block.get(x, y, z)
-        if id == -1 then
+        if not Room.contains(x, y, z) then
+            -- вне текущей площадки не лвигаем
+        elseif id == -1 then
             -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
         elseif not is_transport(x, y, z) then
             -- При сносе ленты убираем её продукцию вместе с моделью.

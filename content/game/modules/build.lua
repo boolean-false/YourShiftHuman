@@ -3,6 +3,7 @@ local Conveyor = require("game:conveyor")
 local Actions = require("game:selection_actions")
 local Utils = require("game:utils")
 local Mission = require("game:mission")
+local Room = require("game:room")
 
 local M = {
     rotation = 1,
@@ -73,6 +74,9 @@ local function can_place(cells)
     local belt = block.index(M.tools[1])
     local seen = {}
     for i, cell in ipairs(cells) do
+        if not Room.contains(cell.x, cell.y, cell.z) then
+            return false, "За пределами"
+        end
         local key = Utils.key(cell.x, cell.y, cell.z)
         if seen[key] then
             return false, "Маршрут пересекает сам себя"

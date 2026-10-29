@@ -2,6 +2,7 @@ local Conveyor = require("game:conveyor")
 local Utils = require("game:utils")
 local Source = require("game:source")
 local Production = require("game:production")
+local Room = require("game:room")
 
 function on_placed(x, y, z)
     Source.register(x, y, z)
@@ -18,7 +19,9 @@ function on_block_removed(x, y, z)
 end
 
 function on_block_tick(x, y, z, tps)
-    if Production.paused or block.is_segment(x, y, z) then
+    if Production.paused or
+            block.is_segment(x, y, z) or
+            not Room.contains(x, y, z) then
         return
     end
     local dx, dz = Utils.direction(x, y, z)

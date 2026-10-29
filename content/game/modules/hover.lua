@@ -1,5 +1,6 @@
 local M = {}
 local Camera = require("game:camera")
+local Room = require("game:room")
 local cursors = {}
 
 local sizes = {
@@ -97,6 +98,10 @@ function M.update(clicked)
     end
     x, z = math.floor(x), math.floor(z)
     local y = Camera.y
+    if not Room.contains(x, y, z) then
+        M.hide()
+        return
+    end
     local id = block.get(x, y, z)
     if id == -1 then
         M.hide();

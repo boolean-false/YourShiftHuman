@@ -9,6 +9,7 @@ local Splitter = require("game:splitter")
 local Delivery = require("game:delivery")
 local Mission = require("game:mission")
 local Production = require("game:production")
+local Room = require("game:room")
 
 local controllers = {
     ["game:press"] = Press,
@@ -26,6 +27,9 @@ local function selected()
     end
     if block.get(object.x, object.y, object.z) ~= object.id then
         Hover.clear_selection()
+        return nil
+    end
+    if not Room.contains(object.x, object.y, object.z) then
         return nil
     end
     return object

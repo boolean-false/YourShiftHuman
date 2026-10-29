@@ -1,5 +1,6 @@
 local Machine = require("game:machine")
 local Utils = require("game:utils")
+local Room = require("game:room")
 local processing = {}
 local recipe = { gear = 2, rod = 1 }
 local process_ticks = 40
@@ -20,6 +21,9 @@ function M.can_accept(x, y, z, dx, dz, item_name)
         return false
     end
     local ox, oy, oz = block.seek_origin(x, y, z)
+    if not Room.contains(ox, oy, oz) then
+        return false
+    end
     local state = processing[Utils.key(ox, oy, oz)]
     return not state or (state.stock[item_name] or 0) < 4
 end
@@ -52,7 +56,9 @@ function M.tick()
         local x, y, z = state.x, state.y, state.z
         local id = block.get(x, y, z)
 
-        if id == -1 then
+        if not Room.contains(x, y, z) then
+            -- За стенами комнаты ничего не крутим
+        elseif id == -1 then
         elseif id ~= block.index(M.block_name) then
             processing[key] = nil
         else

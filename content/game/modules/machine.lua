@@ -1,4 +1,5 @@
 local Utils = require("game:utils")
+local Room = require("game:room")
 local M = {}
 
 function M.create(config)
@@ -53,6 +54,9 @@ function M.create(config)
 
     function machine.can_accept(x, y, z, dx, dz, item_name)
         local ox, oy, oz = block.seek_origin(x, y, z)
+        if not Room.contains(ox, oy, oz) then
+            return false
+        end
         local px, py, pz = machine.port(x, y, z, false)
         return x == px and y == py and z == pz and recipes[item_name] ~= nil and
                 processing[Utils.key(ox, oy, oz)] == nil and Utils.same_direction(ox, oy, oz, dx, dz)
@@ -104,7 +108,9 @@ function M.create(config)
         for key, state in pairs(processing) do
             local x, y, z = state.x, state.y, state.z
             local id = block.get(x, y, z)
-            if id == -1 then
+            if not Room.contains(x, y, z) then
+                -- Соседние площадки
+            elseif id == -1 then
                 -- В выгруженном чанке обработка стоит.
             elseif id ~= block.index(config.block_name) then
                 processing[key] = nil
