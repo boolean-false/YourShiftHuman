@@ -3,6 +3,7 @@ local UI = require("kompot:ui")
 local Hover = require("game:hover")
 local Actions = require("game:selection_actions")
 local Press = require("game:press")
+local MachineInfo = require("game:ui/machine_info")
 
 return K.component(function()
     local recipe = K.poll(function()
@@ -25,11 +26,11 @@ return K.component(function()
     UI.Dialog({
         visible = recipe ~= "",
         title = "Пресс",
-        text = "Выберите изделие",
         on_dismiss = Hover.close_dialog,
         dismiss = { text = "Закрыть" }
     }, function()
         K.Column({ spacing = 4 }, function()
+            MachineInfo({ machine = Press })
             UI.Button({
                 text = "Шестерёнка",
                 selected = last.value == "gear",

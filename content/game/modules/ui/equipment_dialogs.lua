@@ -1,0 +1,15 @@
+local PressDialog = require("game:ui/press_dialog")
+local FilterDialog = require("game:ui/filter_dialog")
+local SplitterDialog = require("game:ui/splitter_dialog")
+local SinkDialog = require("game:ui/sink_dialog")
+local SmelterDialog = require("game:ui/smelter_dialog")
+local AssemblerDialog = require("game:ui/assembler_dialog")
+
+return function()
+    PressDialog()
+    FilterDialog()
+    SplitterDialog()
+    SinkDialog()
+    SmelterDialog()
+    AssemblerDialog()
+end

@@ -2,6 +2,14 @@ local M = {}
 local Camera = require("game:camera")
 local Room = require("game:room")
 local cursors = {}
+local dialogs = {
+    ["game:press"] = true,
+    ["game:smelter"] = true,
+    ["game:assembler"] = true,
+    ["game:filter"] = true,
+    ["game:splitter"] = true,
+    ["game:sink"] = true
+}
 
 local sizes = {
     ["game:source"] = 1,
@@ -27,6 +35,17 @@ local function object_at(x, y, z)
         z = z,
         id = id
     }
+end
+
+function M.has_dialog(id)
+    return dialogs[block.name(id)] == true
+end
+
+function M.select(x, y, z)
+    M.message = nil
+    M.selected = object_at(x, y, z)
+    M.dialog_open = M.selected ~= nil and M.has_dialog(M.selected.id)
+    return M.dialog_open
 end
 
 function M.clear_selection()
@@ -110,13 +129,7 @@ function M.update(clicked)
     M.cell = { x = x, y = y, z = z }
 
     if clicked then
-        M.message = nil
-        M.selected = object_at(x, y, z)
-        M.dialog_open = M.selected ~= nil and
-                (M.selected.id == block.index("game:press") or
-                        M.selected.id == block.index("game:filter") or
-                        M.selected.id == block.index("game:splitter") or
-                        M.selected.id == block.index("game:sink"))
+        M.select(x, y, z)
     end
     if M.selected then
         x, y, z = M.selected.x, M.selected.y, M.selected.z

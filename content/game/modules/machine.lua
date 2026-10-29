@@ -1,5 +1,7 @@
 local Utils = require("game:utils")
 local Room = require("game:room")
+local Products = require("game:products")
+local Production = require("game:production")
 local M = {}
 
 function M.create(config)
@@ -9,6 +11,11 @@ function M.create(config)
     local size = config.size or 2
     local recipes = config.recipes or {}
     local process_ticks = config.process_ticks or 20
+    local ingredients = config.ingredients or {}
+    for item_name in pairs(recipes) do
+        ingredients[item_name] = 1
+    end
+
     local function state_at(x, y, z)
         if config.get_process then
             return config.get_process(x, y, z)
@@ -173,6 +180,34 @@ function M.create(config)
                 end
             end
         end
+    end
+
+    function machine.describe(x, y, z)
+        x, y, z = block.seek_origin(x, y, z)
+        if block.get(x, y, z) ~= block.index(config.block_name) then
+            return ""
+        end
+        local state = state_at(x, y, z)
+        local stock = state and state.stock or {}
+        local status = Production.paused and "Пауза" or "Работает"
+        local inputs = {}
+        for _, item_name in ipairs({ "ore", "ingot", "gear", "rod" }) do
+            if ingredients[item_name] then
+                if (stock[item_name] or 0) < ingredients[item_name] then
+                    status = "Ждёт: " .. Products[item_name].caption
+                end
+                inputs[#inputs + 1] = Products[item_name].caption .. " " .. (stock[item_name] or 0) .. "/4"
+            end
+        end
+        if state and (state.output or state.ready) then
+            status = "Ждёт свободный выход"
+        end
+        local output = config.output or recipes[next(recipes)]
+        if config.get_output then
+            output = config.get_output(x, y, z)
+        end
+        return status .. "\nВыпуск: " .. Products[output].caption .. " / до " ..
+                math.floor(1200 / process_ticks) .. " в мин\n" .. table.concat(inputs, " · ")
     end
 
     function machine.clear_process()
