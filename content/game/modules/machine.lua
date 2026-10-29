@@ -9,6 +9,12 @@ function M.create(config)
     local size = config.size or 2
     local recipes = config.recipes or {}
     local process_ticks = config.process_ticks or 20
+    local function state_at(x, y, z)
+        if config.get_process then
+            return config.get_process(x, y, z)
+        end
+        return processing[Utils.key(x, y, z)]
+    end
 
     -- Координаты порта считаем от главного блока с учётом поворота
     function machine.port(x, y, z, output, second)
@@ -58,30 +64,27 @@ function M.create(config)
             return false
         end
         local px, py, pz = machine.port(x, y, z, false)
+        local state = processing[Utils.key(ox, oy, oz)]
         return x == px and y == py and z == pz and recipes[item_name] ~= nil and
-                processing[Utils.key(ox, oy, oz)] == nil and Utils.same_direction(ox, oy, oz, dx, dz)
+                (not state or (state.stock[item_name] or 0) < 4) and Utils.same_direction(ox, oy, oz, dx, dz)
     end
 
     function machine.accept(x, y, z, item_name)
         x, y, z = block.seek_origin(x, y, z)
-        local output = recipes[item_name]
-        if config.get_output then
-            output = config.get_output(x, y, z, item_name)
+        local key = Utils.key(x, y, z)
+        local state = processing[key]
+        if not state then
+            state = { x = x, y = y, z = z, stock = {}, ticks = 0 }
+            processing[key] = state
         end
-        processing[Utils.key(x, y, z)] = {
-            x = x,
-            y = y,
-            z = z,
-            output = output,
-            ticks = 0
-        }
+        state.stock[item_name] = (state.stock[item_name] or 0) + 1
     end
 
     function machine.has_output(x, y, z)
         local px, py, pz = machine.port(x, y, z, true)
         local ox, oy, oz = block.seek_origin(x, y, z)
         local state = processing[Utils.key(ox, oy, oz)]
-        return x == px and y == py and z == pz and state ~= nil and state.ticks == process_ticks
+        return x == px and y == py and z == pz and state ~= nil and state.output ~= nil
     end
 
     function machine.register(x, y, z)
@@ -115,12 +118,31 @@ function M.create(config)
             elseif id ~= block.index(config.block_name) then
                 processing[key] = nil
             else
-                state.ticks = math.min(process_ticks, state.ticks + 1)
-                if state.ticks == process_ticks then
+                if not state.output then
+                    if not state.input then
+                        for item_name in pairs(recipes) do
+                            if (state.stock[item_name] or 0) > 0 then
+                                state.input = item_name
+                                break
+                            end
+                        end
+                    end
+                    if state.input then
+                        state.ticks = state.ticks + 1
+                        if state.ticks == process_ticks then
+                            state.stock[state.input] = state.stock[state.input] - 1
+                            state.output = config.get_output and config.get_output(x, y, z, state.input) or recipes[state.input]
+                            state.input = nil
+                        end
+                    end
+                end
+                -- Готовая деталь ждёт выхода, а сырьё пока может копиться до четырёх.
+                if state.output then
                     local px, py, pz = machine.port(x, y, z, true)
                     local dx, dz = Utils.direction(x, y, z)
                     if Conveyor.feed(px + dx, py, pz + dz, dx, dz, state.output) then
-                        processing[key] = nil
+                        state.output = nil
+                        state.ticks = 0
                     end
                 end
             end
@@ -144,10 +166,7 @@ function M.create(config)
                 model.entity.transform:set_pos(position)
                 model.entity.transform:set_rot(mat4.rotate({ 0, 1, 0 }, block.get_rotation(x, y, z) * 90 - 90))
                 model.entity.skeleton:reset_pose()
-                local state = processing[key]
-                if config.get_process then
-                    state = config.get_process(x, y, z)
-                end
+                local state = state_at(x, y, z)
                 local track = config.animation and animation.get_track(config.animation)
                 if state and state.ticks > 0 and state.ticks < process_ticks and track then
                     track.func(model.entity.skeleton, (state.ticks / 20) % track.duration)
