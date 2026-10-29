@@ -10,6 +10,7 @@ local Utils = require("game:utils")
 local Splitter = require("game:splitter")
 local Merger = require("game:merger")
 local Filter = require("game:filter")
+local Sink = require("game:sink")
 local items = {}
 local speed = 1.5 -- Блоков в сек
 
@@ -194,7 +195,7 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
     if processor then
         return processor.can_accept(x, y, z, dx, dz, item_name)
     end
-    return id == block.index("game:sink")
+    return id == block.index("game:sink") and Sink.can_accept(x, y, z, item_name)
 end
 
 -- Проверяем расположение входа
