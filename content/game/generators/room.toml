@@ -1,0 +1,6 @@
+caption = "Пустой уровень"
+biome-parameters = 0
+sea-level = 0
+player-spawn-radius = 1
+player-min-spawn-height = 128
+player-max-spawn-height = 130

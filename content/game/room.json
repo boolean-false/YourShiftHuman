@@ -1,0 +1,11 @@
+{
+    "width": 32,
+    "depth": 20,
+    "floor": 127,
+    "wall_height": 2,
+    "areas": [
+        { "width": 18, "depth": 12 },
+        { "width": 18, "depth": 12 },
+        { "width": 22, "depth": 16 }
+    ]
+}
