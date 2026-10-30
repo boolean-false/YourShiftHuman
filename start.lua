@@ -8,5 +8,7 @@ while true do
         app.load_content()
         require("game:session").start(app)
     end
+    require("game:ui/state").update(time.delta())
+    require("game:sound").update()
     require("game:session").update(app)
 end
