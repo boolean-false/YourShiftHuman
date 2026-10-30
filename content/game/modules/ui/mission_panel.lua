@@ -3,8 +3,6 @@ local UI = require("kompot:ui")
 local Mission = require("game:mission")
 local Products = require("game:products")
 local Delivery = require("game:delivery")
-local Actions = require("game:selection_actions")
-local Session = require("game:session")
 local parts = { "gear", "rod", "gearbox" }
 
 return K.component(function()
@@ -28,23 +26,6 @@ return K.component(function()
                 return Mission.status()
             end))
 
-            local completed = K.poll(function()
-                return Mission.completed
-            end)
-
-            if completed and not Mission.is_last() then
-                local ready = K.poll(function()
-                    return Session.managed and
-                            not Session.busy and
-                            Session.has_level(Mission.index + 1)
-                end)
-                UI.Button({
-                    text = ready and "Следующее задание" or "Следующий уровень не готов",
-                    enabled = ready,
-                    modifier = K.M:fill_max_width(),
-                    on_click = Actions.next_mission
-                })
-            end
         end)
     end)
 end)

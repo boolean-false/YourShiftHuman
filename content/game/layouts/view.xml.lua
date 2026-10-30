@@ -6,6 +6,7 @@ local Production = require("game:production")
 local EquipmentDialogs = require("game:ui/equipment_dialogs")
 local DeliveryPanel = require("game:ui/delivery_panel")
 local MissionPanel = require("game:ui/mission_panel")
+local CompletionDialog = require("game:ui/completion_dialog")
 local Session = require("game:session")
 local Mission = require("game:mission")
 local Actions = require("game:selection_actions")
@@ -75,6 +76,7 @@ function on_open()
             end)
 
             EquipmentDialogs()
+            CompletionDialog()
 
         end
     })

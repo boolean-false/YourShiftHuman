@@ -83,8 +83,11 @@ function M.is_last()
 end
 
 function M.advance()
-    if not M.completed or M.is_last() then
+    if not M.completed then
         return false
+    end
+    if M.is_last() then
+        return Session.queue("menu")
     end
     return Session.queue("play", M.index + 1)
 end
@@ -117,6 +120,7 @@ function M.tick()
     if M.windows == 3 then
         M.completed = true
         Production.paused = true
+        M.save()
     end
 end
 

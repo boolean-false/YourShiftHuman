@@ -11,7 +11,7 @@ function on_open()
         content = function()
             K.Column({ spacing = 4, modifier = K.M:padding(8) }, function()
                 K.Text("Редактор · уровень " .. Session.index)
-                K.Text("ПКМ — настройки · Esc — меню")
+                K.Text("ПКМ - настройки · Esc - меню")
             end)
         end
     })
