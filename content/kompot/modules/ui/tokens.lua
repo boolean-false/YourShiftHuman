@@ -52,10 +52,19 @@ for _, role in ipairs({
     "display",
     "mono",
 }) do
-    T.TYPE[role] = { font = "kompot_16", size = 16 }
+    T.TYPE[role] = {
+        font = "kompot_16",
+        size = 16,
+    }
 end
-T.TYPE.mono = { font = "kompot_mono_16", size = 16 }
-T.TYPE.strong = { font = "kompot_sb_16", size = 16 }
+T.TYPE.mono = {
+    font = "kompot_mono_16",
+    size = 16,
+}
+T.TYPE.strong = {
+    font = "kompot_sb_16",
+    size = 16,
+}
 
 -- Размеры: высоты элементов управления, панели, отступы.
 T.COMPACT_METRICS = {
@@ -75,6 +84,17 @@ T.COMPACT_METRICS = {
     tool_h = 26,
     button_pad = 8,
     field_pad = 4,
+    press_offset = 2,
+    checkbox_size = 24,
+    check_icon = 14,
+    switch_width = 40,
+    switch_height = 24,
+    switch_pad = 4,
+    switch_thumb = 16,
+    slider_height = 20,
+    slider_track = 4,
+    slider_thumb_width = 12,
+    slider_thumb_height = 20,
 }
 
 T.METRICS = {
@@ -94,6 +114,17 @@ T.METRICS = {
     tool_h = 32,
     button_pad = 14,
     field_pad = 7,
+    press_offset = 2,
+    checkbox_size = 24,
+    check_icon = 14,
+    switch_width = 40,
+    switch_height = 24,
+    switch_pad = 4,
+    switch_thumb = 16,
+    slider_height = 20,
+    slider_track = 4,
+    slider_thumb_width = 12,
+    slider_thumb_height = 20,
 }
 
 T.MOTION = {
@@ -114,8 +145,25 @@ local function clone(value)
     return out
 end
 
+-- Рисунок и форма заменяются целиком; состояния и варианты наследуются по именам.
+function T.extend_surface(base, patch)
+    local out = clone(base or {})
+    for key, value in pairs(patch or {}) do
+        if key == "states" or key == "variants" then
+            local group = out[key] or {}
+            for name, style in pairs(value) do
+                group[name] = T.extend_surface(group[name], style)
+            end
+            out[key] = group
+        else
+            out[key] = clone(value)
+        end
+    end
+    return out
+end
+
 -- opts: density (comfortable|compact), accent, panel_alpha, name, colors, skin, accents, type, metrics, motion,
--- shapes ({control, panel, card, field}), components ({Button = {size = "lg"}}),
+-- surfaces (оформление ролей и состояний), shapes ({control, panel, card, field}), components ({Button = {size = "lg"}}),
 -- ui (частичная замена общего контракта K.ui()). base - тема для наследования.
 function T.theme(opts, base)
     opts = opts or {}
@@ -158,14 +206,24 @@ function T.theme(opts, base)
             metrics = T.METRICS,
             motion = T.MOTION,
             density = "comfortable",
-            shapes = { control = 0, panel = 0, card = 0, field = 0 },
+            shapes = {
+                control = 0,
+                panel = 0,
+                card = 0,
+                field = 0,
+            },
             components = {},
+            surfaces = {},
             ui = T.ui,
         }),
         opts
     )
     out = clone(out)
     out.kompot_ui = true
+    out.surfaces = clone(base and base.surfaces or {})
+    for role, style in pairs(opts.surfaces or {}) do
+        out.surfaces[role] = T.extend_surface(out.surfaces[role], style)
+    end
     if opts.density ~= nil then
         assert(
             opts.density == "compact" or opts.density == "comfortable",

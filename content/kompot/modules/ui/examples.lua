@@ -31,8 +31,18 @@ function E.items()
             src = "block-previews:base:grass_block",
             count = 32,
         },
-        { id = "base:sand", name = "Песок", src = "block-previews:base:sand", count = 48 },
-        { id = "base:glass", name = "Стекло", src = "block-previews:base:glass", count = 8 },
+        {
+            id = "base:sand",
+            name = "Песок",
+            src = "block-previews:base:sand",
+            count = 48,
+        },
+        {
+            id = "base:glass",
+            name = "Стекло",
+            src = "block-previews:base:glass",
+            count = 8,
+        },
     }
 end
 -- Сундук и рюкзак используют один список предметов.
@@ -84,9 +94,13 @@ E.Inventory = K.component(function()
         end
     end
     local function grid(first, count)
-        K.Column({ spacing = 4 }, function()
+        K.Column({
+            spacing = 4,
+        }, function()
             for row = 0, math.ceil(count / columns) - 1 do
-                K.Row({ spacing = 4 }, function()
+                K.Row({
+                    spacing = 4,
+                }, function()
                     for col = 1, columns do
                         local index = first + row * columns + col - 1
                         if index < first + count then
@@ -104,7 +118,11 @@ E.Inventory = K.component(function()
                                     end,
                                     on_drag_event = function(e, item)
                                         if e.type == "start" then
-                                            return { index = index, item = item, group = identity }
+                                            return {
+                                                index = index,
+                                                item = item,
+                                                group = identity,
+                                            }
                                         end
                                     end,
                                     accepts = function(payload)
@@ -125,22 +143,29 @@ E.Inventory = K.component(function()
             end
         end)
     end
-    V.Panel({ title = "Сундук", width = columns * (size + 4) + 28 }, function()
+    V.Panel({
+        title = "Сундук",
+        width = columns * (size + 4) + 28,
+    }, function()
         grid(1, 24)
         K.Spacer(6)
-        K.Text("Рюкзак", { color = V.current().colors.muted })
+        K.Text("Рюкзак", {
+            color = V.current().colors.muted,
+        })
         grid(25, 16)
-        K.Text(
-            "ЛКМ: переместить    ПКМ: переложить",
-            { style = "caption", color = V.current().colors.dim }
-        )
+        K.Text("ЛКМ: переместить    ПКМ: переложить", {
+            style = "caption",
+            color = V.current().colors.dim,
+        })
     end)
 end)
 E.Machine = K.component(function()
     local running, progress, energy, completed = K.state(false), K.state(0), K.state(80), K.state(0)
     local tick = K.clock()
     local last = K.remember(function()
-        return { time = tick }
+        return {
+            time = tick,
+        }
     end)
     K.effect(function()
         local dt = math.max(0, math.min(0.1, tick - last.time))
@@ -160,7 +185,11 @@ E.Machine = K.component(function()
     end, tick)
     local items = E.items()
     local output = completed.value > 0
-            and { name = "Доски", src = items[3].src, count = completed.value }
+            and {
+                name = "Доски",
+                src = items[3].src,
+                count = completed.value,
+            }
         or nil
     V.MachinePanel({
         title = "Верстак",
@@ -180,27 +209,41 @@ E.Machine = K.component(function()
         end,
         content = function()
             K.Spacer(4)
-            K.Text("Рюкзак", { color = V.current().colors.muted })
-            V.InventoryGrid({ items = items, count = 6, columns = 6, size = 40 })
+            K.Text("Рюкзак", {
+                color = V.current().colors.muted,
+            })
+            V.InventoryGrid({
+                items = items,
+                count = 6,
+                columns = 6,
+                size = 40,
+            })
         end,
     })
 end)
 E.Hud = K.component(function()
     local health, slot = K.state(80), K.state(1)
     local items = E.items()
-    K.Box({ modifier = M:fill_max_width():height(480) }, function()
+    K.Box({
+        modifier = M:fill_max_width():height(480),
+    }, function()
         V.HUD({
             items = items,
             selected = slot.value,
             health = health.value,
             energy = 65,
             experience = 35,
-            prompt = { binding = "E", text = "Открыть мастерскую" },
+            prompt = {
+                binding = "E",
+                text = "Открыть мастерскую",
+            },
             on_select = function(i)
                 slot.value = i
             end,
         })
-        K.Row({ spacing = 8 }, function()
+        K.Row({
+            spacing = 8,
+        }, function()
             V.Button({
                 text = "Получить урон",
                 variant = "danger",
@@ -221,103 +264,115 @@ E.Controls = K.component(function()
     local checked, value, text, selected =
         K.state(true), K.state(8), K.state("Путешественник"), K.state(1)
     local dialog, menu = K.state(false), K.state(false)
-    V.Panel(
-        { title = "Настройки", width = math.min(520, K.runtime().width - 48) },
-        function()
-            V.TextField({
-                state = text,
-                label = "Имя игрока",
-                hint = "Введите имя",
-            })
-            V.Checkbox({
-                label = "Подсказки взаимодействия",
-                checked = checked.value,
-                on_change = function(v)
-                    checked.value = v
+    V.Panel({
+        title = "Настройки",
+        width = math.min(520, K.runtime().width - 48),
+    }, function()
+        V.TextField({
+            state = text,
+            label = "Имя игрока",
+            hint = "Введите имя",
+        })
+        V.Checkbox({
+            label = "Подсказки взаимодействия",
+            checked = checked.value,
+            on_change = function(v)
+                checked.value = v
+            end,
+        })
+        V.Switch({
+            label = "Звук",
+            checked = checked.value,
+            on_change = function(v)
+                checked.value = v
+            end,
+        })
+        V.Slider({
+            label = "Дальность",
+            min = 2,
+            max = 24,
+            steps = 22,
+            value = value.value,
+            on_change = function(v)
+                value.value = v
+            end,
+        })
+        V.Segmented({
+            options = { "Мир", "Предметы", "Устройства" },
+            selected = selected.value,
+            on_select = function(i)
+                selected.value = i
+            end,
+        })
+        K.FlowRow({
+            spacing = 8,
+            run_spacing = 8,
+        }, function()
+            V.Button({
+                text = "Применить",
+                modifier = M:tag("apply"),
+                variant = "primary",
+                on_click = function()
+                    dialog.value = true
                 end,
             })
-            V.Switch({
-                label = "Звук",
-                checked = checked.value,
-                on_change = function(v)
-                    checked.value = v
+            V.Button({
+                text = "Обычная",
+                variant = "secondary",
+            })
+            V.Button({
+                text = "Удалить",
+                variant = "danger",
+            })
+            V.Button({
+                text = "Недоступна",
+                enabled = false,
+            })
+        end)
+        K.Box(function()
+            V.Button({
+                text = "Действия",
+                modifier = M:tag("menu"),
+                on_click = function()
+                    menu.value = not menu:peek()
                 end,
             })
-            V.Slider({
-                label = "Дальность",
-                min = 2,
-                max = 24,
-                steps = 22,
-                value = value.value,
-                on_change = function(v)
-                    value.value = v
+            V.Menu({
+                expanded = menu.value,
+                on_dismiss = function()
+                    menu.value = false
                 end,
-            })
-            V.Segmented({
-                options = { "Мир", "Предметы", "Устройства" },
-                selected = selected.value,
-                on_select = function(i)
-                    selected.value = i
-                end,
-            })
-            K.FlowRow({ spacing = 8, run_spacing = 8 }, function()
-                V.Button({
-                    text = "Применить",
-                    modifier = M:tag("apply"),
-                    variant = "primary",
+            }, function()
+                V.MenuItem({
+                    text = "Сбросить дальность",
                     on_click = function()
-                        dialog.value = true
-                    end,
-                })
-                V.Button({ text = "Обычная", variant = "secondary" })
-                V.Button({ text = "Удалить", variant = "danger" })
-                V.Button({ text = "Недоступна", enabled = false })
-            end)
-            K.Box(function()
-                V.Button({
-                    text = "Действия",
-                    modifier = M:tag("menu"),
-                    on_click = function()
-                        menu.value = not menu:peek()
-                    end,
-                })
-                V.Menu({
-                    expanded = menu.value,
-                    on_dismiss = function()
+                        value.value = 8
                         menu.value = false
                     end,
-                }, function()
-                    V.MenuItem({
-                        text = "Сбросить дальность",
-                        on_click = function()
-                            value.value = 8
-                            menu.value = false
-                        end,
-                    })
-                    V.MenuItem({
-                        text = "Отмена",
-                        on_click = function()
-                            menu.value = false
-                        end,
-                    })
-                end)
+                })
+                V.MenuItem({
+                    text = "Отмена",
+                    on_click = function()
+                        menu.value = false
+                    end,
+                })
             end)
-            V.Dialog({
-                visible = dialog.value,
-                title = "Настройки сохранены",
-                text = "Это локальный пример; настройки игры не изменяются.",
-                on_dismiss = function()
+        end)
+        V.Dialog({
+            visible = dialog.value,
+            title = "Настройки сохранены",
+            text = "Это локальный пример; настройки игры не изменяются.",
+            on_dismiss = function()
+                dialog.value = false
+            end,
+            confirm = {
+                text = "Готово",
+                on_click = function()
                     dialog.value = false
                 end,
-                confirm = {
-                    text = "Готово",
-                    on_click = function()
-                        dialog.value = false
-                    end,
-                },
-            })
-        end
-    )
+            },
+        })
+    end)
 end)
 E.States = K.component(function()
     local items = E.items()
@@ -328,36 +383,61 @@ E.States = K.component(function()
         count = 3,
         rarity = "#EAC778",
     }
-    V.Panel(
-        { title = "Предметы", width = math.min(560, K.runtime().width - 48) },
-        function()
-            K.FlowRow({ spacing = 8, run_spacing = 8 }, function()
-                V.ItemSlot({ item = items[1] })
-                V.ItemSlot({ item = items[2], selected = true })
-                V.ItemSlot({ item = tool })
-                V.ItemSlot({ item = items[3], enabled = false })
-                V.ItemSlot({ locked = true })
-                V.ItemSlot({ placeholder = "arrow_down" })
-            end)
-            K.Text(
-                "Предмет · выбор · износ · недоступно · закрыто · вход",
-                { color = V.current().colors.muted }
-            )
-            V.ResourceBar({ label = "Неполный сегмент", value = 35 })
-            V.ProgressBar({})
-        end
-    )
+    V.Panel({
+        title = "Предметы",
+        width = math.min(560, K.runtime().width - 48),
+    }, function()
+        K.FlowRow({
+            spacing = 8,
+            run_spacing = 8,
+        }, function()
+            V.ItemSlot({
+                item = items[1],
+            })
+            V.ItemSlot({
+                item = items[2],
+                selected = true,
+            })
+            V.ItemSlot({
+                item = tool,
+            })
+            V.ItemSlot({
+                item = items[3],
+                enabled = false,
+            })
+            V.ItemSlot({
+                locked = true,
+            })
+            V.ItemSlot({
+                placeholder = "arrow_down",
+            })
+        end)
+        K.Text(
+            "Предмет · выбор · износ · недоступно · закрыто · вход",
+            {
+                color = V.current().colors.muted,
+            }
+        )
+        V.ResourceBar({
+            label = "Неполный сегмент",
+            value = 35,
+        })
+        V.ProgressBar({})
+    end)
 end)
 E.Pause = K.component(function(p)
     p = p or {}
     local view, sound, distance = K.state("menu"), K.state(true), K.state(12)
     local c = V.current().colors
     local width = math.min(280, K.runtime().width - 48)
-    K.Column({ modifier = M:width(width), spacing = 6 }, function()
-        K.Text(
-            view.value == "settings" and "Настройки" or "Пауза",
-            { style = "title", modifier = M:padding(0, 0, 0, 12) }
-        )
+    K.Column({
+        modifier = M:width(width),
+        spacing = 6,
+    }, function()
+        K.Text(view.value == "settings" and "Настройки" or "Пауза", {
+            style = "title",
+            modifier = M:padding(0, 0, 0, 12),
+        })
         if view.value == "menu" then
             V.Button({
                 text = "Продолжить",
@@ -390,7 +470,9 @@ E.Pause = K.component(function(p)
                 end,
             })
         elseif view.value == "settings" then
-            V.Panel({ width = width }, function()
+            V.Panel({
+                width = width,
+            }, function()
                 V.Checkbox({
                     label = "Звук",
                     checked = sound.value,

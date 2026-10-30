@@ -58,16 +58,26 @@ local EASING = {
 A.EASING = EASING
 
 function A.tween(duration, easing)
-    return { kind = "tween", duration = duration or 0.25, easing = easing or "standard" }
+    return {
+        kind = "tween",
+        duration = duration or 0.25,
+        easing = easing or "standard",
+    }
 end
 
 -- stiffness: жёсткость (200 - мягко, 800 - резко), damping: доля
 -- критического затухания (1 - без отскока, 0.5 - с отскоком).
 function A.spring(stiffness, damping)
-    return { kind = "spring", stiffness = stiffness or 380, damping = damping or 0.78 }
+    return {
+        kind = "spring",
+        stiffness = stiffness or 380,
+        damping = damping or 0.78,
+    }
 end
 
-A.snap = { kind = "snap" }
+A.snap = {
+    kind = "snap",
+}
 
 -- Значения: число или массив чисел
 
@@ -181,15 +191,22 @@ function Anim:step(dt)
     return running
 end
 
--- Хук: текущее значение, плавно идущее к target.
+-- Общий объект анимации для хуков и переходов
+function A._new(initial, spec)
+    return setmetatable({
+        __anim = true,
+        value = copy(initial),
+        to = copy(initial),
+        spec = spec,
+    }, Anim)
+end
+A._equal = equal
+
 function A.animate(target, spec)
     spec = spec or A.tween()
     local scope = runtime.current_scope()
     local a = runtime._remember("animate", function()
-        return setmetatable(
-            { __anim = true, value = copy(target), to = copy(target), spec = spec },
-            Anim
-        )
+        return A._new(target, spec)
     end)
     a.scope = scope
     if not equal(a.to, target) then
@@ -204,7 +221,10 @@ end
 function A.clock()
     local rt = runtime.runtime()
     local a = runtime._remember("clock", function()
-        local obj = { __anim = true, t0 = rt.time }
+        local obj = {
+            __anim = true,
+            t0 = rt.time,
+        }
         obj.step = function()
             return true
         end

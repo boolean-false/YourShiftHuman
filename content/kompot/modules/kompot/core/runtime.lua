@@ -32,7 +32,9 @@ local layout_rt = nil -- рантайм, чья раскладка идёт се
 
 -- Состояния
 
-local WEAK_KEYS = { __mode = "k" }
+local WEAK_KEYS = {
+    __mode = "k",
+}
 
 local State = {}
 State.__index = function(self, k)
@@ -47,7 +49,9 @@ State.__index = function(self, k)
                 deps[self] = true
             elseif obs.mods then
                 -- узел раскладки становится наблюдателем при первом чтении
-                obs.deps = setmetatable({ [self] = true }, WEAK_KEYS)
+                obs.deps = setmetatable({
+                    [self] = true,
+                }, WEAK_KEYS)
                 obs.rt, obs.is_layout = layout_rt, true
             end
         end
@@ -135,7 +139,11 @@ function State:update_field(key, value_or_fn)
 end
 
 function R.new_state(v, eq)
-    return setmetatable({ __v = v, __subs = setmetatable({}, WEAK_KEYS), __eq = eq }, State)
+    return setmetatable({
+        __v = v,
+        __subs = setmetatable({}, WEAK_KEYS),
+        __eq = eq,
+    }, State)
 end
 
 -- Снимает все подписки наблюдателя: следующий запуск соберёт их заново,
@@ -188,7 +196,10 @@ local Local = {}
 Local.__index = Local
 
 function R.local_of(default, name)
-    return setmetatable({ default = default, name = name or "local" }, Local)
+    return setmetatable({
+        default = default,
+        name = name or "local",
+    }, Local)
 end
 
 -- Текущее значение (во время композиции).
@@ -220,8 +231,13 @@ local function new_scope(rt, parent, fn, key, kind)
         depth = parent and parent.depth + 1 or 0,
         locals = parent and parent.locals or EMPTY,
     }
-    scope.fragment =
-        { kind = "fragment", mods = EMPTY, params = EMPTY, children = {}, scope = scope }
+    scope.fragment = {
+        kind = "fragment",
+        mods = EMPTY,
+        params = EMPTY,
+        children = {},
+        scope = scope,
+    }
     return scope
 end
 
@@ -236,7 +252,9 @@ local function dispose_scope(scope)
     unsubscribe(scope)
     for _, slot in pairs(scope.slots) do
         if type(slot) == "table" then
-            if slot.__effect then slot.pending=nil end
+            if slot.__effect then
+                slot.pending = nil
+            end
             if slot.__effect and slot.cleanup then
                 local ok, err = pcall(slot.cleanup)
                 if not ok and scope.rt then
@@ -252,7 +270,9 @@ R._dispose_scope = dispose_scope
 
 local function scope_failed(scope)
     while scope do
-        if scope.failed then return true end
+        if scope.failed then
+            return true
+        end
         scope = scope.parent
     end
     return false
@@ -261,12 +281,17 @@ end
 local function hook_site()
     for level = 3, 18 do
         local info = debug.getinfo(level, "Sl")
-        if not info then break end
+        if not info then
+            break
+        end
         local source = info.source or ""
-        if info.what ~= "C" and not source:find("kompot/core/runtime.lua", 1, true)
+        if
+            info.what ~= "C"
+            and not source:find("kompot/core/runtime.lua", 1, true)
             and not source:find("kompot/core/anim.lua", 1, true)
             and not source:find("kompot/ui/foundation.lua", 1, true)
-            and not source:find("modules/kompot.lua", 1, true) then
+            and not source:find("modules/kompot.lua", 1, true)
+        then
             return info.short_src .. ":" .. info.currentline
         end
     end
@@ -274,18 +299,41 @@ end
 
 local function hook_error(scope, index, expected, actual)
     local info = debug.getinfo(scope.fn, "Sn")
-    local component = (info.name or scope.kind) .. " (" .. info.short_src .. ":" .. info.linedefined .. ")"
-    local message = "Hook order changed in component " .. component
-        .. ": slot " .. index .. " expected " .. expected .. ", got " .. actual .. "."
+    local component = (info.name or scope.kind)
+        .. " ("
+        .. info.short_src
+        .. ":"
+        .. info.linedefined
+        .. ")"
+    local message = "Hook order changed in component "
+        .. component
+        .. ": slot "
+        .. index
+        .. " expected "
+        .. expected
+        .. ", got "
+        .. actual
+        .. "."
     if scope.rt.hook_diagnostics then
         message = message .. "\nPrevious:"
         for i = 1, scope.hook_count or #scope.hook_kinds do
-            message = message .. "\n  " .. i .. " " .. scope.hook_kinds[i]
-                .. " at " .. ((scope.hook_sites or {})[i] or "unknown")
+            message = message
+                .. "\n  "
+                .. i
+                .. " "
+                .. scope.hook_kinds[i]
+                .. " at "
+                .. ((scope.hook_sites or {})[i] or "unknown")
         end
         message = message .. "\nCurrent:"
         for i, hook in ipairs(scope.current_hooks or {}) do
-            message = message .. "\n  " .. i .. " " .. hook.kind .. " at " .. (hook.site or "unknown")
+            message = message
+                .. "\n  "
+                .. i
+                .. " "
+                .. hook.kind
+                .. " at "
+                .. (hook.site or "unknown")
         end
     end
     return message .. "\nUse K.key or a separate K.component for conditional hooks."
@@ -296,7 +344,9 @@ local function cancel_scope_effects(scope)
     local effects = scope.rt.effects
     for i = #effects, 1, -1 do
         local slot, owner = effects[i], effects[i].scope
-        while owner and owner ~= scope do owner = owner.parent end
+        while owner and owner ~= scope do
+            owner = owner.parent
+        end
         if owner == scope then
             slot.pending, slot.queued = nil, nil
             slot.keys = slot.committed_keys
@@ -346,9 +396,11 @@ local function sweep(scope, frame, deferred)
             end
         elseif child.visited ~= frame then
             if deferred then
-                child.detached=true
-                deferred[#deferred+1]=child
-            else dispose_scope(child) end
+                child.detached = true
+                deferred[#deferred + 1] = child
+            else
+                dispose_scope(child)
+            end
             scope.children[k] = nil
         else
             sweep(child, frame, deferred)
@@ -360,9 +412,14 @@ end
 
 -- Испускает узел в текущего родителя. content - функция, испускающая детей.
 function R.emit(kind, mods, params, content, key)
-    local node =
-        { kind = kind, mods = mods or EMPTY, params = params or EMPTY, children = {}, key = key,
-            placement_owner = cur_scope }
+    local node = {
+        kind = kind,
+        mods = mods or EMPTY,
+        params = params or EMPTY,
+        children = {},
+        key = key,
+        placement_owner = cur_scope,
+    }
     local parent = cur_parent
     if parent then
         parent.children[#parent.children + 1] = node
@@ -402,13 +459,20 @@ local function run_scope(scope, fn, ...)
     scope.initializing_hook = nil
     if ok and scope.hook_count and scope.slot_i ~= scope.hook_count then
         ok = false
-        err = hook_error(scope, scope.slot_i + 1, scope.hook_kinds[scope.slot_i + 1], "end of composition")
+        err = hook_error(
+            scope,
+            scope.slot_i + 1,
+            scope.hook_kinds[scope.slot_i + 1],
+            "end of composition"
+        )
     end
     if ok then
         scope.hook_count = scope.slot_i
         if scope.current_hooks then
             scope.hook_sites = {}
-            for i, hook in ipairs(scope.current_hooks) do scope.hook_sites[i] = hook.site end
+            for i, hook in ipairs(scope.current_hooks) do
+                scope.hook_sites[i] = hook.site
+            end
         end
     else
         scope.failed = true
@@ -416,15 +480,23 @@ local function run_scope(scope, fn, ...)
         -- Частично созданные хуки не становятся базой для следующей попытки.
         for i = #scope.slots, previous_slots + 1, -1 do
             local slot = scope.slots[i]
-            if slot.__frame then slot.dead = true end
-            if type(slot.v) == "table" and slot.v.__anim then slot.v.dead = true end
+            if slot.__frame then
+                slot.dead = true
+            end
+            if type(slot.v) == "table" and slot.v.__anim then
+                slot.v.dead = true
+            end
             if slot.__effect and slot.cleanup then
                 local cleanup_ok, cleanup_err = pcall(slot.cleanup)
-                if not cleanup_ok then scope.rt:report_error(cleanup_err) end
+                if not cleanup_ok then
+                    scope.rt:report_error(cleanup_err)
+                end
             end
             scope.slots[i], scope.hook_kinds[i] = nil, nil
         end
-        for i = previous_slots + 1, scope.slot_i do scope.hook_kinds[i] = nil end
+        for i = previous_slots + 1, scope.slot_i do
+            scope.hook_kinds[i] = nil
+        end
     end
     scope.current_hooks = nil
     cur_scope, cur_parent, cur_observer = prev_scope, prev_parent, prev_obs
@@ -510,7 +582,9 @@ end
 -- Оборачивает функцию в компонент: C(props, content).
 -- Обёртка компонента -> исходная функция (инструменты: документация и
 -- переход к объявлению в редакторе).
-R.component_source = setmetatable({}, { __mode = "k" })
+R.component_source = setmetatable({}, {
+    __mode = "k",
+})
 
 function R.component(fn)
     local wrapper = function(props, content)
@@ -560,12 +634,20 @@ local function next_slot(kind)
         error("hook called outside of composition", 3)
     end
     if scope.initializing_hook then
-        error("hook called inside initializer of " .. scope.initializing_hook .. "; call hooks during composition", 3)
+        error(
+            "hook called inside initializer of "
+                .. scope.initializing_hook
+                .. "; call hooks during composition",
+            3
+        )
     end
     scope.slot_i = scope.slot_i + 1
     local i = scope.slot_i
     if scope.current_hooks then
-        scope.current_hooks[i] = { kind = kind, site = hook_site() }
+        scope.current_hooks[i] = {
+            kind = kind,
+            site = hook_site(),
+        }
     end
     local expected = scope.hook_kinds[i]
     if expected and expected ~= kind then
@@ -581,7 +663,10 @@ end
 -- Ключи хуков: {n = число, ...}. n нужен, чтобы nil среди ключей
 -- сравнивался корректно (# для таблиц с дырами не определён).
 local function pack_keys(...)
-    return { n = select("#", ...), ... }
+    return {
+        n = select("#", ...),
+        ...,
+    }
 end
 
 local function keys_changed(old, new)
@@ -612,7 +697,10 @@ function R._remember(kind, init, ...)
             v = init()
             scope.initializing_hook = nil
         end
-        slot = { v = v, keys = keys }
+        slot = {
+            v = v,
+            keys = keys,
+        }
         scope.slots[i] = slot
     end
     return slot.v
@@ -637,7 +725,9 @@ function R.form(initial)
     assert(type(initial) == "table", "K.form initial must be a table")
     local form = R._remember("form", function()
         local fields = {}
-        for key, value in pairs(initial) do fields[key] = R.new_state(value) end
+        for key, value in pairs(initial) do
+            fields[key] = R.new_state(value)
+        end
         return fields
     end)
     for key in pairs(initial) do
@@ -656,7 +746,10 @@ function R.effect(fn, ...)
     local keys = pack_keys(...)
     local slot = scope.slots[i]
     if slot == nil then
-        slot = { __effect = true, scope = scope }
+        slot = {
+            __effect = true,
+            scope = scope,
+        }
         scope.slots[i] = slot
     end
     if keys_changed(slot.keys, keys) then
@@ -664,7 +757,7 @@ function R.effect(fn, ...)
         slot.pending = fn
         local rt = cur_rt
         if not slot.queued then
-            slot.queued=true
+            slot.queued = true
             rt.effects[#rt.effects + 1] = slot
         end
     end
@@ -675,7 +768,9 @@ function R.on_dispose(fn)
     local scope, i = next_slot("on_dispose")
     local slot = scope.slots[i]
     if slot == nil then
-        slot = { __effect = true }
+        slot = {
+            __effect = true,
+        }
         scope.slots[i] = slot
     end
     slot.cleanup = fn
@@ -687,9 +782,12 @@ function R.on_frame(fn)
     local scope, i = next_slot("on_frame")
     local slot = scope.slots[i]
     if not slot then
-        slot = {__frame=true, scope=scope}
+        slot = {
+            __frame = true,
+            scope = scope,
+        }
         scope.slots[i] = slot
-        scope.rt.frame_callbacks[#scope.rt.frame_callbacks+1] = slot
+        scope.rt.frame_callbacks[#scope.rt.frame_callbacks + 1] = slot
     end
     slot.fn = fn
 end
@@ -704,13 +802,17 @@ function R.poll(getter, eq)
         local ok, v = pcall(getter)
         -- по умолчанию поверхностное сравнение: новая таблица с теми же
         -- полями - не изменение
-        return { state = R.new_state(ok and v or nil, eq or shallow_equal) }
+        return {
+            state = R.new_state(ok and v or nil, eq or shallow_equal),
+        }
     end)
     p.getter = getter
     rt.pollers[p] = true
     local slot = cur_scope.slots[cur_scope.slot_i]
     slot.__effect = true
-    slot.cleanup = function() rt.pollers[p] = nil end
+    slot.cleanup = function()
+        rt.pollers[p] = nil
+    end
     return p.state.value
 end
 
@@ -767,7 +869,11 @@ function R.new(opts)
         root = nil,
         overlays = {},
         base_locals = opts.locals or EMPTY,
-        stats = { full = 0, partial = 0, reruns = 0 },
+        stats = {
+            full = 0,
+            partial = 0,
+            reruns = 0,
+        },
     }, Runtime)
     rt.root_scope = new_scope(rt, nil, opts.content, "root", "root")
     rt.root_scope.locals = rt.base_locals
@@ -845,8 +951,10 @@ end
 
 local function scope_active(scope)
     while scope do
-        if scope.disposed or scope.detached then return false end
-        scope=scope.parent
+        if scope.disposed or scope.detached then
+            return false
+        end
+        scope = scope.parent
     end
     return true
 end
@@ -879,7 +987,14 @@ function Runtime:compose()
     local ok, err = true, nil
     if full then
         self.force_full = false
-        local root = { kind = "box", mods = EMPTY, params = { fill = true }, children = {} }
+        local root = {
+            kind = "box",
+            mods = EMPTY,
+            params = {
+                fill = true,
+            },
+            children = {},
+        }
         self.root_scope.fn = self.content
         root.children[1] = self.root_scope.fragment
         ok, err = pcall(run_scope, self.root_scope, self.content)
@@ -982,15 +1097,17 @@ end
 -- поэтому обход полной композиции должен завершиться до её начала.
 function Runtime:prune_scopes()
     if self.last_full then
-        sweep(self.root_scope,self.frame,self.pending_disposals)
-        self.last_full=false
+        sweep(self.root_scope, self.frame, self.pending_disposals)
+        self.last_full = false
     end
 end
 
 local function dispose_pending(rt)
-    local pending=rt.pending_disposals
-    rt.pending_disposals={}
-    for _,scope in ipairs(pending) do dispose_scope(scope) end
+    local pending = rt.pending_disposals
+    rt.pending_disposals = {}
+    for _, scope in ipairs(pending) do
+        dispose_scope(scope)
+    end
 end
 
 -- Удаляет ушедшие области и запускает эффекты. Вызывать после раскладки.
@@ -1003,7 +1120,7 @@ function Runtime:commit()
     local effects = self.effects
     self.effects = {}
     for _, slot in ipairs(effects) do
-        slot.queued=nil
+        slot.queued = nil
         if slot.cleanup then
             local ok, err = pcall(slot.cleanup)
             if not ok then
@@ -1032,22 +1149,26 @@ function Runtime:dispose()
 end
 
 function Runtime:run_frame_callbacks(dt)
-    if #self.frame_callbacks==0 and not self.frame_error then return end
-    if self.frame_error and self.error_text==self.frame_error then
-        self.error_text=nil
-        self.need_layout=true
+    if #self.frame_callbacks == 0 and not self.frame_error then
+        return
     end
-    self.frame_error=nil
+    if self.frame_error and self.error_text == self.frame_error then
+        self.error_text = nil
+        self.need_layout = true
+    end
+    self.frame_error = nil
     local keep = {}
     for _, slot in ipairs(self.frame_callbacks) do
         if not slot.dead and scope_active(slot.scope) then
-            keep[#keep+1] = slot
+            keep[#keep + 1] = slot
             local ok, err = true, nil
-            if not scope_failed(slot.scope) then ok, err = pcall(slot.fn, dt) end
+            if not scope_failed(slot.scope) then
+                ok, err = pcall(slot.fn, dt)
+            end
             if not ok then
                 self:report_error(err)
-                self.frame_error=tostring(err)
-                self.need_layout=true
+                self.frame_error = tostring(err)
+                self.need_layout = true
             end
         end
     end

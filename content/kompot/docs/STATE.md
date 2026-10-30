@@ -9,8 +9,14 @@ local K = require "kompot:kompot"
 local UI = require "kompot:ui"
 
 local Screen = K.component(function()
-    local player = K.state({ name = "Петя", health = 100, coins = 0 })
-    K.Column({ spacing = 8 }, function()
+    local player = K.state({
+        name = "Петя",
+        health = 100,
+        coins = 0,
+    })
+    K.Column({
+        spacing = 8,
+    }, function()
         K.Text(player.value.name .. ": " .. player.value.health)
         UI.Button({
             text = "Получить урон",
@@ -23,7 +29,11 @@ local Screen = K.component(function()
     end)
 end)
 
-K.preview("Игрок", { width = 360, height = 180, theme = UI.theme() }, Screen)
+K.preview("Игрок", {
+    width = 360,
+    height = 180,
+    theme = UI.theme(),
+}, Screen)
 ```
 
 ## Замена значения
@@ -45,7 +55,10 @@ player.value = old -- ссылка прежняя, уведомления не �
 ## Несколько полей: patch
 
 ```lua
-player:patch({ health = 90, level = 5 })
+player:patch({
+    health = 90,
+    level = 5,
+})
 ```
 
 Метод создаёт новую поверхностную копию и заменяет перечисленные поля.
@@ -77,13 +90,17 @@ end)
 
 ```lua
 player:update_field("temporary", nil)
-player:update_field("temporary", function() return nil end)
+player:update_field("temporary", function()
+    return nil
+end)
 ```
 
 Записать функцию как значение поля можно через `patch`:
 
 ```lua
-player:patch({ on_damage = callback })
+player:patch({
+    on_damage = callback,
+})
 ```
 
 В `update_field` функция всегда означает вычисление нового значения.
@@ -91,7 +108,9 @@ player:patch({ on_damage = callback })
 ## Обычные таблицы: K.copy
 
 ```lua
-local next_player = K.copy(old_player, { health = 90 })
+local next_player = K.copy(old_player, {
+    health = 90,
+})
 local duplicate = K.copy(old_player)
 ```
 
@@ -107,11 +126,17 @@ local duplicate = K.copy(old_player)
 
 ```lua
 -- armor не сохранится: stats заменяется целиком.
-player:patch({ stats = { health = 90 } })
+player:patch({
+    stats = {
+        health = 90,
+    },
+})
 
 -- Изменяется health, armor и другие поля stats сохраняются.
 player:update_field("stats", function(stats)
-    return K.copy(stats, { health = 90 })
+    return K.copy(stats, {
+        health = 90,
+    })
 end)
 ```
 
@@ -121,7 +146,9 @@ end)
 player:update(function(old)
     return K.copy(old, {
         name = "Петя",
-        stats = K.copy(old.stats, { health = 90 }),
+        stats = K.copy(old.stats, {
+            health = 90,
+        }),
     })
 end)
 ```
@@ -144,16 +171,30 @@ Lua не сохраняет такую запись в таблице измен
 
 ```lua
 local Settings = K.component(function()
-    local form = K.form({ name = "", enabled = true, size = 10 })
-    UI.TextField({ state = form.name, label = "Имя" })
+    local form = K.form({
+        name = "",
+        enabled = true,
+        size = 10,
+    })
+    UI.TextField({
+        state = form.name,
+        label = "Имя",
+    })
     UI.Switch({
         text = "Включено",
         checked = form.enabled.value,
-        on_change = function(value) form.enabled.value = value end,
+        on_change = function(value)
+            form.enabled.value = value
+        end,
     })
     UI.Slider({
-        label = "Размер", min = 1, max = 20, value = form.size.value,
-        on_change = function(value) form.size.value = value end,
+        label = "Размер",
+        min = 1,
+        max = 20,
+        value = form.size.value,
+        on_change = function(value)
+            form.size.value = value
+        end,
     })
 end)
 ```
@@ -173,12 +214,20 @@ end)
 
 ```lua
 local generation = K.state(0)
-UI.Button({text = "Сбросить", on_click = function()
-    generation.value = generation:peek() + 1
-end})
+UI.Button({
+    text = "Сбросить",
+    on_click = function()
+        generation.value = generation:peek() + 1
+    end,
+})
 K.key(generation.value, function()
-    local form = K.form({ name = "", enabled = true })
-    UI.TextField({ state = form.name })
+    local form = K.form({
+        name = "",
+        enabled = true,
+    })
+    UI.TextField({
+        state = form.name,
+    })
 end)
 ```
 
@@ -222,7 +271,11 @@ end
 `Previous`/`Current` включаются отдельно:
 
 ```lua
-K.mount({ content = Screen, theme = UI.theme(), hook_diagnostics = true })
+K.mount({
+    content = Screen,
+    theme = UI.theme(),
+    hook_diagnostics = true,
+})
 ```
 
 Тот же параметр принимает `K.App.new`. В превью диагностика мест вызова

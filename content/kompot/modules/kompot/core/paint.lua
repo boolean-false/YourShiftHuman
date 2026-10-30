@@ -27,8 +27,14 @@ function P.raster(opts)
         version = opts.version or 1,
     }
 end
+-- Материал для рамок и повторения; src - имя текстуры или атлас:спрайт.
+-- props: source_size, border, center ("stretch"|"tile"|"none"), edges ("stretch"|"tile"), scale
 function P.nine_patch(src, opts)
     opts = opts or {}
+    assert(
+        opts.fit == nil,
+        'K.nine_patch: fit задаётся в K.Image, а не в nine_patch. Для фона без искажения используйте K.Image(..., {source_size = {...}, fit = "cover"}).'
+    )
     assert(
         type(src) == "string" or (type(src) == "table" and src.kind == "raster"),
         "image or raster source required"

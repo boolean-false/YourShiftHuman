@@ -26,7 +26,9 @@ local function args(a, b)
         return EMPTY, b
     end
     if Mod.is(a) then
-        return { modifier = a }, b
+        return {
+            modifier = a,
+        }, b
     end
     return a, b
 end
@@ -41,13 +43,10 @@ end
 -- props: modifier, align ("top_start" .. "bottom_end", "center"), propagate_min, key
 function F.Box(a, b)
     local props, content = args(a, b)
-    return R.emit(
-        "box",
-        mods(props),
-        { align = props.align, propagate_min = props.propagate_min },
-        content,
-        props.key
-    )
+    return R.emit("box", mods(props), {
+        align = props.align,
+        propagate_min = props.propagate_min,
+    }, content, props.key)
 end
 
 local function linear(kind, a, b)
@@ -77,13 +76,11 @@ end
 -- Перенос по строкам. props: spacing, run_spacing, align
 function F.FlowRow(a, b)
     local props, content = args(a, b)
-    return R.emit(
-        "flow",
-        mods(props),
-        { spacing = props.spacing, run_spacing = props.run_spacing, align = props.align },
-        content,
-        props.key
-    )
+    return R.emit("flow", mods(props), {
+        spacing = props.spacing,
+        run_spacing = props.run_spacing,
+        align = props.align,
+    }, content, props.key)
 end
 
 -- Пустое место: Spacer(8) - квадрат, Spacer(M:weight(1)) - заполнитель.
@@ -116,8 +113,11 @@ local function build_runs(src, style, base_color)
     for i, r in ipairs(src) do
         local st = r.style and Th.style(r.style) or style
         local font = r.font or (r.bold and (st.bold or st.font)) or st.font
-        runs[i] =
-            { text = r.text or r[1] or "", font = font, color = color.of(r.color) or base_color }
+        runs[i] = {
+            text = r.text or r[1] or "",
+            font = font,
+            color = color.of(r.color) or base_color,
+        }
     end
     return runs
 end
@@ -141,7 +141,10 @@ function F.Text(s, props)
     elseif props.markup == "md" then
         local src = parse_md(tostring(s or ""))
         if props.font then
-            style = { font = props.font, bold = props.bold_font or style.bold }
+            style = {
+                font = props.font,
+                bold = props.bold_font or style.bold,
+            }
         end
         runs = build_runs(src, style, c)
     end
@@ -160,6 +163,7 @@ end
 -- Image("atlas:name" | "texture/path", props?) props: width, height, size,
 --   source_size = {width, height}, fit ("fill"|"contain"|"cover"), color, region.
 -- Размер источника нужен для сохранения пропорций и режимов contain/cover.
+-- Двоеточие обозначает атлас:спрайт, а не префикс пака. Картинка может быть фоновым слоем Box.
 function F.Image(src, props)
     props = props or EMPTY
     local fit = props.fit or "fill"
@@ -225,7 +229,9 @@ end
 -- props.measure(children, minW, maxW, minH, maxH, api) -> w, h
 --   api.measure(child, minW, maxW, minH, maxH) -> w, h;  api.place(child, x, y)
 function F.Layout(props, content)
-    return R.emit("layout", mods(props), { measure = props.measure }, content, props.key)
+    return R.emit("layout", mods(props), {
+        measure = props.measure,
+    }, content, props.key)
 end
 
 -- Нативное поле ввода текста.
@@ -268,11 +274,13 @@ function F.TextInput(props)
         syntax = props.syntax,
         line_numbers = props.line_numbers,
         editable = props.editable ~= false,
+        enabled = props.enabled ~= false,
         wrap = wrap,
         presentation = props.presentation,
         editor_state = props.editor_state,
         editor_value = props.editor_value,
         on_selection_change = props.on_selection_change,
+        scroll_state = props.scroll_state,
     }, nil, props.key)
 end
 
@@ -281,7 +289,11 @@ function F.new_text_field_state(initial)
         initial = ""
     end
     assert(type(initial) == "string", "text_field_state expects a string")
-    return R.new_state({ text = initial, anchor = 0, caret = 0 })
+    return R.new_state({
+        text = initial,
+        anchor = 0,
+        caret = 0,
+    })
 end
 
 function F.text_field_state(initial)
@@ -360,11 +372,15 @@ F.BasicTextField = R.component(function(props)
         p.value = draft.value
     end
     p.on_change = function(value, selection)
-        if props.editable == false then
+        if props.editable == false or props.enabled == false then
             return
         end
         if editor then
-            editor.value = { text = value, anchor = selection[1], caret = selection[2] }
+            editor.value = {
+                text = value,
+                anchor = selection[1],
+                caret = selection[2],
+            }
         elseif state then
             state.value = value
         else
@@ -374,6 +390,13 @@ F.BasicTextField = R.component(function(props)
             props.on_change(value)
         end
     end
+    p.on_submit = props.on_submit
+            and function(value)
+                if props.enabled ~= false then
+                    props.on_submit(value)
+                end
+            end
+        or nil
     p.on_focus = function()
         focused.value = true
         if props.on_focus then
@@ -453,7 +476,10 @@ local function lazy_grid(props)
         modifier = props.modifier,
         pad = props.pad,
         item = function(r)
-            F.Row({ spacing = spacing, modifier = Mod:fill_max_width() }, function()
+            F.Row({
+                spacing = spacing,
+                modifier = Mod:fill_max_width(),
+            }, function()
                 for c = 1, cols do
                     local i = (r - 1) * cols + c
                     F.Box(Mod:weight(1), function()
@@ -515,19 +541,28 @@ end
 -- Всплывающий слой поверх всего интерфейса, привязанный к месту вызова.
 -- props: placement ("below"|"above"|"right"|"center"|"fill" | функция), gap, key,
 --        z (порядок среди всплывающих слоёв: больше - выше; по умолчанию 0)
+local LocalPopupInput = R.local_of(true, "PopupInput")
 local function popup(props, content)
+    local interactive = props.interactive ~= false and LocalPopupInput:get()
     local id = R.remember(function()
         return {}
     end)
     local anchor_id = tostring(id)
     -- якорь нулевого размера: привязка идёт к области родителя
-    R.emit("anchor", Mod, { id = anchor_id })
+    R.emit("anchor", Mod, {
+        id = anchor_id,
+    })
     local rt = R.runtime()
-    local holder = { kind = "box", mods = EMPTY, params = EMPTY, children = {} }
+    local holder = {
+        kind = "box",
+        mods = EMPTY,
+        params = EMPTY,
+        children = {},
+    }
     local prev = R.current_parent()
     -- содержимое строится вне дерева
     R._set_current(rt, R.current_scope(), holder)
-    local ok, err = pcall(content)
+    local ok, err = pcall(R.provide, LocalPopupInput, interactive, content)
     R._set_current(rt, R.current_scope(), prev)
     if not ok then
         error(err, 0)
@@ -542,6 +577,7 @@ local function popup(props, content)
         anchor = anchor_id,
         key = props.key or anchor_id,
         z = props.z,
+        interactive = interactive,
         place = function(anchor, w, h, W, H)
             return place_fn(anchor, w, h, W, H, gap)
         end,

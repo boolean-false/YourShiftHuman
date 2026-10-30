@@ -40,13 +40,33 @@ function Cache:acquire(p)
     if type(p.src) == "table" then
         source, flip = self.canvas({ p.width, p.height }), true
         source:clear()
-        p.src.draw(require("kompot:kompot/core/canvas").wrap(source,p.width,p.height,
-            require("kompot:kompot/core/canvas").engine_loader), p.width, p.height)
+        p.src.draw(
+            require("kompot:kompot/core/canvas").wrap(
+                source,
+                p.width,
+                p.height,
+                require("kompot:kompot/core/canvas").engine_loader
+            ),
+            p.width,
+            p.height
+        )
     else
-        source = assert(self.image(p.src), "background texture not loaded: " .. p.src)
+        source = assert(
+            self.image(p.src),
+            "K.nine_patch: ресурс не загружен: "
+                .. p.src
+                .. ". Проверьте preload.json. Двоеточие означает атлас:спрайт, а не пак:путь."
+        )
         assert(
             source.width == p.width and source.height == p.height,
-            "background source_size does not match texture"
+            string.format(
+                "K.nine_patch: source_size для %s задан как %sx%s, размер ресурса %sx%s. Для атласа укажите размер спрайта.",
+                p.src,
+                p.width,
+                p.height,
+                source.width,
+                source.height
+            )
         )
     end
     local slot
@@ -60,7 +80,9 @@ function Cache:acquire(p)
     if slot then
         self.lookup[slot.key] = nil
     else
-        slot = { id = #self.slots + 1 }
+        slot = {
+            id = #self.slots + 1,
+        }
         self.slots[slot.id] = slot
     end
     slot.key, slot.refs, slot.used, slot.flip, slot.cells = key, 1, self.clock, flip, {}
@@ -75,7 +97,10 @@ function Cache:acquire(p)
                 cv:blit(source, -xs[col], -(flip and ys[row] or (p.height - ys[row + 1])))
                 local name = "kompot_patch_" .. self.epoch .. "_" .. slot.id .. "_" .. index
                 cv:create_texture(name)
-                slot.cells[index] = { name = name, canvas = cv }
+                slot.cells[index] = {
+                    name = name,
+                    canvas = cv,
+                }
             end
         end
     end

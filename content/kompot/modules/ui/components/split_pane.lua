@@ -46,7 +46,9 @@ return K.component(function(props)
                 interaction = inter,
                 cursor = vertical and "ns-resize" or "ew-resize",
                 on_event = function(e)
-                    if e.type == "move" then change(vertical and e.parent_dy or e.parent_dx) end
+                    if e.type == "move" then
+                        change(vertical and e.parent_dy or e.parent_dx)
+                    end
                 end,
             })
             :focusable(function(key)
@@ -55,7 +57,9 @@ return K.component(function(props)
                 elseif key == (vertical and "down" or "right") then
                     change(props.step or 10)
                 end
-            end, { interaction = inter })
+            end, {
+                interaction = inter,
+            })
     end
     K.Layout({
         modifier = Common.mods(props),
@@ -82,9 +86,16 @@ return K.component(function(props)
             return w, h
         end,
     }, function()
-        K.Box({ modifier = M:clip() }, props.first)
-        K.Box({ modifier = M:clip() }, props.second)
-        K.Box({ modifier = divider, align = "center" }, function()
+        K.Box({
+            modifier = M:clip(),
+        }, props.first)
+        K.Box({
+            modifier = M:clip(),
+        }, props.second)
+        K.Box({
+            modifier = divider,
+            align = "center",
+        }, function()
             local line = vertical and M:fill_max_width():height(2) or M:width(2):fill_max_height()
             K.Box({
                 modifier = line:background(

@@ -21,7 +21,11 @@ local color = require "kompot:kompot/core/color"
 local Th = {}
 
 local function style(font, bold, size)
-    return { font = font, bold = bold, size = size or tonumber(font:match("(%d+)$")) }
+    return {
+        font = font,
+        bold = bold,
+        size = size or tonumber(font:match("(%d+)$")),
+    }
 end
 
 -- Минимальная нейтральная тема: работает без дизайн-системы (прототипы,

@@ -8,6 +8,7 @@ function on_open()
     handle = K.mount({
         target = document.root,
         theme = UI.DEFAULT,
+        keyboard_navigation = true,
         content = function()
             Gallery.App(session, function()
                 local current = handle

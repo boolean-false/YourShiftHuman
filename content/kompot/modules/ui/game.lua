@@ -23,7 +23,10 @@ G.ItemSlot = K.component(function(p)
     local t, inter = T.current(), K.interaction()
     local c, item = t.colors, p.item
     if not item and (p.src or p.icon or p.badge) then
-        item = { src = p.src, count = tonumber(p.badge) }
+        item = {
+            src = p.src,
+            count = tonumber(p.badge),
+        }
     end
     local enabled = p.enabled ~= false and not p.locked
     local over, valid = K.state(false), K.state(false)
@@ -79,24 +82,33 @@ G.ItemSlot = K.component(function(p)
         })
     end
     local function draw()
-        K.Box({ modifier = m, align = "center" }, function()
-            Skin.Surface({
-                kind = "inset",
+        K.Box({
+            modifier = m,
+            align = "center",
+        }, function()
+            Skin.Surface(Common.surface("slot", "inset", p, inter, {
                 color = bg,
                 selected = p.selected or over.value or inter.focused.value,
+                enabled = enabled,
+                error = over.value and not valid.value,
                 edge = edge,
-            })
+            }))
             if item and item.src then
-                K.Image(
-                    item.src,
-                    { size = size - 12, color = inter.dragged.value and K.hex("#FFFFFF66") or nil }
-                )
+                K.Image(item.src, {
+                    size = size - 12,
+                    color = inter.dragged.value and K.hex("#FFFFFF66") or nil,
+                })
             elseif p.icon or p.placeholder then
                 Skin.Icon(p.icon or p.placeholder, 22, c.dim)
             end
             if p.keycap then
-                K.Box({ modifier = M:align("top_start"):padding(3, 0) }, function()
-                    K.Text(tostring(p.keycap), { style = t.type.caption, color = c.muted })
+                K.Box({
+                    modifier = M:align("top_start"):padding(3, 0),
+                }, function()
+                    K.Text(tostring(p.keycap), {
+                        style = t.type.caption,
+                        color = c.muted,
+                    })
                 end)
             end
             local count_text = p.badge and tostring(p.badge)
@@ -122,8 +134,12 @@ G.ItemSlot = K.component(function(p)
                 end)
             end
             if item and item.durability ~= nil then
-                K.Box({ modifier = M:align("bottom_start"):padding(4, 0, 4, 4) }, function()
-                    K.Box({ modifier = M:size(size - 8, 3):background(c.shadow) }, function()
+                K.Box({
+                    modifier = M:align("bottom_start"):padding(4, 0, 4, 4),
+                }, function()
+                    K.Box({
+                        modifier = M:size(size - 8, 3):background(c.shadow),
+                    }, function()
                         K.Box({
                             modifier = M:size(math.floor((size - 8) * clamp(item.durability)), 3)
                                 :background(item.durability < 0.25 and c.error or c.success),
@@ -154,7 +170,9 @@ G.ItemSlot = K.component(function(p)
                         return anchor.x + pos[1] + 10, anchor.y + pos[2] + 10
                     end,
                 }, function()
-                    K.Image(item.src, { size = size - 8 })
+                    K.Image(item.src, {
+                        size = size - 8,
+                    })
                 end)
             end
         end)
@@ -166,7 +184,10 @@ G.ItemSlot = K.component(function(p)
             tip = tip .. "\n" .. item.description
         end
     end
-    Common.Tooltip({ text = tip, suppressed = inter.dragged.value }, draw)
+    Common.Tooltip({
+        text = tip,
+        suppressed = inter.dragged.value,
+    }, draw)
 end)
 G.Slot = G.ItemSlot
 
@@ -179,9 +200,14 @@ G.InventoryGrid = K.component(function(p)
         return {}
     end)
     local group = p.drag_group or identity
-    K.Column({ modifier = p.modifier, spacing = gap }, function()
+    K.Column({
+        modifier = p.modifier,
+        spacing = gap,
+    }, function()
         for row = 0, math.ceil(count / columns) - 1 do
-            K.Row({ spacing = gap }, function()
+            K.Row({
+                spacing = gap,
+            }, function()
                 for col = 1, columns do
                     local i = row * columns + col
                     if i <= count then
@@ -203,9 +229,15 @@ G.InventoryGrid = K.component(function(p)
                             if p.on_move then
                                 local callback = q.on_drag_event
                                 q.on_drag_event = function(e, item)
-                                    if callback then callback(e, item) end
+                                    if callback then
+                                        callback(e, item)
+                                    end
                                     if e.type == "start" then
-                                        return { index = i, item = item, group = group }
+                                        return {
+                                            index = i,
+                                            item = item,
+                                            group = group,
+                                        }
                                     end
                                 end
                             end
@@ -236,20 +268,31 @@ end)
 
 G.Hotbar = K.component(function(p)
     local t = T.current()
-    K.Column({ modifier = p.modifier, spacing = 6, align = "center" }, function()
+    K.Column({
+        modifier = p.modifier,
+        spacing = 6,
+        align = "center",
+    }, function()
         local selected = (p.items or {})[p.selected or 1]
         if p.show_name ~= false and selected then
             K.Box({}, function()
-                Skin.Surface({ color = t.colors.panel_bg })
-                K.Text(
-                    selected.name or selected.id or "",
-                    { style = t.type.title, modifier = M:padding(12, 8) }
-                )
+                Skin.Surface({
+                    color = t.colors.panel_bg,
+                })
+                K.Text(selected.name or selected.id or "", {
+                    style = t.type.title,
+                    modifier = M:padding(12, 8),
+                })
             end)
         end
         K.Box({}, function()
-            Skin.Surface({ color = t.colors.panel_bg })
-            K.Row({ modifier = M:padding(6), spacing = 4 }, function()
+            Skin.Surface({
+                color = t.colors.panel_bg,
+            })
+            K.Row({
+                modifier = M:padding(6),
+                spacing = 4,
+            }, function()
                 for i = 1, p.count or 10 do
                     K.key(i, function()
                         G.ItemSlot({
@@ -274,11 +317,17 @@ G.ResourceBar = K.component(function(p)
     local fraction = clamp((p.value or 0) / max)
     local segments = math.max(1, math.floor(p.segments or 10))
     local fill = K.color.of(p.color) or t.colors[p.kind or "energy"] or t.colors.primary
-    K.Column({ modifier = (p.modifier or M):fill_max_width(), spacing = 4 }, function()
+    K.Column({
+        modifier = (p.modifier or M):fill_max_width(),
+        spacing = 4,
+    }, function()
         if p.label then
             local value_text = p.text or (tostring(p.value or 0) .. " / " .. tostring(p.max or 100))
             local layout = p.compact and K.Column or K.Row
-            layout({ modifier = M:fill_max_width(), spacing = 2 }, function()
+            layout({
+                modifier = M:fill_max_width(),
+                spacing = 2,
+            }, function()
                 K.Text(p.label, {
                     style = t.type.caption,
                     wrap = false,
@@ -307,18 +356,15 @@ G.ResourceBar = K.component(function(p)
         }, function()
             for i = 1, segments do
                 local amount = clamp(fraction * segments - i + 1)
-                K.Box(
-                    { modifier = M:weight(1):fill_max_height():background(t.colors.control) },
-                    function()
-                        if amount > 0 then
-                            K.Box({
-                                modifier = M:fill_max_width(amount)
-                                    :fill_max_height()
-                                    :background(fill),
-                            })
-                        end
+                K.Box({
+                    modifier = M:weight(1):fill_max_height():background(t.colors.control),
+                }, function()
+                    if amount > 0 then
+                        K.Box({
+                            modifier = M:fill_max_width(amount):fill_max_height():background(fill),
+                        })
                     end
-                )
+                end)
             end
         end)
     end)
@@ -326,16 +372,26 @@ end)
 
 function G.ActionHint(p)
     local c = T.current().colors
-    K.Box({ modifier = p.modifier }, function()
-        Skin.Surface({ color = c.panel_bg })
-        K.Row({ modifier = M:padding(10, 6), spacing = 8, align = "center" }, function()
+    K.Box({
+        modifier = p.modifier,
+    }, function()
+        Skin.Surface({
+            color = c.panel_bg,
+        })
+        K.Row({
+            modifier = M:padding(10, 6),
+            spacing = 8,
+            align = "center",
+        }, function()
             C.Key(p.binding or "E")
-            K.Text(
-                p.text or "Взаимодействовать",
-                { style = T.current().type.body }
-            )
+            K.Text(p.text or "Взаимодействовать", {
+                style = T.current().type.body,
+            })
             if p.detail then
-                K.Text(p.detail, { color = c.muted, style = T.current().type.caption })
+                K.Text(p.detail, {
+                    color = c.muted,
+                    style = T.current().type.caption,
+                })
             end
         end)
     end)
@@ -350,13 +406,19 @@ function G.ItemDetails(p)
     }, function()
         if item then
             if item.src then
-                K.Image(item.src, { size = 80 })
+                K.Image(item.src, {
+                    size = 80,
+                })
             end
             if item.description then
-                K.Text(item.description, { color = t.colors.muted })
+                K.Text(item.description, {
+                    color = t.colors.muted,
+                })
             end
             if item.count then
-                K.Text("Количество: " .. item.count, { style = t.type.mono })
+                K.Text("Количество: " .. item.count, {
+                    style = t.type.mono,
+                })
             end
             if item.durability then
                 G.ResourceBar({
@@ -366,7 +428,9 @@ function G.ItemDetails(p)
                 })
             end
         else
-            K.Text("Выберите ячейку инвентаря.", { color = t.colors.muted })
+            K.Text("Выберите ячейку инвентаря.", {
+                color = t.colors.muted,
+            })
         end
         if p.actions then
             p.actions(item)
@@ -382,7 +446,11 @@ G.MachinePanel = K.component(function(p)
         modifier = p.modifier,
         header = nil,
     }, function()
-        K.Row({ modifier = M:fill_max_width(), spacing = 12, align = "center" }, function()
+        K.Row({
+            modifier = M:fill_max_width(),
+            spacing = 12,
+            align = "center",
+        }, function()
             G.ItemSlot({
                 item = p.input,
                 placeholder = "arrow_down",
@@ -390,8 +458,13 @@ G.MachinePanel = K.component(function(p)
                 accepts = p.accepts,
                 on_drop = p.on_drop,
             })
-            K.Column({ modifier = M:weight(1), spacing = 6 }, function()
-                K.Text(p.recipe or "Обработка", { style = t.type.caption })
+            K.Column({
+                modifier = M:weight(1),
+                spacing = 6,
+            }, function()
+                K.Text(p.recipe or "Обработка", {
+                    style = t.type.caption,
+                })
                 C.ProgressBar({
                     progress = p.progress or 0,
                     color = t.colors.energy,
@@ -414,7 +487,10 @@ G.MachinePanel = K.component(function(p)
             })
         end
         if p.status then
-            K.Text(p.status, { color = t.colors.muted, style = t.type.caption })
+            K.Text(p.status, {
+                color = t.colors.muted,
+                style = t.type.caption,
+            })
         end
         if p.on_start then
             C.Button({
@@ -445,11 +521,17 @@ G.HUD = K.component(function(p)
             end)
             :padding(16),
     }, function()
-        K.Column({ modifier = M:align("bottom_center"), spacing = 8, align = "center" }, function()
+        K.Column({
+            modifier = M:align("bottom_center"),
+            spacing = 8,
+            align = "center",
+        }, function()
             if p.prompt then
                 G.ActionHint(p.prompt)
             end
-            K.Row({ spacing = 8 }, function()
+            K.Row({
+                spacing = 8,
+            }, function()
                 for _, entry in ipairs({
                     { "health", "Здоровье" },
                     { "energy", "Энергия" },
@@ -458,25 +540,24 @@ G.HUD = K.component(function(p)
                     local value = p[entry[1]]
                     if value ~= nil then
                         local maximum = p[entry[1] .. "_max"] or 100
-                        Common.Tooltip(
-                            { text = entry[2] .. ": " .. value .. " / " .. maximum },
-                            function()
-                                K.Row({
-                                    modifier = M:width(bar_width),
-                                    spacing = 6,
-                                    align = "center",
-                                }, function()
-                                    Skin.Icon(entry[1], 14, T.current().colors[entry[1]])
-                                    G.ResourceBar({
-                                        kind = entry[1],
-                                        value = value,
-                                        max = maximum,
-                                        height = 10,
-                                        modifier = M:weight(1),
-                                    })
-                                end)
-                            end
-                        )
+                        Common.Tooltip({
+                            text = entry[2] .. ": " .. value .. " / " .. maximum,
+                        }, function()
+                            K.Row({
+                                modifier = M:width(bar_width),
+                                spacing = 6,
+                                align = "center",
+                            }, function()
+                                Skin.Icon(entry[1], 14, T.current().colors[entry[1]])
+                                G.ResourceBar({
+                                    kind = entry[1],
+                                    value = value,
+                                    max = maximum,
+                                    height = 10,
+                                    modifier = M:weight(1),
+                                })
+                            end)
+                        end)
                     end
                 end
             end)

@@ -1,23 +1,69 @@
 -- Общий каталог живого справочника и превью.
 local K = require "kompot:kompot"
 local UI = require "kompot:ui"
-local G = { entries = {}, by_id = {} }
-G.groups = {
-    { id = "game", title = "Игровые окна" },
-    { id = "start", title = "Начало работы" },
-    { id = "controls", title = "Компоненты" },
-    { id = "layout", title = "Раскладка" },
-    { id = "media", title = "Текст и графика" },
-    { id = "fields", title = "Текстовый ввод" },
-    { id = "input", title = "Взаимодействие" },
-    { id = "state", title = "Состояние и эффекты" },
-    { id = "motion", title = "Анимация" },
-    { id = "scroll", title = "Прокрутка" },
-    { id = "theme", title = "Темизация" },
-    { id = "recipes", title = "Игровые примеры" },
-    { id = "integration", title = "Интеграция" },
+local G = {
+    entries = {},
+    by_id = {},
 }
-G.prelude = 'local K = require "kompot:kompot"\nlocal UI = require "kompot:ui"\nlocal M = K.M\n'
+G.groups = {
+    {
+        id = "game",
+        title = "Игровые окна",
+    },
+    {
+        id = "start",
+        title = "Начало работы",
+    },
+    {
+        id = "controls",
+        title = "Компоненты",
+    },
+    {
+        id = "layout",
+        title = "Раскладка",
+    },
+    {
+        id = "media",
+        title = "Текст и графика",
+    },
+    {
+        id = "fields",
+        title = "Текстовый ввод",
+    },
+    {
+        id = "input",
+        title = "Взаимодействие",
+    },
+    {
+        id = "state",
+        title = "Состояние и эффекты",
+    },
+    {
+        id = "motion",
+        title = "Анимация",
+    },
+    {
+        id = "scroll",
+        title = "Прокрутка",
+    },
+    {
+        id = "theme",
+        title = "Темизация",
+    },
+    {
+        id = "recipes",
+        title = "Игровые примеры",
+    },
+    {
+        id = "integration",
+        title = "Интеграция",
+    },
+}
+G.prelude = [[
+local K = require "kompot:kompot"
+local UI = require "kompot:ui"
+local M = K.M
+]]
 
 function G.add(group, id, title, description, apis, source, opts)
     assert(not G.by_id[id], "duplicate guide entry: " .. id)
@@ -59,7 +105,10 @@ function G.add(group, id, title, description, apis, source, opts)
             if opts.scene then
                 draw(K, UI, K.M)
             else
-                K.Column({ modifier = K.M:fill_max_width(), spacing = 12 }, function()
+                K.Column({
+                    modifier = K.M:fill_max_width(),
+                    spacing = 12,
+                }, function()
                     draw(K, UI, K.M)
                 end)
             end
@@ -126,9 +175,24 @@ function G.code(entry)
         return entry.source
     end
     return G.prelude
-        .. "\nlocal function Example()\n"
-        .. "    K.Column({modifier = M:fill_max_width(), spacing = 12}, function()\n"
-        .. entry.source:gsub("([^\n]+)", "        %1")
-        .. "\n    end)\nend\n\nK.mount({theme = UI.theme(), content = Example})"
+        .. "\n"
+        .. [[
+local function Example()
+    K.Column({
+        modifier = M:fill_max_width(),
+        spacing = 12,
+    }, function()
+]]
+        .. entry.source:gsub("\n+$", ""):gsub("([^\n]+)", "        %1")
+        .. "\n"
+        .. [[
+    end)
+end
+
+K.mount({
+    theme = UI.theme(),
+    content = Example,
+})
+]]
 end
 return G

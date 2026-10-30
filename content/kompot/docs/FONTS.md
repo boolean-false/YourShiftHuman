@@ -13,9 +13,15 @@
 Доступные размеры: **11, 12, 13, 14, 16, 20, 24, 32, 44**.
 
 ```lua
-K.Text("Обычный текст", {font = "kompot_16"})
-K.Text("Заголовок", {font = "kompot_sb_24"})
-K.Text("123 / 456", {font = "kompot_mono_14"})
+K.Text("Обычный текст", {
+    font = "kompot_16",
+})
+K.Text("Заголовок", {
+    font = "kompot_sb_24",
+})
+K.Text("123 / 456", {
+    font = "kompot_mono_14",
+})
 ```
 
 Компоненты выбирают шрифт из темы, поэтому указывать `font` для каждой
@@ -73,8 +79,17 @@ my_ui/
 local K = require "kompot:kompot"
 
 K.fonts.register_family("my_ui:sans", {
-    {name = "my_sans_14", file = "my_ui/fonts/My-Regular.ttf", size = 14},
-    {name = "my_sans_sb_14", file = "my_ui/fonts/My-Semibold.ttf", size = 14, weight = "semibold"},
+    {
+        name = "my_sans_14",
+        file = "my_ui/fonts/My-Regular.ttf",
+        size = 14,
+    },
+    {
+        name = "my_sans_sb_14",
+        file = "my_ui/fonts/My-Semibold.ttf",
+        size = 14,
+        weight = "semibold",
+    },
 })
 ```
 
@@ -90,8 +105,12 @@ local K = require "kompot:kompot"
 require "my_ui:fonts"
 
 -- Внутри содержимого экрана или превью:
-K.Text("Текст", {font = K.fonts.resolve("my_ui:sans", 14)})
-K.Text("Выделенный текст", {font = K.fonts.resolve("my_ui:sans", 14, "semibold")})
+K.Text("Текст", {
+    font = K.fonts.resolve("my_ui:sans", 14),
+})
+K.Text("Выделенный текст", {
+    font = K.fonts.resolve("my_ui:sans", 14, "semibold"),
+})
 ```
 
 Те же имена шрифтов можно указать в стилях своей [темы](DESIGN_SYSTEM.md).
@@ -113,7 +132,12 @@ K.Text("Выделенный текст", {font = K.fonts.resolve("my_ui:sans", 
 
 ```lua
 K.fonts.register_family("my_ui:pixel", {
-    {name = "my_pixel", file = "my_ui/fonts/pixel", size = 16, kind = "bitmap"},
+    {
+        name = "my_pixel",
+        file = "my_ui/fonts/pixel",
+        size = 16,
+        kind = "bitmap",
+    },
 })
 ```
 

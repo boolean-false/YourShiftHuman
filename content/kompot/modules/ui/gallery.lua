@@ -3,7 +3,9 @@ local UI = require "kompot:ui"
 local Guide = require "kompot:ui/guide"
 local Scroll = require "kompot:kompot/core/scroll"
 local M = K.M
-local G = { catalog = Guide }
+local G = {
+    catalog = Guide,
+}
 G.pages = Guide.entries
 
 function G.new_session()
@@ -14,10 +16,19 @@ function G.new_session()
         query = K.new_state(""),
         navigation = K.new_state(false),
         show_code = K.new_state(false),
+        code_height = K.new_state(nil),
         generations = {},
         scrolls = {},
-        history = { game = "chest", core = "welcome", ui = "buttons" },
-        searches = { game = "", core = "", ui = "" },
+        history = {
+            game = "chest",
+            core = "welcome",
+            ui = "buttons",
+        },
+        searches = {
+            game = "",
+            core = "",
+            ui = "",
+        },
         nav_scrolls = {
             game = Scroll.new_scroll(),
             core = Scroll.new_scroll(),
@@ -71,17 +82,22 @@ end)
 local function navigation(s)
     local results = Guide.search(s.query.value, s.section.value)
     local nav_scroll = s.nav_scrolls[s.section.value]
-    K.Column({ modifier = M:fill_max_size(), spacing = 10 }, function()
+    K.Column({
+        modifier = M:fill_max_size(),
+        spacing = 10,
+    }, function()
         UI.TextField({
             state = s.query,
             hint = "Поиск по названию или API",
             modifier = M:tag("guide_search"),
         })
-        K.Text(
-            #results .. " примеров",
-            { style = "caption", color = K.theme().colors.muted }
-        )
-        K.Box({ modifier = M:weight(1):fill_max_width() }, function()
+        K.Text(#results .. " примеров", {
+            style = "caption",
+            color = K.theme().colors.muted,
+        })
+        K.Box({
+            modifier = M:weight(1):fill_max_width(),
+        }, function()
             K.Column({
                 modifier = M:fill_max_size():vertical_scroll(nav_scroll):padding(0, 0, 12, 0),
                 spacing = 4,
@@ -91,10 +107,10 @@ local function navigation(s)
                     if entry.group ~= previous then
                         for _, group in ipairs(Guide.groups) do
                             if group.id == entry.group then
-                                K.Text(
-                                    group.title,
-                                    { style = "strong", modifier = M:padding(4, 12, 0, 4) }
-                                )
+                                K.Text(group.title, {
+                                    style = "strong",
+                                    modifier = M:padding(4, 12, 0, 4),
+                                })
                             end
                         end
                         previous = entry.group
@@ -121,7 +137,9 @@ local function navigation(s)
                     })
                 end
             end)
-            UI.Scrollbar({ state = nav_scroll })
+            UI.Scrollbar({
+                state = nav_scroll,
+            })
         end)
     end)
 end
@@ -134,25 +152,39 @@ local function page(s)
         s.generations[entry.id] = K.new_state(0)
     end
     local scroll, generation = s.scrolls[entry.id], s.generations[entry.id].value
-    K.Box({ modifier = M:fill_max_size() }, function()
+    K.Box({
+        modifier = M:fill_max_size(),
+    }, function()
         K.Column({
             modifier = M:fill_max_size():vertical_scroll(scroll):padding(0, 0, 18, 16),
             spacing = 16,
         }, function()
-            K.Text(
-                (entry.section == "core" and "Kompot / " or "Kompot UI / ") .. entry.title,
-                { style = "caption", color = K.theme().colors.muted }
-            )
-            K.Text(entry.title, { style = "heading" })
+            K.Text((entry.section == "core" and "Kompot / " or "Kompot UI / ") .. entry.title, {
+                style = "caption",
+                color = K.theme().colors.muted,
+            })
+            K.Text(entry.title, {
+                style = "heading",
+            })
             K.Text(entry.description)
-            K.FlowRow({ spacing = 6, run_spacing = 6 }, function()
+            K.FlowRow({
+                spacing = 6,
+                run_spacing = 6,
+            }, function()
                 for _, api in ipairs(entry.apis) do
                     UI.Key(api)
                 end
             end)
             if not entry.standalone then
-                K.Row({ modifier = M:fill_max_width(), align = "center", spacing = 8 }, function()
-                    K.Text("Живой пример", { style = "strong", modifier = M:weight(1)})
+                K.Row({
+                    modifier = M:fill_max_width(),
+                    align = "center",
+                    spacing = 8,
+                }, function()
+                    K.Text("Живой пример", {
+                        style = "strong",
+                        modifier = M:weight(1),
+                    })
                     UI.Button({
                         text = "Сбросить",
                         size = "sm",
@@ -162,29 +194,37 @@ local function page(s)
                         end,
                     })
                 end)
-                UI.Panel(
-                    { width = false, modifier = M:fill_max_width(), padding = 16, spacing = 12 },
-                    function()
-                        if supports(entry) then
-                            K.key(entry.id .. ":" .. generation, function()
-                                entry.render()
-                            end)
-                        else
-                            K.Text(
-                                "Нужна сборка VoxelCore с API текстовой раскладки",
-                                { style = "strong" }
-                            )
-                            UI.Hint(
-                                "Этот пример использует selection, textLayout и externalRendering. Код доступен ниже; остальные примеры работают на обычной сборке."
-                            )
-                        end
+                UI.Panel({
+                    width = false,
+                    modifier = M:fill_max_width(),
+                    padding = 16,
+                    spacing = 12,
+                }, function()
+                    if supports(entry) then
+                        K.key(entry.id .. ":" .. generation, function()
+                            entry.render()
+                        end)
+                    else
+                        K.Text(
+                            "Нужна сборка VoxelCore с API текстовой раскладки",
+                            {
+                                style = "strong",
+                            }
+                        )
+                        UI.Hint(
+                            "Этот пример использует selection, textLayout и externalRendering. Код доступен ниже; остальные примеры работают на обычной сборке."
+                        )
                     end
-                )
+                end)
             end
             if entry.note then
                 UI.Hint(entry.note)
             end
-            K.FlowRow({ spacing = 8, run_spacing = 8, align='center'}, function()
+            K.FlowRow({
+                spacing = 8,
+                run_spacing = 8,
+                align = "center",
+            }, function()
                 UI.Button({
                     text = s.show_code.value and "Скрыть код" or "Показать код",
                     size = "sm",
@@ -193,16 +233,26 @@ local function page(s)
                         s.show_code.value = not s.show_code:peek()
                     end,
                 })
-                K.Text("Готовый Lua-фрагмент", { style = "caption" })
+                K.Text("Готовый Lua-фрагмент", {
+                    style = "caption",
+                })
             end)
             if s.show_code.value then
-                UI.Lua({ code = Guide.code(entry), line_numbers = true, lines = 20 })
-                UI.Hint(
-                    "Код можно выделить и скопировать Ctrl+C. Прокрутка внутри поля открывает остальные строки."
-                )
+                local code = Guide.code(entry)
+                local _, newlines = code:gsub("\n", "")
+                UI.Lua({
+                    code = code,
+                    line_numbers = true,
+                    lines = math.min(40, newlines + 2),
+                    resizable = true,
+                    scroll_past_end = true,
+                    height_state = s.code_height,
+                })
             end
         end)
-        UI.Scrollbar({ state = scroll })
+        UI.Scrollbar({
+            state = scroll,
+        })
     end)
 end
 function G.App(s, on_close)
@@ -213,8 +263,15 @@ function G.App(s, on_close)
             modifier = M:fill_max_size():background(c.scrim):block_pointer():padding(16),
             spacing = 12,
         }, function()
-            K.Row({ modifier = M:fill_max_width(), spacing = 8, align = "center" }, function()
-                K.Text("Kompot", { style = "title", modifier = M:weight(1) })
+            K.Row({
+                modifier = M:fill_max_width(),
+                spacing = 8,
+                align = "center",
+            }, function()
+                K.Text("Kompot", {
+                    style = "title",
+                    modifier = M:weight(1),
+                })
                 if on_close then
                     UI.IconButton({
                         icon = "close",
@@ -224,7 +281,10 @@ function G.App(s, on_close)
                     })
                 end
             end)
-            K.Row({ modifier = M:fill_max_width(), spacing = 8 }, function()
+            K.Row({
+                modifier = M:fill_max_width(),
+                spacing = 8,
+            }, function()
                 for _, section in ipairs({
                     { "game", "Игровые окна" },
                     { "ui", "Компоненты" },
@@ -257,7 +317,10 @@ function G.App(s, on_close)
                 end)
             end
             if s.section.value == "game" then
-                K.FlowRow({ spacing = 4, run_spacing = 4 }, function()
+                K.FlowRow({
+                    spacing = 4,
+                    run_spacing = 4,
+                }, function()
                     for _, entry in ipairs(Guide.search("", "game")) do
                         UI.Button({
                             text = entry.title,
@@ -279,31 +342,33 @@ function G.App(s, on_close)
                         end,
                     })
                 end)
-                K.Box({ modifier = M:weight(1):fill_max_width() }, function()
+                K.Box({
+                    modifier = M:weight(1):fill_max_width(),
+                }, function()
                     if s.show_code.value then
-                        UI.Panel(
-                            { width = false, fill_height = true, modifier = M:fill_max_size() },
-                            content
-                        )
+                        UI.Panel({
+                            width = false,
+                            fill_height = true,
+                            modifier = M:fill_max_size(),
+                        }, content)
                     else
                         local entry = Guide.by_id[s.page.value]
                         if not s.scrolls[entry.id] then
                             s.scrolls[entry.id] = Scroll.new_scroll()
                         end
-                        K.Column(
-                            { modifier = M:fill_max_size():vertical_scroll(s.scrolls[entry.id]) },
-                            function()
-                                K.Box({
-                                    modifier = M:fill_max_width():height_in(
-                                        math.max(400, K.runtime().height - 180),
-                                        10000
-                                    ),
-                                    align = "center",
-                                }, function()
-                                    K.key(entry.id, entry.render)
-                                end)
-                            end
-                        )
+                        K.Column({
+                            modifier = M:fill_max_size():vertical_scroll(s.scrolls[entry.id]),
+                        }, function()
+                            K.Box({
+                                modifier = M:fill_max_width():height_in(
+                                    math.max(400, K.runtime().height - 180),
+                                    10000
+                                ),
+                                align = "center",
+                            }, function()
+                                K.key(entry.id, entry.render)
+                            end)
+                        end)
                     end
                 end)
             elseif narrow then

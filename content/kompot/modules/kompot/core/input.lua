@@ -27,6 +27,7 @@ function Input.new(rt)
         rdragging = false,
         hovered = {},
         cursor = nil,
+        focus_scopes = {},
         focus_key = nil,
         focus_visible = false,
     }, Input)
@@ -43,13 +44,18 @@ function Input.interaction()
 end
 
 local function focus_spec(r)
-    if not r then
+    if not r or r.disabled then
         return nil
     end
     if r.focus and r.focus.enabled then
         return r.focus
     end
-    if r.click and r.click.enabled and r.click.focusable then
+    if
+        r.click
+        and r.click.enabled
+        and r.click.focusable
+        and (not r.click.auto_focus or r.keyboard_navigation)
+    then
         return r.click
     end
     return nil
@@ -62,11 +68,14 @@ function Input:set_focus(key, by_key, keyboard)
             self.focus_visible = visible
             self.rt.need_layout = true
         end
+        if keyboard and self.focus_region then
+            self:reveal(self.focus_region)
+        end
         return
     end
     local old = self.focus_region or (self.focus_key and by_key[self.focus_key])
     local new = key and by_key[key]
-    local old_spec = focus_spec(old)
+    local old_spec = old and (old.focus or old.click)
     if old_spec then
         if old_spec.interaction then
             old_spec.interaction.focused:set(false)
@@ -87,29 +96,91 @@ function Input:set_focus(key, by_key, keyboard)
             self:call(new_spec.on_focus)
         end
     end
+    if keyboard and new then
+        self:reveal(new)
+    end
     self.rt.need_layout = true
 end
 
-local function local_point(r,x,y)
-    x,y=A.point(r.inverse,x,y)
-    return x-r.x,y-r.y
-end
-local function inside(r,x,y)
-    if r.singular then return false end
-    local c=r.clip
-    while c do
-        if c.inverse then
-            local cx,cy=A.point(c.inverse,x,y)
-            if not Corners.contains(cx-c.x,cy-c.y,c.w,c.h,c.radius) then return false end
-        elseif not c.passthrough and not c.parent then
-            if x<c.x0 or y<c.y0 or x>=c.x1 or y>=c.y1 then return false end
-        end
-        c=c.parent
+-- Прокручиваем изнутри наружу, учитывая уже сдвинутый прямоугольник.
+function Input:reveal(r)
+    local matrix = A.inverse(r.inverse)
+    local points = { r.x, r.y, r.x + r.w, r.y, r.x + r.w, r.y + r.h, r.x, r.y + r.h }
+    for i = 1, 8, 2 do
+        points[i], points[i + 1] = A.point(matrix, points[i], points[i + 1])
     end
-    local lx,ly=local_point(r,x,y)
-    return lx>=0 and ly>=0 and lx<r.w and ly<r.h
+    local c = r.clip
+    while c do
+        if c.scroll then
+            local lo, hi = math.huge, -math.huge
+            for i = 1, 8, 2 do
+                local x, y = A.point(c.inverse, points[i], points[i + 1])
+                local value = c.axis == 1 and x - c.x or y - c.y
+                lo, hi = math.min(lo, value), math.max(hi, value)
+            end
+            local view = c.axis == 1 and c.w or c.h
+            local delta = lo < 0 and lo or (hi > view and math.min(lo, hi - view) or 0)
+            local moved = c.scroll:scroll_by(delta)
+            local transform = A.inverse(c.inverse)
+            local dx, dy =
+                A.point(transform, c.axis == 1 and moved or 0, c.axis == 2 and moved or 0)
+            local ox, oy = A.point(transform, 0, 0)
+            for i = 1, 8, 2 do
+                points[i], points[i + 1] = points[i] - dx + ox, points[i + 1] - dy + oy
+            end
+        end
+        c = c.parent
+    end
 end
 
+local function focus_candidate(r)
+    if not focus_spec(r) or r.singular or r.w <= 0 or r.h <= 0 then
+        return false
+    end
+    local matrix = A.inverse(r.inverse)
+    local x, y, w, h = r.x, r.y, r.w, r.h
+    local c = r.clip
+    while c do
+        if c.scroll then
+            -- Дальний потомок доступен через прокрутку; дальше проверяем сам viewport.
+            x, y, w, h, matrix = c.x, c.y, c.w, c.h, A.inverse(c.inverse)
+        elseif not c.passthrough then
+            local x0, y0, x1, y1 = A.bounds(A.multiply(c.inverse, matrix), x, y, w, h)
+            local cx, cy, cw, ch = c.x or c.x0, c.y or c.y0, c.w or c.x1 - c.x0, c.h or c.y1 - c.y0
+            if x1 <= cx or y1 <= cy or x0 >= cx + cw or y0 >= cy + ch then
+                return false
+            end
+        end
+        c = c.parent
+    end
+    return true
+end
+
+local function local_point(r, x, y)
+    x, y = A.point(r.inverse, x, y)
+    return x - r.x, y - r.y
+end
+local function inside(r, x, y)
+    if r.singular or r.disabled then
+        return false
+    end
+    local c = r.clip
+    while c do
+        if c.inverse then
+            local cx, cy = A.point(c.inverse, x, y)
+            if not Corners.contains(cx - c.x, cy - c.y, c.w, c.h, c.radius) then
+                return false
+            end
+        elseif not c.passthrough and not c.parent then
+            if x < c.x0 or y < c.y0 or x >= c.x1 or y >= c.y1 then
+                return false
+            end
+        end
+        c = c.parent
+    end
+    local lx, ly = local_point(r, x, y)
+    return lx >= 0 and ly >= 0 and lx < r.w and ly < r.h
+end
 
 function Input:call(fn, ...)
     local ok, err = pcall(fn, ...)
@@ -121,49 +192,91 @@ end
 
 -- Единый формат событий перетаскивания и координат указателя
 function Input:drag_event(r, phase, x, y, last_x, last_y, right)
-    local lx,ly=local_point(r,x,y)
-    local px,py=A.point(r.parent_inverse,x,y)
-    local ox,oy=A.point(r.parent_inverse,last_x or x,last_y or y)
-    local ex,ey=local_point(r,last_x or x,last_y or y)
-    local opts=r.drag
-    if right then opts=r.rdrag end
-    local dx,dy=lx-ex,ly-ey
-    local pdx,pdy=px-ox,py-oy
-    if opts and opts.axis==1 then dy,pdy=0,0 elseif opts and opts.axis==2 then dx,pdx=0,0 end
-    local velocity=self.velocity
-    if right then velocity=self.rvelocity end
-    velocity=velocity or {x=0,y=0,time=self.rt.time}
-    local dt=self.rt.time-(velocity.time or self.rt.time)
-    if phase=="move" and dt>0 then
-        velocity.x,velocity.y=pdx/dt,pdy/dt
-        velocity.time=self.rt.time
-    elseif phase=="end" and self.rt.time-velocity.time>0.1 then
-        velocity.x,velocity.y=0,0
+    local lx, ly = local_point(r, x, y)
+    local px, py = A.point(r.parent_inverse, x, y)
+    local ox, oy = A.point(r.parent_inverse, last_x or x, last_y or y)
+    local ex, ey = local_point(r, last_x or x, last_y or y)
+    local opts = r.drag
+    if right then
+        opts = r.rdrag
     end
-    if right then self.rvelocity=velocity else self.velocity=velocity end
-    return {type=phase,x=lx,y=ly,dx=dx,dy=dy,parent_x=px-(r.parent_x or 0),
-        parent_y=py-(r.parent_y or 0),parent_dx=pdx,parent_dy=pdy,
-        velocity_x=velocity.x,velocity_y=velocity.y,button=right and "right" or "left"}
+    local dx, dy = lx - ex, ly - ey
+    local pdx, pdy = px - ox, py - oy
+    if opts and opts.axis == 1 then
+        dy, pdy = 0, 0
+    elseif opts and opts.axis == 2 then
+        dx, pdx = 0, 0
+    end
+    local velocity = self.velocity
+    if right then
+        velocity = self.rvelocity
+    end
+    velocity = velocity or {
+        x = 0,
+        y = 0,
+        time = self.rt.time,
+    }
+    local dt = self.rt.time - (velocity.time or self.rt.time)
+    if phase == "move" and dt > 0 then
+        velocity.x, velocity.y = pdx / dt, pdy / dt
+        velocity.time = self.rt.time
+    elseif phase == "end" and self.rt.time - velocity.time > 0.1 then
+        velocity.x, velocity.y = 0, 0
+    end
+    if right then
+        self.rvelocity = velocity
+    else
+        self.velocity = velocity
+    end
+    return {
+        type = phase,
+        x = lx,
+        y = ly,
+        dx = dx,
+        dy = dy,
+        parent_x = px - (r.parent_x or 0),
+        parent_y = py - (r.parent_y or 0),
+        parent_dx = pdx,
+        parent_dy = pdy,
+        velocity_x = velocity.x,
+        velocity_y = velocity.y,
+        button = right and "right" or "left",
+    }
 end
-function Input:cancel_capture(right,reason,r)
+function Input:cancel_capture(right, reason, r)
     if not r then
-        if right then r=self.rcapture_region else r=self.capture_region end
+        if right then
+            r = self.rcapture_region
+        else
+            r = self.capture_region
+        end
     end
     if r then
-        local opts,dragging=r.drag,self.dragging
-        if right then opts,dragging=r.rdrag,self.rdragging end
+        local opts, dragging = r.drag, self.dragging
+        if right then
+            opts, dragging = r.rdrag, self.rdragging
+        end
         if opts and opts.interaction then
             opts.interaction.pressed:set(false)
             opts.interaction.dragged:set(false)
         end
-        if r.click and r.click.interaction then r.click.interaction.pressed:set(false) end
-        local e=self:drag_event(r,"cancel",self.x,self.y,nil,nil,right)
-        e.cancelled,e.reason=true,reason
-        if dragging and opts and opts.on_event then self:call(opts.on_event,e) end
-        if r.pointer then self:call(r.pointer,e) end
+        if r.click and r.click.interaction then
+            r.click.interaction.pressed:set(false)
+        end
+        local e = self:drag_event(r, "cancel", self.x, self.y, nil, nil, right)
+        e.cancelled, e.reason = true, reason
+        if dragging and opts and opts.on_event then
+            self:call(opts.on_event, e)
+        end
+        if r.pointer then
+            self:call(r.pointer, e)
+        end
     end
-    if right then self.rcapture,self.rcapture_region,self.rdragging=nil,nil,false
-    else self.capture,self.capture_region,self.dragging=nil,nil,false end
+    if right then
+        self.rcapture, self.rcapture_region, self.rdragging = nil, nil, false
+    else
+        self.capture, self.capture_region, self.dragging = nil, nil, false
+    end
 end
 
 local function scroll_region(self, r, wheel)
@@ -254,12 +367,37 @@ function Input:sync_regions(regions)
     for i, r in ipairs(regions) do
         by_key[r.key], indices[r.key] = r, i
     end
-    local focus_start = 1
+    local focus_start, scopes = 1, {}
     for i, r in ipairs(regions) do
-        if r.focus_scope then
+        if r.focus_scope and not r.disabled then
             focus_start = i + 1
+            scopes[#scopes + 1] = r
         end
     end
+    local common = 0
+    while
+        self.focus_scopes[common + 1]
+        and scopes[common + 1]
+        and self.focus_scopes[common + 1].key == scopes[common + 1].key
+    do
+        scopes[common + 1].restore = self.focus_scopes[common + 1].restore
+        common = common + 1
+    end
+    local restore
+    for i = #self.focus_scopes, common + 1, -1 do
+        restore = self.focus_scopes[i].restore
+    end
+    if restore and by_key[restore.key] and focus_spec(by_key[restore.key]) then
+        self:set_focus(restore.key, by_key, restore.keyboard)
+    end
+    for i = common + 1, #scopes do
+        scopes[i].restore = {
+            key = self.focus_key,
+            keyboard = self.focus_visible,
+        }
+    end
+    local entered = #scopes > common
+    self.focus_scopes = scopes
     if self.focus_key and focus_start > 1 then
         local allowed = false
         for i = focus_start, #regions do
@@ -276,7 +414,9 @@ function Input:sync_regions(regions)
         self:set_focus(nil, by_key)
     elseif self.focus_key and self.focus_region ~= by_key[self.focus_key] then
         local current = by_key[self.focus_key]
-        local old_spec, new_spec = focus_spec(self.focus_region), focus_spec(current)
+        local old_spec, new_spec =
+            self.focus_region and (self.focus_region.focus or self.focus_region.click),
+            focus_spec(current)
         if old_spec and old_spec.interaction and old_spec.interaction ~= new_spec.interaction then
             old_spec.interaction.focused:set(false)
             if new_spec.interaction then
@@ -285,21 +425,70 @@ function Input:sync_regions(regions)
         end
         self.focus_region = current
     end
+    if entered and not self.focus_key and scopes[#scopes].click.focus_index then
+        local candidates = {}
+        for i = focus_start, #regions do
+            if focus_candidate(regions[i]) then
+                candidates[#candidates + 1] = regions[i]
+            end
+        end
+        local index = math.min(#candidates, math.max(1, scopes[#scopes].click.focus_index))
+        if candidates[index] then
+            local keyboard = scopes[#scopes].restore.keyboard
+            self:set_focus(candidates[index].key, by_key, keyboard)
+            if not keyboard then
+                self:reveal(candidates[index])
+            end
+        end
+    end
     local pointer_start = math.max(1, focus_start - 1)
     local function blocked(key)
-        return not indices[key] or indices[key] < pointer_start
+        return not indices[key] or indices[key] < pointer_start or by_key[key].disabled
     end
-    if self.capture and (blocked(self.capture) or (by_key[self.capture] and
-        (by_key[self.capture].singular or (self.capture_region.drag and not by_key[self.capture].drag)))) then
-        local reason=not by_key[self.capture] and "removed" or "blocked"
-        self:cancel_capture(false,reason,(by_key[self.capture] and by_key[self.capture].drag) and by_key[self.capture] or self.capture_region)
-        drag_target(self,{})
-        self.drag_payload=nil
+    if
+        self.capture
+        and (
+            blocked(self.capture)
+            or (
+                by_key[self.capture]
+                and (
+                    by_key[self.capture].singular
+                    or (self.capture_region.drag and not by_key[self.capture].drag)
+                )
+            )
+        )
+    then
+        local reason = not by_key[self.capture] and "removed" or "blocked"
+        self:cancel_capture(
+            false,
+            reason,
+            (by_key[self.capture] and by_key[self.capture].drag) and by_key[self.capture]
+                or self.capture_region
+        )
+        drag_target(self, {})
+        self.drag_payload = nil
     end
-    if self.rcapture and (blocked(self.rcapture) or (by_key[self.rcapture] and (by_key[self.rcapture].singular or (self.rcapture_region.rdrag and not by_key[self.rcapture].rdrag)))) then
-        self:cancel_capture(true,not by_key[self.rcapture] and "removed" or "blocked",(by_key[self.rcapture] and by_key[self.rcapture].rdrag) and by_key[self.rcapture] or self.rcapture_region)
-        drag_target(self,{})
-        self.drag_payload=nil
+    if
+        self.rcapture
+        and (
+            blocked(self.rcapture)
+            or (
+                by_key[self.rcapture]
+                and (
+                    by_key[self.rcapture].singular
+                    or (self.rcapture_region.rdrag and not by_key[self.rcapture].rdrag)
+                )
+            )
+        )
+    then
+        self:cancel_capture(
+            true,
+            not by_key[self.rcapture] and "removed" or "blocked",
+            (by_key[self.rcapture] and by_key[self.rcapture].rdrag) and by_key[self.rcapture]
+                or self.rcapture_region
+        )
+        drag_target(self, {})
+        self.drag_payload = nil
     end
     for key, r in pairs(self.hovered) do
         if blocked(key) then
@@ -388,25 +577,11 @@ function Input:frame(ev, regions)
 
     -- Tab идёт в порядке компонентов, Shift+Tab в обратном. Активация
     -- клавишами использует тот же обработчик, что и щелчок мышью.
-    if ev.key == "tab" then
+    if ev.key == "tab" and self.keyboard_navigation then
         local candidates = {}
         for i = focus_start, #regions do
             local r = regions[i]
-            local clip = r.clip
-            if
-                focus_spec(r)
-                and r.w > 0
-                and r.h > 0
-                and (
-                    not clip
-                    or (
-                        r.x < clip.x1
-                        and r.x + r.w > clip.x0
-                        and r.y < clip.y1
-                        and r.y + r.h > clip.y0
-                    )
-                )
-            then
+            if focus_candidate(r) then
                 candidates[#candidates + 1] = r.key
             end
         end
@@ -426,31 +601,76 @@ function Input:frame(ev, regions)
             self:set_focus(candidates[next_index], by_key, true)
         end
     elseif ev.key == "enter" or ev.key == "space" then
+        if self.focus_key then
+            self:set_focus(self.focus_key, by_key, true)
+        end
         local r = self.focus_key and by_key[self.focus_key]
         if r and r.click and r.click.enabled and r.click.on_click then
             self:call(r.click.on_click)
         elseif r and r.focus and r.focus.on_key then
             self:call(r.focus.on_key, ev.key)
         end
-    elseif ev.key == "left" or ev.key == "right" or ev.key == "up" or ev.key == "down" then
+    elseif
+        ev.key == "left"
+        or ev.key == "right"
+        or ev.key == "up"
+        or ev.key == "down"
+        or ev.key == "home"
+        or ev.key == "end"
+        or ev.key == "page-up"
+        or ev.key == "page-down"
+    then
+        if self.focus_key then
+            self:set_focus(self.focus_key, by_key, true)
+        end
         local r = self.focus_key and by_key[self.focus_key]
         if r and r.focus and r.focus.on_key then
             self:call(r.focus.on_key, ev.key)
+        else
+            local scope = self.focus_scopes[#self.focus_scopes]
+            if
+                scope
+                and scope.click.focus_navigation == "vertical"
+                and (ev.key == "up" or ev.key == "down" or ev.key == "home" or ev.key == "end")
+            then
+                local candidates, current = {}, 0
+                for i = focus_start, #regions do
+                    if focus_candidate(regions[i]) then
+                        candidates[#candidates + 1] = regions[i].key
+                        if regions[i].key == self.focus_key then
+                            current = #candidates
+                        end
+                    end
+                end
+                if #candidates > 0 then
+                    local index = ev.key == "home" and 1
+                        or ev.key == "end" and #candidates
+                        or ((current - 1 + (ev.key == "up" and -1 or 1)) % #candidates + 1)
+                    self:set_focus(candidates[index], by_key, true)
+                end
+            end
         end
     elseif ev.key == "escape" then
-        self:cancel_capture(false,"escape")
-        self:cancel_capture(true,"escape")
-        drag_target(self,{})
-        self.drag_payload=nil
-        self:set_focus(nil, by_key)
+        self:cancel_capture(false, "escape")
+        self:cancel_capture(true, "escape")
+        drag_target(self, {})
+        self.drag_payload = nil
+        local scope = self.focus_scopes[#self.focus_scopes]
+        if scope then
+            if scope.click.on_escape then
+                self:call(scope.click.on_escape)
+            end
+        else
+            self:set_focus(nil, by_key)
+        end
     end
 
     if ev.cancel then
-        self:cancel_capture(false,"cancelled")
-        self:cancel_capture(true,"cancelled")
-        drag_target(self,{})
-        self.drag_payload=nil
-        self.down,self.rdown=ev.down==true,ev.rdown==true
+        self:cancel_capture(false, "cancelled")
+        self:cancel_capture(true, "cancelled")
+        drag_target(self, {})
+        self.drag_payload = nil
+        self.down, self.rdown = ev.down == true, ev.rdown == true
     end
     -- нажатие
     local down = ev.down and true or false
@@ -465,10 +685,14 @@ function Input:frame(ev, regions)
                 self.press_x, self.press_y = x, y
                 self.last_x, self.last_y = x, y
                 self.dragging = false
-                self.velocity={x=0,y=0,time=self.rt.time}
+                self.velocity = {
+                    x = 0,
+                    y = 0,
+                    time = self.rt.time,
+                }
                 set_pressed(r, true)
                 if r.pointer then
-                    self:call(r.pointer, self:drag_event(r,"down",x,y))
+                    self:call(r.pointer, self:drag_event(r, "down", x, y))
                 end
                 break
             end
@@ -481,7 +705,7 @@ function Input:frame(ev, regions)
         if not r then
             self.capture, self.capture_region = nil, nil
         elseif moved then
-            self.capture_region=r
+            self.capture_region = r
             if r.drag then
                 if
                     not self.dragging
@@ -493,18 +717,23 @@ function Input:frame(ev, regions)
                         r.drag.interaction.dragged:set(true)
                     end
                     self.last_x, self.last_y = self.press_x, self.press_y
-                    self.drag_payload=nil
+                    self.drag_payload = nil
                     if r.drag.on_event then
-                        self.drag_payload=self:call(r.drag.on_event,self:drag_event(r,"start",self.press_x,self.press_y))
+                        self.drag_payload = self:call(
+                            r.drag.on_event,
+                            self:drag_event(r, "start", self.press_x, self.press_y)
+                        )
                     end
                 end
                 if self.dragging then
-                    local e=self:drag_event(r,"move",x,y,self.last_x,self.last_y)
-                    if r.drag.on_event then self:call(r.drag.on_event,e) end
+                    local e = self:drag_event(r, "move", x, y, self.last_x, self.last_y)
+                    if r.drag.on_event then
+                        self:call(r.drag.on_event, e)
+                    end
                 end
             end
             if r.pointer then
-                self:call(r.pointer, self:drag_event(r,"move",x,y,self.last_x,self.last_y))
+                self:call(r.pointer, self:drag_event(r, "move", x, y, self.last_x, self.last_y))
             end
             self.last_x, self.last_y = x, y
         end
@@ -526,14 +755,16 @@ function Input:frame(ev, regions)
                         and target.drop.on_drop
                         and self:call(target.drop.on_drop, self.drag_payload) ~= false
                     or false
-                local e=self:drag_event(r,"end",x,y,self.last_x,self.last_y)
-                e.accepted,e.cancelled=accepted,false
-                if r.drag.on_event then self:call(r.drag.on_event,e) end
+                local e = self:drag_event(r, "end", x, y, self.last_x, self.last_y)
+                e.accepted, e.cancelled = accepted, false
+                if r.drag.on_event then
+                    self:call(r.drag.on_event, e)
+                end
             elseif r.click and r.click.enabled and r.click.on_click and inside(r, x, y) then
                 self:call(r.click.on_click)
             end
             if r.pointer then
-                self:call(r.pointer, self:drag_event(r,"up",x,y))
+                self:call(r.pointer, self:drag_event(r, "up", x, y))
             end
         end
         drag_target(self, {})
@@ -553,7 +784,11 @@ function Input:frame(ev, regions)
                 self.rpress_x, self.rpress_y = x, y
                 self.rlast_x, self.rlast_y = x, y
                 self.rdragging = false
-                self.rvelocity={x=0,y=0,time=self.rt.time}
+                self.rvelocity = {
+                    x = 0,
+                    y = 0,
+                    time = self.rt.time,
+                }
                 break
             end
             if r.click or r.drag or r.pointer or r.block then
@@ -573,15 +808,20 @@ function Input:frame(ev, regions)
                     r.rdrag.interaction.dragged:set(true)
                 end
                 self.rlast_x, self.rlast_y = self.rpress_x, self.rpress_y
-                self.drag_payload=nil
+                self.drag_payload = nil
                 if r.rdrag.on_event then
-                    self.drag_payload=self:call(r.rdrag.on_event,self:drag_event(r,"start",self.rpress_x,self.rpress_y,nil,nil,true))
+                    self.drag_payload = self:call(
+                        r.rdrag.on_event,
+                        self:drag_event(r, "start", self.rpress_x, self.rpress_y, nil, nil, true)
+                    )
                 end
             end
             if self.rdragging then
                 drag_target(self, hits)
-                local e=self:drag_event(r,"move",x,y,self.rlast_x,self.rlast_y,true)
-                if r.rdrag.on_event then self:call(r.rdrag.on_event,e) end
+                local e = self:drag_event(r, "move", x, y, self.rlast_x, self.rlast_y, true)
+                if r.rdrag.on_event then
+                    self:call(r.rdrag.on_event, e)
+                end
             end
             self.rlast_x, self.rlast_y = x, y
         end
@@ -598,9 +838,11 @@ function Input:frame(ev, regions)
                 if r.rdrag.interaction then
                     r.rdrag.interaction.dragged:set(false)
                 end
-                local e=self:drag_event(r,"end",x,y,self.rlast_x,self.rlast_y,true)
-                e.accepted,e.cancelled=accepted,false
-                if r.rdrag.on_event then self:call(r.rdrag.on_event,e) end
+                local e = self:drag_event(r, "end", x, y, self.rlast_x, self.rlast_y, true)
+                e.accepted, e.cancelled = accepted, false
+                if r.rdrag.on_event then
+                    self:call(r.rdrag.on_event, e)
+                end
             end
             drag_target(self, {})
             self.drag_payload = nil
@@ -647,9 +889,9 @@ function Input:reset()
     end
     self.hovered = {}
     drag_target(self, {})
-    self:cancel_capture(false,"reset")
-    self:cancel_capture(true,"reset")
-    self.drag_payload=nil
+    self:cancel_capture(false, "reset")
+    self:cancel_capture(true, "reset")
+    self.drag_payload = nil
     self.capture, self.capture_region = nil, nil
     self.rcapture, self.rcapture_region = nil, nil
     self.dragging = false
@@ -657,6 +899,7 @@ function Input:reset()
     self.rdown = false
     self.rdragging = false
     self:set_focus(nil, {})
+    self.focus_scopes = {}
 end
 
 return Input

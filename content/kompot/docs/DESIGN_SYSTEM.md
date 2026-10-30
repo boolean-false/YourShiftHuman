@@ -5,6 +5,10 @@ Kompot отвечает за состояние, раскладку и ввод.
 её отдельным паком. Kompot UI уже входит в `kompot`, но ядро не подключает её
 само.
 
+Если нужно изменить оформление готового Kompot UI, используйте
+`UI.theme({surfaces = ...})`: можно заменить фон, формы, текстуры и состояния,
+сохранив поведение компонентов. Подробности - в [руководстве Kompot UI](UI.md#оформление-компонентов).
+
 Для текстурных панелей и кнопок ядро предоставляет `K.nine_patch`,
 `K.raster` и `M:background_image`: [механизм скинов](SKINS.md).
 
@@ -60,14 +64,29 @@ function T.theme(opts)
             wood_dark = K.hex("#5C3A21"),
         },
         type = {
-            body = {font = "pixel_16"},
-            label = {font = "pixel_16"},
-            title = {font = "pixel_24"},
-            caption = {font = "pixel_12"},
-            heading = {font = "pixel_32"},
-            mono = {font = "pixel_16"},
+            body = {
+                font = "pixel_16",
+            },
+            label = {
+                font = "pixel_16",
+            },
+            title = {
+                font = "pixel_24",
+            },
+            caption = {
+                font = "pixel_12",
+            },
+            heading = {
+                font = "pixel_32",
+            },
+            mono = {
+                font = "pixel_16",
+            },
         },
-        frame = {texture = "pixel_ui:frame", border = 6},
+        frame = {
+            texture = "pixel_ui:frame",
+            border = 6,
+        },
         ui = T.ui,
     }
     return K.extend_theme(base, opts or {})
@@ -109,6 +128,7 @@ end
 | `Slider` | `value`, `min`, `max`, `steps`, `on_change(v)`, `format(v)` |
 | `TextField` | `value`, `on_change`, `on_submit`, `label`, `hint`, `supporting`, `error` |
 | `Tabs` | `tabs`, `selected` (индекс), `on_select(i)` |
+| `Select` | `options`, `selected` (значение), `on_select(value)`, `enabled`, `read_only`, `error`, `max_height` |
 | `Segmented` | `options`, `selected` (индекс), `on_select(i)` |
 | `Panel(props, content)` | `title`, `accent?`, `modifier` |
 | `ListItem` | `headline`, `supporting`, `icon`, `trailing` (строка или функция), `on_click`, `selected` |
@@ -116,10 +136,16 @@ end
 | `Badge` | `count` |
 | `ProgressBar` | `progress` (0..1, `nil` - бегущая) |
 | `Tooltip(props, content)` | `text` |
-| `Dialog(props, content?)` | `visible`, `on_dismiss`, `title`, `text`, `confirm = {text, on_click, variant}`, `dismiss = {text, on_click}` |
-| `Menu(props, content)` | `expanded`, `on_dismiss`, `width` |
+| `Dialog(props, content?)` | `visible` или `visible_state`, `on_close`, `on_dismiss`, `title`, `text`, `confirm = {text, on_click, variant}`, `dismiss = {text, on_click}` |
+| `Menu(props, content)` | `expanded` или `expanded_state`, `on_dismiss`, `width` |
 | `MenuItem` | `text`, `icon`, `shortcut`, `on_click`, `enabled` |
 | `Scrollbar` | `state` (`scroll_state` / `lazy_state`) |
+
+`on_close`/`on_dismiss` запрашивают изменение управляемой видимости.
+Для наблюдения за анимацией `Dialog` принимает `visible_state`, а `Menu` -
+`expanded_state` вместо булевого флага. Это `K.transition_state(boolean)`;
+действие после завершения задаётся через `K.effect` по его `completion`.
+Общий контракт описан в [Kompot UI](UI.md).
 
 Набор - это минимум для переносимости. Своих компонентов в системе может
 быть сколько угодно: `ToolButton` и `Stepper` в Kompot UI, `FAB` и
@@ -136,7 +162,10 @@ local T = require "my_ds:my_ds/tokens"
 local C = require "my_ds:my_ds/components"
 local UI = require "my_ds:my_ds/ui"
 
-local DS = {tokens = T, ui = UI}
+local DS = {
+    tokens = T,
+    ui = UI,
+}
 T.ui = UI
 function DS.theme(opts)
     return T.theme(opts)
@@ -154,12 +183,18 @@ local K = require "kompot:kompot"
 local DS = require "my_ds:my_ds"
 
 local function MyScreen()
-    K.Text("Привет", {style = "body"})
+    K.Text("Привет", {
+        style = "body",
+    })
 end
 
 local handle
 function on_open()
-    handle = K.mount({target = document.root, theme = DS.theme(), content = MyScreen})
+    handle = K.mount({
+        target = document.root,
+        theme = DS.theme(),
+        content = MyScreen,
+    })
 end
 
 function on_close()
@@ -183,10 +218,10 @@ end
 - **Токены - из текущей темы.** Если компонент может оказаться в теме другой
   системы, берите запасную тему. Так делают обе готовые системы:
   ```lua
-  local function current()
-      local t = K.theme()
-      return t.my_ds and t or DEFAULT
-  end
+local function current()
+    local t = K.theme()
+    return t.my_ds and t or DEFAULT
+end
   ```
 - **Состояния наведения и нажатия.** `local inter = K.interaction()`, затем
   `M:clickable(fn, {interaction = inter})` и
@@ -197,14 +232,18 @@ end
   области отменяется. Другой обработчик этот клик не получит.
   Сохраняйте порядок модификаторов ввода (`clickable`, `focusable`, `hoverable`
   и других). Для временного отключения `clickable` используйте `enabled = false`.
-- **Клавиатура.** Кликабельные элементы с обработчиком `on_click` входят в
-  порядок фокуса. Tab и Shift+Tab перемещают фокус, Enter и пробел вызывают
-  обработчик, Escape снимает фокус. `inter.focused.value` позволяет менять
-  оформление; видимая рамка фокуса появляется автоматически. Параметры
-  `focusable = false`, `focus_color` и `focus_radius` у `M:clickable` управляют
-  участием в навигации и рамкой. Для элементов без щелчка есть
-  `M:focusable(function(key) ... end, {interaction = inter})`; слайдеры Kompot UI
-  меняют значение стрелками.
+- **Клавиатура.** `keyboard_navigation = true` у `K.mount` или `K.App.new`
+  включает общий обход элементов. Tab и Shift+Tab перемещают фокус,
+  Enter и пробел вызывают обработчик. По умолчанию обход выключен,
+  обычные кнопки не получают фокус при щелчке. Текстовые поля, слайдеры
+  и открытые меню сохраняют локальное управление. `focusable = true` у
+  `M:clickable` явно разрешает локальный фокус независимо от режима;
+  `false` исключает элемент. Для элементов без щелчка есть
+  `M:focusable(function(key) ... end, {interaction = inter})`.
+  `inter.focused.value` позволяет менять оформление; рамка появляется
+  при работе с клавиатурой. Её цвет и форму задают `focus_color` и
+  `focus_shape`. Escape запрашивает отмену верхней модальной области,
+  а вне неё снимает фокус.
 - **Правая кнопка:** `M:clickable(fn, {on_right_click = fn2})`.
 - **Необязательные модификаторы перетаскивания:** `M:draggable` и
   `M:drop_target` описывают только события ввода и попадание указателя в цель.
@@ -227,7 +266,9 @@ end
   над интерфейсом, а не над миром.
 - **Всплывающие слои:** `K.Popup({placement, z}, content)`. Порядок слоёв
   задаёт `z`: в Kompot UI меню - 20, подсказки - 30, диалоги - 10,
-  уведомления - −1.
+  уведомления - −1. `interactive = false` сохраняет рисунок слоя,
+  но отключает его ввод, включая вложенные Popup. Это позволяет завершать
+  анимацию закрытия без повторных нажатий на исчезающие элементы.
 - **Разметка движка** в подписях: `Text(s, {markup = "md"})` понимает
   `[#RRGGBB]` и `**жирный**`, как `label markup="md"`.
 - **Подложка точно по содержимому:** `M:match_parent_size()` у ребёнка `Box`.

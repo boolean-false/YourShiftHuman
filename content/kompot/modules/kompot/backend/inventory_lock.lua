@@ -56,7 +56,10 @@ end
 -- Новая аренда (по одной на хост).
 ---@return KompotInventoryLease
 function Lock.new()
-    return setmetatable({ held = false, seen = frame }, Lease)
+    return setmetatable({
+        held = false,
+        seen = frame,
+    }, Lease)
 end
 
 -- Сторож: раз в кадр HUD снимает аренды хостов, которые перестали тикать.

@@ -21,7 +21,11 @@ local L = {}
 local INF = math.huge
 local max, min, floor, ceil = math.max, math.min, math.floor, math.ceil
 
-local ctx = { rt = nil, m = nil, gen = 0 }
+local ctx = {
+    rt = nil,
+    m = nil,
+    gen = 0,
+}
 
 local function coerce(v, lo, hi)
     if v < lo then
@@ -198,7 +202,10 @@ function measure(node, minW, maxW, minH, maxH)
     return w, h
 end
 -- Счётчики кэша (для тестов и замеров).
-L.stats = { hits = 0, misses = 0 }
+L.stats = {
+    hits = 0,
+    misses = 0,
+}
 L.measure = measure
 
 -- padding
@@ -621,7 +628,11 @@ POLICIES.lazy = function(node, minW, maxW, minH, maxH)
         else
             w, h = measure(wrapper, 0, INF, p.fill_cross and maxH < INF and maxH or 0, maxH)
         end
-        it = { node = wrapper, size = axis == 2 and h or w, cross = axis == 2 and w or h }
+        it = {
+            node = wrapper,
+            size = axis == 2 and h or w,
+            cross = axis == 2 and w or h,
+        }
         cache[i] = it
         -- сумма и число известных размеров ведутся на ходу: обходить
         -- st.sizes на каждой раскладке - O(всех когда-либо виденных строк)
@@ -693,7 +704,10 @@ POLICIES.lazy = function(node, minW, maxW, minH, maxH)
         local i = first
         while i <= count and pos < view do
             local it = item(i)
-            visible[#visible + 1] = { it = it, pos = pos }
+            visible[#visible + 1] = {
+                it = it,
+                pos = pos,
+            }
             pos = pos + it.size + spacing
             i = i + 1
         end

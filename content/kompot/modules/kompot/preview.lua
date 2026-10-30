@@ -25,7 +25,11 @@ function P.register(name, opts, content)
     if type(opts) == "function" then
         content, opts = opts, {}
     end
-    local entry = { name = name, opts = opts or {}, content = content }
+    local entry = {
+        name = name,
+        opts = opts or {},
+        content = content,
+    }
     -- место объявления: редактор переходит к нему из превью
     local info = debug and debug.getinfo and debug.getinfo(2, "Sl")
     if info then
@@ -68,10 +72,9 @@ function P.wrap(entry)
     return function()
         K.Theme(theme, function()
             local bg = (theme.colors or Th.BASE.colors).background or Th.BASE.colors.background
-            K.Box(
-                { modifier = K.M:fill_max_size():background(bg):padding(entry.opts.padding or 16) },
-                entry.content
-            )
+            K.Box({
+                modifier = K.M:fill_max_size():background(bg):padding(entry.opts.padding or 16),
+            }, entry.content)
         end)
     end
 end
@@ -82,36 +85,47 @@ local SoftCanvas = {}
 SoftCanvas.__index = SoftCanvas
 
 function P.soft_canvas(w, h)
-    return setmetatable({ w = w, h = h, width=w, height=h, px = {} }, SoftCanvas)
+    return setmetatable({
+        w = w,
+        h = h,
+        width = w,
+        height = h,
+        px = {},
+    }, SoftCanvas)
 end
 
 local function rgba_args(a, b, c, d)
     if b == nil then
         -- упакованное 0xAABBGGRR (как Canvas движка)
         local v = a or 0
-        return v % 256, math.floor(v / 256) % 256,
-            math.floor(v / 65536) % 256, math.floor(v / 16777216) % 256
+        return v % 256,
+            math.floor(v / 256) % 256,
+            math.floor(v / 65536) % 256,
+            math.floor(v / 16777216) % 256
     end
     return a, b, c, d or 255
 end
 
-local function integer(n) return n<0 and math.ceil(n) or math.floor(n) end
+local function integer(n)
+    return n < 0 and math.ceil(n) or math.floor(n)
+end
 function SoftCanvas:set(x, y, r, g, b, a)
-    x,y=integer(x),integer(y)
+    x, y = integer(x), integer(y)
     if x < 0 or y < 0 or x >= self.w or y >= self.h then
         return
     end
     r, g, b, a = rgba_args(r, g, b, a)
-    self.px[y*self.w+x] = {integer(r)%256,integer(g)%256,integer(b)%256,integer(a)%256}
+    self.px[y * self.w + x] =
+        { integer(r) % 256, integer(g) % 256, integer(b) % 256, integer(a) % 256 }
 end
 
 function SoftCanvas:at(x, y)
-    x,y=integer(x),integer(y)
+    x, y = integer(x), integer(y)
     local p = self.px[y * self.w + x]
     if not p then
         return 0
     end
-    return p[1]+p[2]*256+p[3]*65536+p[4]*16777216
+    return p[1] + p[2] * 256 + p[3] * 65536 + p[4] * 16777216
 end
 
 function SoftCanvas:clear(r, g, b, a)
@@ -142,7 +156,7 @@ function SoftCanvas:rect(x, y, w, h, r, g, b, a)
 end
 
 function SoftCanvas:line(x1, y1, x2, y2, r, g, b, a)
-    x1,y1,x2,y2=integer(x1),integer(y1),integer(x2),integer(y2)
+    x1, y1, x2, y2 = integer(x1), integer(y1), integer(x2), integer(y2)
     local dx, dy = math.abs(x2 - x1), -math.abs(y2 - y1)
     local sx, sy = x1 < x2 and 1 or -1, y1 < y2 and 1 or -1
     local err = dx + dy
@@ -194,6 +208,7 @@ function P.app(name, measurer)
     return App.new({
         content = P.wrap(entry),
         hook_diagnostics = entry.opts.hook_diagnostics ~= false,
+        keyboard_navigation = entry.opts.keyboard_navigation == true,
         width = entry.opts.width or 400,
         height = entry.opts.height or 300,
         measurer = measurer or text.metrics_measurer(),
@@ -225,7 +240,12 @@ local fonts = {}
 local font_registry = require "kompot:kompot/fonts"
 
 function P.register_font(name, file, size, family)
-    fonts[name] = { file = file, size = size, family = family, absolute = true }
+    fonts[name] = {
+        file = file,
+        size = size,
+        family = family,
+        absolute = true,
+    }
 end
 
 -- Имя шрифта -> файл и размер (для внешних отрисовщиков). Шрифты ядра -
@@ -239,10 +259,19 @@ function P.font_info(font)
         return fonts[font]
     end
     if font == "normal" then
-        return {file="@engine/fonts/font",size=16,kind="bitmap",absolute=true}
+        return {
+            file = "@engine/fonts/font",
+            size = 16,
+            kind = "bitmap",
+            absolute = true,
+        }
     end
-    error("unregistered preview font: " .. tostring(font)
-        .. "; register it with kompot.fonts.register_family or preview.register_font", 2)
+    error(
+        "unregistered preview font: "
+            .. tostring(font)
+            .. "; register it with kompot.fonts.register_family or preview.register_font",
+        2
+    )
 end
 
 local function json_escape(s)
@@ -273,55 +302,95 @@ local function num(v)
 end
 
 local function json_value(v)
-    if type(v)=="string" then return '"'..json_escape(v)..'"' end
-    if type(v)=="number" then return num(v) end
-    if type(v)=="boolean" then return tostring(v) end
-    if type(v)=="table" then
-        local parts={}
-        if v[1]~=nil then
-            for _,x in ipairs(v) do parts[#parts+1]=json_value(x) end
-            return "["..table.concat(parts,",").."]"
+    if type(v) == "string" then
+        return '"' .. json_escape(v) .. '"'
+    end
+    if type(v) == "number" then
+        return num(v)
+    end
+    if type(v) == "boolean" then
+        return tostring(v)
+    end
+    if type(v) == "table" then
+        local parts = {}
+        if v[1] ~= nil then
+            for _, x in ipairs(v) do
+                parts[#parts + 1] = json_value(x)
+            end
+            return "[" .. table.concat(parts, ",") .. "]"
         end
-        for k,x in pairs(v) do parts[#parts+1]=json_value(k)..":"..json_value(x) end
-        return "{"..table.concat(parts,",").."}"
+        for k, x in pairs(v) do
+            parts[#parts + 1] = json_value(k) .. ":" .. json_value(x)
+        end
+        return "{" .. table.concat(parts, ",") .. "}"
     end
     return "null"
 end
 
 -- Пиксели рисуются в Lua; изображения передаются редактору как команды,
 -- чтобы использовать те же ресурсы без PNG-декодера в Lua-процессе.
-function P.draw_canvas(draw,w,h,encoder)
-    local cv=P.soft_canvas(w,h)
-    local commands,has_images={},false
-    local wrapper={width=w,height=h,raw=cv}
-    for _,name in ipairs({"set","line","rect","clear"}) do
-        wrapper[name]=function(_, ...)
-            local args={...}
-            commands[#commands+1]={op=name,args=args}
-            cv[name](cv,...)
+function P.draw_canvas(draw, w, h, encoder)
+    local cv = P.soft_canvas(w, h)
+    local commands, has_images = {}, false
+    local wrapper = {
+        width = w,
+        height = h,
+        raw = cv,
+    }
+    for _, name in ipairs({ "set", "line", "rect", "clear" }) do
+        wrapper[name] = function(_, ...)
+            local args = { ... }
+            commands[#commands + 1] = {
+                op = name,
+                args = args,
+            }
+            cv[name](cv, ...)
         end
     end
-    wrapper.at=function(_,...) return cv:at(...) end
-    wrapper.update=function() end
-    function wrapper:image(src,opts)
-        has_images=true
-        opts=opts or {}
+    wrapper.at = function(_, ...)
+        return cv:at(...)
+    end
+    wrapper.update = function() end
+    function wrapper:image(src, opts)
+        has_images = true
+        opts = opts or {}
         require("kompot:kompot/core/canvas").validate(opts)
-        local copied={}
-        for k,v in pairs(opts) do copied[k]=v end
-        if copied.color then copied.color=color.of(copied.color) end
-        local command={op="image",options=copied}
-        if type(src)=="string" then command.src=src
-        elseif type(src)=="table" and src.kind=="raster" then
-            local data=P.draw_canvas(src.draw,src.width,src.height,encoder)
-            command.source={width=src.width,height=src.height,pixels=data.pixels,commands=data.commands}
-        else
-            command.source={width=src.width or src.w,height=src.height or src.h,pixels=encoder(src:bytes())}
+        local copied = {}
+        for k, v in pairs(opts) do
+            copied[k] = v
         end
-        commands[#commands+1]=command
+        if copied.color then
+            copied.color = color.of(copied.color)
+        end
+        local command = {
+            op = "image",
+            options = copied,
+        }
+        if type(src) == "string" then
+            command.src = src
+        elseif type(src) == "table" and src.kind == "raster" then
+            local data = P.draw_canvas(src.draw, src.width, src.height, encoder)
+            command.source = {
+                width = src.width,
+                height = src.height,
+                pixels = data.pixels,
+                commands = data.commands,
+            }
+        else
+            command.source = {
+                width = src.width or src.w,
+                height = src.height or src.h,
+                pixels = encoder(src:bytes()),
+            }
+        end
+        commands[#commands + 1] = command
     end
-    draw(wrapper,w,h)
-    return has_images and {commands=commands} or {pixels=encoder(cv:bytes())}
+    draw(wrapper, w, h)
+    return has_images and {
+        commands = commands,
+    } or {
+        pixels = encoder(cv:bytes()),
+    }
 end
 
 -- Список примитивов -> JSON (строка). Холсты отрисовываются программно,
@@ -339,14 +408,20 @@ function P.to_json(dl, opts)
             '"w":' .. num(p.w),
             '"h":' .. num(p.h),
         }
-        if p.shape then f[#f+1]='"shape":'..json_value(p.shape) end
-        if p.mask_shape then f[#f+1]='"mask_shape":'..json_value(p.mask_shape) end
-        if p.mask_radius then f[#f+1]='"mask_radius":'..json_value(p.mask_radius) end
+        if p.shape then
+            f[#f + 1] = '"shape":' .. json_value(p.shape)
+        end
+        if p.mask_shape then
+            f[#f + 1] = '"mask_shape":' .. json_value(p.mask_shape)
+        end
+        if p.mask_radius then
+            f[#f + 1] = '"mask_radius":' .. json_value(p.mask_radius)
+        end
         if p.kind == "layer" then
-            local bx,by,bw,bh=Render.bounds(p.prims)
-            f[#f+1]='"source_bounds":'..json_value({bx,by,bw,bh})
-            f[#f+1]='"transform":'..json_value(p.transform)
-            f[#f+1]='"prims":'..P.to_json(p.prims,opts)
+            local bx, by, bw, bh = Render.bounds(p.prims)
+            f[#f + 1] = '"source_bounds":' .. json_value({ bx, by, bw, bh })
+            f[#f + 1] = '"transform":' .. json_value(p.transform)
+            f[#f + 1] = '"prims":' .. P.to_json(p.prims, opts)
         end
         if p.kind == "nine_patch" then
             local paint = p.paint
@@ -357,9 +432,13 @@ function P.to_json(dl, opts)
             if type(paint.src) == "string" then
                 f[#f + 1] = '"src":"' .. json_escape(paint.src) .. '"'
             elseif opts.encoder then
-                local data=P.draw_canvas(paint.src.draw,paint.width,paint.height,opts.encoder)
-                if data.pixels then f[#f+1]='"source_pixels":'..json_value(data.pixels) end
-                if data.commands then f[#f+1]='"source_commands":'..json_value(data.commands) end
+                local data = P.draw_canvas(paint.src.draw, paint.width, paint.height, opts.encoder)
+                if data.pixels then
+                    f[#f + 1] = '"source_pixels":' .. json_value(data.pixels)
+                end
+                if data.commands then
+                    f[#f + 1] = '"source_commands":' .. json_value(data.commands)
+                end
             end
         end
         if p.color then
@@ -367,6 +446,9 @@ function P.to_json(dl, opts)
         end
         if p.radius then
             f[#f + 1] = '"radius":' .. json_value(p.radius)
+        end
+        if p.under_border then
+            f[#f + 1] = '"under_border":' .. json_value(p.under_border)
         end
         if p.width and p.kind == "border" then
             f[#f + 1] = '"width":' .. num(p.width)
@@ -391,7 +473,9 @@ function P.to_json(dl, opts)
                 .. fi.file
                 .. '","font_size":'
                 .. fi.size
-            if fi.kind then f[#f+1] = '"font_kind":"' .. json_escape(fi.kind) .. '"' end
+            if fi.kind then
+                f[#f + 1] = '"font_kind":"' .. json_escape(fi.kind) .. '"'
+            end
             if fi.absolute and fi.measured ~= nil then
                 f[#f + 1] = '"font_metrics":"'
                     .. (fi.measured and "measured" or "approximate")
@@ -402,7 +486,13 @@ function P.to_json(dl, opts)
             f[#f + 1] = '"hint":"' .. json_escape(p.hint) .. '"'
         end
         if p.kind == "field" then
-            f[#f + 1] = '"pad":' .. num(p.pad or 8) .. ',"lines":' .. num(p.lines or 1)
+            local multiline = p.multiline == true or (p.lines or 1) > 1
+            f[#f + 1] = '"multiline":' .. tostring(multiline)
+            -- Старые отрисовщики определяют многострочность только по lines.
+            f[#f + 1] = '"pad":'
+                .. num(p.pad or 8)
+                .. ',"lines":'
+                .. num(p.lines or (multiline and 2 or 1))
             f[#f + 1] = '"editable":' .. tostring(p.editable ~= false)
             f[#f + 1] = '"line_numbers":' .. tostring(p.line_numbers == true)
             f[#f + 1] = '"wrap":' .. tostring(p.wrap == true)
@@ -425,9 +515,13 @@ function P.to_json(dl, opts)
         end
         if p.kind == "canvas" and p.draw and opts.encoder then
             local w, h = math.max(1, math.floor(p.w)), math.max(1, math.floor(p.h))
-            local data=P.draw_canvas(p.draw,w,h,opts.encoder)
-            if data.pixels then f[#f+1]='"pixels":'..json_value(data.pixels) end
-            if data.commands then f[#f+1]='"commands":'..json_value(data.commands) end
+            local data = P.draw_canvas(p.draw, w, h, opts.encoder)
+            if data.pixels then
+                f[#f + 1] = '"pixels":' .. json_value(data.pixels)
+            end
+            if data.commands then
+                f[#f + 1] = '"commands":' .. json_value(data.commands)
+            end
         end
         out[#out + 1] = "{" .. table.concat(f, ",") .. "}"
     end
@@ -473,7 +567,10 @@ function P.document(name, app, measurer)
         P.animating(app) and "true" or "false",
         json_escape(app.input.cursor or ""),
         app.rt.error_text and ('"' .. json_escape(app.rt.error_text) .. '"') or "null",
-        P.to_json(app.dl, { encoder = P.base64, measurer = measurer })
+        P.to_json(app.dl, {
+            encoder = P.base64,
+            measurer = measurer,
+        })
     )
 end
 

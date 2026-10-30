@@ -6,6 +6,7 @@ local T = require "kompot:ui/tokens"
 local Common = require "kompot:ui/components/common"
 local Buttons = require "kompot:ui/components/buttons"
 local Lua = require "kompot:ui/components/lua"
+local visibility = require "kompot:ui/components/visibility"
 
 local Skin = require "kompot:ui/skin"
 local M = K.M
@@ -40,6 +41,12 @@ C.IconButton = K.component(function(props)
     local base, hover, pressed = variant_colors(c, props.variant, props.selected)
     local bg = state_color(enabled and base or c.disabled_bg, hover, pressed, inter, enabled)
     local s = props.size or th.metrics.control
+    local surface = Common.surface("icon_button", "button", props, inter, {
+        color = bg,
+        selected = props.selected,
+        edge = c.primary,
+        content_color = enabled and c.text or c.disabled_fg,
+    })
     with_tooltip(props.tooltip, function()
         Box({
             modifier = mods(props):size(s):clickable(props.on_click, {
@@ -49,14 +56,8 @@ C.IconButton = K.component(function(props)
             }),
             align = "center",
         }, function()
-            Skin.Surface({
-                kind = "button",
-                color = bg,
-                pressed = inter.pressed.value,
-                selected = props.selected,
-                edge = c.primary,
-            })
-            any_icon(props.icon, math.floor(s * 0.62), enabled and c.text or c.disabled_fg)
+            Skin.Surface(surface)
+            any_icon(props.icon, props.icon_size or math.floor(s * 0.62), surface.content_color)
         end)
     end)
 end)
@@ -69,7 +70,9 @@ C.ToolButton = K.component(function(props)
     local th = T.current()
     local c, mt = th.colors, th.metrics
     local inter = K.interaction()
-    local bg = state_color(c.control, c.hover, c.pressed, inter)
+    local enabled = props.enabled ~= false
+    local bg =
+        state_color(enabled and c.control or c.disabled_bg, c.hover, c.pressed, inter, enabled)
     local ring = props.selected and c.accent or color.with_alpha(c.accent, 0)
     with_tooltip(props.tooltip, function()
         Box({
@@ -77,13 +80,17 @@ C.ToolButton = K.component(function(props)
             align = "center",
         }, function()
             Box({
-                modifier = M:size(mt.tool_w, mt.tool_h):clickable(
-                    props.on_click,
-                    { interaction = inter, on_right_click = props.on_right_click }
-                ),
+                modifier = M:size(mt.tool_w, mt.tool_h):clickable(props.on_click, {
+                    interaction = inter,
+                    enabled = enabled,
+                    on_right_click = props.on_right_click,
+                }),
                 align = "center",
             }, function()
-                Skin.Surface({ kind = "button", color = bg, pressed = inter.pressed.value })
+                Skin.Surface(Common.surface("tool_button", "button", props, inter, {
+                    color = bg,
+                    edge = c.accent,
+                }))
                 any_icon(props.icon, 24, props.tint)
             end)
         end)
@@ -107,29 +114,35 @@ C.Checkbox = K.component(function(props)
             props.on_change(not on)
         end
     end
+    local surface = Common.surface("checkbox", "inset", props, inter, {
+        color = fill,
+        selected = on,
+        edge = frame,
+        border_width = inter.hovered.value and enabled and 2 or 0,
+        content_color = enabled and c.text or c.disabled_fg,
+    })
     with_tooltip(props.tooltip, function()
         Row({
-            modifier = mods(props)
-                :height(T.current().metrics.control_lg)
-                :clickable(toggle, { interaction = inter, enabled = enabled }),
+            modifier = mods(props):height(T.current().metrics.control_lg):clickable(toggle, {
+                interaction = inter,
+                enabled = enabled,
+            }),
             align = "center",
             spacing = 10,
         }, function()
-            Box({ modifier = M:size(24), align = "center" }, function()
-                Skin.Surface({
-                    kind = "inset",
-                    color = fill,
-                    selected = inter.hovered.value,
-                    edge = frame,
-                })
+            Box({
+                modifier = M:size(T.current().metrics.checkbox_size),
+                align = "center",
+            }, function()
+                Skin.Surface(surface)
                 if on then
-                    Skin.Icon("check", 14, c.text)
+                    Skin.Icon("check", T.current().metrics.check_icon, surface.content_color)
                 end
             end)
             if props.label then
                 Text(props.label, {
                     style = T.current().type.body,
-                    color = enabled and c.text or c.disabled_fg,
+                    color = surface.content_color,
                     wrap = false,
                 })
             end
@@ -141,7 +154,8 @@ end)
 -- props: checked, on_change(bool), label, enabled, modifier
 C.Switch = K.component(function(props)
     props = T.props("Switch", props)
-    local c = T.current().colors
+    local th = T.current()
+    local c, mt = th.colors, th.metrics
     local enabled = props.enabled ~= false
     local inter = K.interaction()
     local on = props.checked == true
@@ -153,24 +167,42 @@ C.Switch = K.component(function(props)
             props.on_change(not on)
         end
     end
+    local surface = Common.surface("switch_track", "inset", props, inter, {
+        color = track,
+        selected = on,
+        content_color = enabled and c.text or c.disabled_fg,
+    })
     Row({
-        modifier = mods(props)
-            :height(T.current().metrics.control_lg)
-            :clickable(toggle, { interaction = inter, enabled = enabled }),
+        modifier = mods(props):height(T.current().metrics.control_lg):clickable(toggle, {
+            interaction = inter,
+            enabled = enabled,
+        }),
         align = "center",
         spacing = 10,
     }, function()
         if props.label then
             Text(props.label, {
                 style = T.current().type.body,
-                color = enabled and c.text or c.disabled_fg,
+                color = surface.content_color,
                 modifier = M:weight(1),
             })
         end
-        Box({ modifier = M:size(40, 24) }, function()
-            Skin.Surface({ kind = "inset", color = track })
-            Box({ modifier = M:offset(4 + t * 16, 4):size(16) }, function()
-                Skin.Surface({ kind = "button", color = knob })
+        Box({
+            modifier = M:size(mt.switch_width, mt.switch_height),
+        }, function()
+            Skin.Surface(surface)
+            Box({
+                modifier = M
+                    :offset(
+                        mt.switch_pad + t * (mt.switch_width - mt.switch_pad * 2 - mt.switch_thumb),
+                        mt.switch_pad
+                    )
+                    :size(mt.switch_thumb),
+            }, function()
+                Skin.Surface(Common.surface("switch_thumb", "button", props, inter, {
+                    color = knob,
+                    selected = on,
+                }))
             end)
         end)
     end)
@@ -187,7 +219,10 @@ local function normalize_options(options)
                 tooltip = o.tooltip,
             }
         else
-            out[i] = { value = o, text = tostring(o) }
+            out[i] = {
+                value = o,
+                text = tostring(o),
+            }
         end
     end
     return out
@@ -202,9 +237,15 @@ C.Choice = K.component(function(props)
     local opts = normalize_options(props.options or {})
     local cols = props.columns or #opts
     local gap = T.current().metrics.gap
-    Column({ modifier = mods(props):fill_max_width(), spacing = gap }, function()
+    Column({
+        modifier = mods(props):fill_max_width(),
+        spacing = gap,
+    }, function()
         for r = 0, math.ceil(#opts / cols) - 1 do
-            Row({ modifier = M:fill_max_width(), spacing = gap }, function()
+            Row({
+                modifier = M:fill_max_width(),
+                spacing = gap,
+            }, function()
                 for i = r * cols + 1, math.min(#opts, r * cols + cols) do
                     local o = opts[i]
                     K.key(tostring(o.value), function()
@@ -230,7 +271,7 @@ C.Choice = K.component(function(props)
 end)
 
 -- Счётчик для настроек: подпись, значение и две кнопки.
--- props: label, value, on_minus, on_plus, minus ("–"), plus ("+"), tooltip, modifier
+-- props: label, value, on_minus, on_plus, minus ("-"), plus ("+"), tooltip, modifier
 C.Stepper = K.component(function(props)
     props = T.props("Stepper", props)
     local c = T.current().colors
@@ -267,7 +308,8 @@ end)
 --   label, format(v) -> текст значения, enabled, modifier
 C.Slider = K.component(function(props)
     props = T.props("Slider", props)
-    local c = T.current().colors
+    local th = T.current()
+    local c, mt = th.colors, th.metrics
     local lo, hi = props.min or 0, props.max or 1
     local v = math.max(lo, math.min(hi, props.value or lo))
     local width = R.state(160)
@@ -302,25 +344,39 @@ C.Slider = K.component(function(props)
         end
     end
     local active = inter.hovered.value or inter.dragged.value or inter.focused.value
-    Column({ modifier = mods(props):fill_max_width(), spacing = 2 }, function()
+    Column({
+        modifier = mods(props):fill_max_width(),
+        spacing = 2,
+    }, function()
         if props.label or props.format then
-            Row({ modifier = M:fill_max_width() }, function()
-                Text(
-                    props.label or "",
-                    { style = T.current().type.body, color = c.text, modifier = M:weight(1) }
-                )
+            Row({
+                modifier = M:fill_max_width(),
+            }, function()
+                Text(props.label or "", {
+                    style = T.current().type.body,
+                    color = c.text,
+                    modifier = M:weight(1),
+                })
                 local shown = props.format and props.format(v)
                     or tostring(math.floor(v * 100 + 0.5) / 100)
-                Text(shown, { style = T.current().type.body, color = c.muted })
+                Text(shown, {
+                    style = T.current().type.body,
+                    color = c.muted,
+                })
             end)
         end
         Box({
             modifier = M:fill_max_width()
-                :height(20)
+                :height(mt.slider_height)
                 :on_size(function(w)
                     width.value = w
                 end)
                 :pointer_input(function(ev)
+                    if ev.type == "down" and props.enabled ~= false then
+                        inter.pressed.value = true
+                    elseif ev.type == "up" or ev.type == "cancel" then
+                        inter.pressed.value = false
+                    end
                     if ev.type == "down" or ev.type == "move" then
                         set_from(ev.x)
                     end
@@ -342,14 +398,30 @@ C.Slider = K.component(function(props)
                 }),
             align = "center_start",
         }, function()
-            Box({ modifier = M:fill_max_width():height(4):background(c.sunken) })
-            Box({ modifier = M:width(math.floor(width.value * f)):height(4):background(c.accent) })
-            Box(
-                { modifier = M:offset(math.floor((width.value - 12) * f), 0):size(12, 20) },
-                function()
-                    Skin.Surface({ kind = "button", color = active and c.hover or c.control })
-                end
-            )
+            Box({
+                modifier = M:fill_max_width():height(mt.slider_track),
+            }, function()
+                Skin.Surface(Common.surface("slider_track", "panel", props, inter, {
+                    skin = false,
+                    color = c.sunken,
+                }))
+            end)
+            Box({
+                modifier = M:width(math.floor(width.value * f)):height(mt.slider_track),
+            }, function()
+                Skin.Surface(Common.surface("slider_fill", "panel", props, inter, {
+                    skin = false,
+                    color = c.accent,
+                }))
+            end)
+            Box({
+                modifier = M:offset(math.floor((width.value - mt.slider_thumb_width) * f), 0)
+                    :size(mt.slider_thumb_width, mt.slider_thumb_height),
+            }, function()
+                Skin.Surface(Common.surface("slider_thumb", "button", props, inter, {
+                    color = active and c.hover or c.control,
+                }))
+            end)
         end)
     end)
 end)
@@ -375,33 +447,44 @@ C.Tabs = K.component(function(props)
                     c.pressed,
                     inter
                 )
+                local surface = Common.surface("tab", "panel", props, inter, {
+                    skin = false,
+                    color = bg,
+                    selected = sel,
+                    content_color = sel and c.bright or c.muted,
+                })
                 Box({
-                    modifier = M:fill_max_height():background(bg):clickable(function()
+                    modifier = M:fill_max_height():clickable(function()
                         if props.on_select then
                             props.on_select(i)
                         end
-                    end, { interaction = inter }),
+                    end, {
+                        interaction = inter,
+                    }),
                 }, function()
+                    Skin.Surface(surface)
                     Row({
                         modifier = M:fill_max_height():padding(12, 0),
                         align = "center",
                         spacing = 6,
                     }, function()
                         if icon then
-                            any_icon(icon, 16, sel and c.bright or c.muted)
+                            any_icon(icon, 16, surface.content_color)
                         end
                         Text(text, {
                             style = sel and T.current().type.strong or T.current().type.body,
-                            color = sel and c.bright or c.muted,
+                            color = surface.content_color,
                             wrap = false,
                         })
                     end)
-                    if sel then
-                        Box({ modifier = M:match_parent_size() }, function()
+                    if sel and props.indicator ~= false then
+                        Box({
+                            modifier = M:match_parent_size(),
+                        }, function()
                             Box({
                                 modifier = M:align("bottom_start")
                                     :fill_max_width()
-                                    :height(2)
+                                    :height(props.indicator_height or 2)
                                     :background(c.accent),
                             })
                         end)
@@ -432,13 +515,17 @@ C.Field = K.component(function(props)
     end
     with_tooltip(props.tooltip, function()
         local fm = h and m:height(h) or m
-        Box({ modifier = fm }, function()
-            Skin.Surface({
-                kind = "inset",
-                color = c.sunken,
-                selected = props.error or focused.value,
+        Box({
+            modifier = fm,
+        }, function()
+            local surface = Common.surface("field", "inset", props, nil, {
+                color = props.enabled == false and c.disabled_bg or c.sunken,
+                focused = focused.value,
+                selected = props.error or (props.enabled ~= false and focused.value),
                 edge = props.error and c.error or c.accent,
+                content_color = props.enabled == false and c.disabled_fg or c.text,
             })
+            Skin.Surface(surface)
             K.BasicTextField({
                 state = props.state,
                 value = props.value,
@@ -450,11 +537,12 @@ C.Field = K.component(function(props)
                 hint = props.hint,
                 lines = lines,
                 font = props.font,
-                color = c.text,
+                color = surface.content_color,
                 pad = T.current().metrics.field_pad,
                 syntax = props.syntax,
                 line_numbers = props.line_numbers,
                 editable = props.editable,
+                enabled = props.enabled,
                 wrap = props.wrap,
                 on_focus = function()
                     focused.value = true
@@ -478,7 +566,11 @@ end)
 C.LabeledField = K.component(function(props)
     props = T.props("LabeledField", props)
     local c = T.current().colors
-    Row({ modifier = mods(props):fill_max_width(), align = "center", spacing = 4 }, function()
+    Row({
+        modifier = mods(props):fill_max_width(),
+        align = "center",
+        spacing = 4,
+    }, function()
         Text(props.label or "", {
             style = T.current().type.body,
             color = c.muted,
@@ -500,7 +592,11 @@ end)
 C.VectorField = K.component(function(props)
     props = T.props("VectorField", props)
     local c = T.current().colors
-    Row({ modifier = mods(props):fill_max_width(), align = "center", spacing = 4 }, function()
+    Row({
+        modifier = mods(props):fill_max_width(),
+        align = "center",
+        spacing = 4,
+    }, function()
         Text(props.label or "", {
             style = T.current().type.body,
             color = c.muted,
@@ -509,10 +605,11 @@ C.VectorField = K.component(function(props)
         })
         for i, axis in ipairs({ "X", "Y", "Z" }) do
             K.key(axis, function()
-                Text(
-                    axis,
-                    { style = T.current().type.body, color = c.muted, modifier = M:width(12) }
-                )
+                Text(axis, {
+                    style = T.current().type.body,
+                    color = c.muted,
+                    modifier = M:width(12),
+                })
                 C.Field({
                     value = tostring(props.values and props.values[i] or ""),
                     modifier = M:weight(1),
@@ -555,12 +652,18 @@ C.Panel = K.component(function(props, content)
     if props.width ~= false then
         m = m:width(props.width or mt.panel_w)
     end
-    Box({ modifier = m:block_pointer() }, function()
+    Box({
+        modifier = m:block_pointer(),
+    }, function()
         if props.variant ~= "flat" then
-            Skin.Surface({ color = props.background or c.panel_bg })
+            Skin.Surface(Common.surface("panel", "panel", props, nil, {
+                color = props.background or c.panel_bg,
+            }))
         end
         if props.variant == "accent" then
-            Box({ modifier = M:offset(0, mt.pad):size(mt.stripe_w, mt.stripe_h):background(accent) })
+            Box({
+                modifier = M:offset(0, mt.pad):size(mt.stripe_w, mt.stripe_h):background(accent),
+            })
         end
         Column({
             modifier = (props.fill_height and M:fill_max_size() or M:fill_max_width()):padding(
@@ -575,31 +678,30 @@ C.Panel = K.component(function(props, content)
                     spacing = 6,
                 }, function()
                     if props.title_modifier then
-                        Box(
-                            { modifier = props.title_modifier:weight(1):height(mt.header_h) },
-                            function()
-                                Row({
-                                    modifier = M:fill_max_size(),
-                                    align = "center",
-                                    spacing = 6,
-                                }, function()
-                                    if props.icon then
-                                        any_icon(props.icon, 20)
-                                    end
-                                    if props.title then
-                                        Text(props.title, {
-                                            style = T.current().type.title,
-                                            color = c.text,
-                                            wrap = false,
-                                            max_lines = 1,
-                                            ellipsis = true,
-                                            markup = props.markup,
-                                            modifier = M:weight(1),
-                                        })
-                                    end
-                                end)
-                            end
-                        )
+                        Box({
+                            modifier = props.title_modifier:weight(1):height(mt.header_h),
+                        }, function()
+                            Row({
+                                modifier = M:fill_max_size(),
+                                align = "center",
+                                spacing = 6,
+                            }, function()
+                                if props.icon then
+                                    any_icon(props.icon, 20)
+                                end
+                                if props.title then
+                                    Text(props.title, {
+                                        style = T.current().type.title,
+                                        color = c.text,
+                                        wrap = false,
+                                        max_lines = 1,
+                                        ellipsis = true,
+                                        markup = props.markup,
+                                        modifier = M:weight(1),
+                                    })
+                                end
+                            end)
+                        end)
                     else
                         if props.icon then
                             any_icon(props.icon, 20)
@@ -623,7 +725,9 @@ C.Panel = K.component(function(props, content)
             end
             if content then
                 if props.content_modifier then
-                    Box({ modifier = props.content_modifier }, content)
+                    Box({
+                        modifier = props.content_modifier,
+                    }, content)
                 else
                     content()
                 end
@@ -642,19 +746,24 @@ end)
 C.Window = require("kompot:ui/components/window")(C.Panel, C.Button)
 
 -- Диалог подтверждения. props: visible, title, text, confirm ({text, on_click,
---   variant}), dismiss ({text, on_click}), on_dismiss, accent, variant, icon, width
+--   variant}), dismiss ({text, on_click}), on_dismiss, on_close,
+--   visible_state, accent, variant, icon, width
 C.Dialog = K.component(function(props, content)
     props = T.props("Dialog", props)
     local c = T.current().colors
+    local dismiss = props.dismiss or props.cancel
+    local on_dismiss = props.on_dismiss or props.on_close
     C.Window({
         visible = props.visible,
+        visible_state = props.visible_state,
         title = props.title,
         accent = props.accent,
         variant = props.variant,
         icon = props.icon,
         width = props.width or 420,
         modal = true,
-        on_dismiss = props.on_dismiss or function() end,
+        on_close = props.on_close,
+        on_dismiss = on_dismiss,
         placement = "center",
         z = 10,
     }, function()
@@ -669,22 +778,22 @@ C.Dialog = K.component(function(props, content)
         if content then
             content()
         end
-        if props.confirm or props.dismiss then
+        if props.confirm or dismiss then
             Row({
                 modifier = M:fill_max_width():padding(0, 6, 0, 0),
                 arrangement = "end",
                 spacing = 6,
             }, function()
-                if props.dismiss then
+                if dismiss then
                     C.Button({
-                        text = props.dismiss.text,
+                        text = dismiss.text,
                         min_width = 100,
                         on_click = function()
-                            if props.dismiss.on_click then
-                                props.dismiss.on_click()
+                            if dismiss.on_click then
+                                dismiss.on_click()
                             end
-                            if props.on_dismiss then
-                                props.on_dismiss()
+                            if on_dismiss then
+                                on_dismiss()
                             end
                         end,
                     })
@@ -704,16 +813,26 @@ end)
 
 -- Меню
 
--- Выпадающее меню под местом вызова. props: expanded, on_dismiss, width (336)
+-- Выпадающее меню. props: expanded или expanded_state, on_dismiss, width (336)
 C.Menu = K.component(function(props, content)
     props = T.props("Menu", props)
     local c = T.current().colors
-    local v = K.animate(props.expanded and 1 or 0, T.current().motion.fast)
-    if v < 0.01 and not props.expanded then
+    local scroll = K.scroll_state()
+    assert(
+        not props.expanded_state or props.expanded == nil,
+        "use expanded or expanded_state, not both"
+    )
+    local v, hidden, expanded =
+        visibility(not not props.expanded, T.current().motion.fast, props.expanded_state)
+    if hidden then
         return
     end
-    if props.expanded then
-        K.Popup({ placement = "fill", key = "menu_scrim", z = 20 }, function()
+    if expanded then
+        K.Popup({
+            placement = "fill",
+            key = "menu_scrim",
+            z = 20,
+        }, function()
             Box({
                 modifier = M:fill_max_size():clickable(function()
                     if props.on_dismiss then
@@ -721,6 +840,11 @@ C.Menu = K.component(function(props, content)
                     end
                 end, {
                     cursor = "arrow",
+                    focusable = false,
+                    focus_scope = true,
+                    on_escape = props.on_dismiss,
+                    focus_index = props.focus_index or 1,
+                    focus_navigation = "vertical",
                     on_right_click = function()
                         if props.on_dismiss then
                             props.on_dismiss()
@@ -730,10 +854,31 @@ C.Menu = K.component(function(props, content)
             })
         end)
     end
-    K.Popup({ placement = props.placement or "below", gap = props.gap or 2, z = 20 }, function()
-        Box({ modifier = M:alpha(v):width(props.width or 336):block_pointer() }, function()
-            Skin.Surface({ color = c.menu_bg })
-            Column({ modifier = M:fill_max_width():padding(6) }, content)
+    K.Popup({
+        placement = props.placement or "below",
+        gap = props.gap or 2,
+        z = 20,
+        interactive = expanded,
+    }, function()
+        Box({
+            modifier = M:alpha(v):width(props.width or 336):tag("menu_popup"):block_pointer(),
+        }, function()
+            Skin.Surface(Common.surface("menu", "panel", props, nil, {
+                color = c.menu_bg,
+            }))
+            Column({
+                modifier = M:fill_max_width()
+                    :height_in(0, props.max_height or math.max(48, K.runtime().height * 0.6))
+                    :vertical_scroll(scroll)
+                    :padding(6, 6, 16, 6),
+            }, content)
+            Box({
+                modifier = M:match_parent_size(),
+            }, function()
+                C.Scrollbar({
+                    state = scroll,
+                })
+            end)
         end)
     end)
 end)
@@ -746,41 +891,64 @@ C.MenuItem = K.component(function(props)
     local enabled = props.enabled ~= false
     local inter = K.interaction()
     local bg = state_color(
-        color.with_alpha(c.hover, 0),
+        props.selected and c.hover or color.with_alpha(c.hover, 0),
         props.danger and c.danger_hover or c.hover,
         c.pressed,
         inter,
         enabled
     )
-    Row({
-        modifier = M:fill_max_width()
-            :height(T.current().metrics.control)
-            :background(bg, T.current().shapes.control)
-            :clickable(props.on_click, { interaction = inter, enabled = enabled })
-            :padding(8, 0),
-        align = "center",
-        spacing = 8,
+    local surface = Common.surface("menu_item", "panel", props, inter, {
+        color = bg,
+        skin = false,
+        content_color = enabled and c.text or c.disabled_fg,
+    })
+    Box({
+        modifier = (props.modifier or M):fill_max_width(),
     }, function()
-        if props.icon then
-            any_icon(props.icon, 16, enabled and c.text or c.disabled_fg)
-        end
-        Text(props.text or "", {
-            style = T.current().type.body,
-            color = enabled and c.text or c.disabled_fg,
-            wrap = false,
-            modifier = M:weight(1),
-        })
-        if props.shortcut then
-            Text(props.shortcut, { style = T.current().type.body, color = c.muted, wrap = false })
-        end
+        Skin.Surface(surface)
+        Row({
+            modifier = M:fill_max_width()
+                :height(T.current().metrics.control)
+                :clickable(props.on_click, {
+                    interaction = inter,
+                    enabled = enabled,
+                    focusable = true,
+                    focus_color = c.accent,
+                    focus_shape = T.current().shapes.control,
+                })
+                :padding(8, 0),
+            align = "center",
+            spacing = 8,
+        }, function()
+            if props.icon then
+                any_icon(props.icon, 16, surface.content_color)
+            end
+            Text(props.text or "", {
+                style = T.current().type.body,
+                color = surface.content_color,
+                wrap = false,
+                modifier = M:weight(1),
+            })
+            if props.shortcut then
+                Text(props.shortcut, {
+                    style = T.current().type.body,
+                    color = c.muted,
+                    wrap = false,
+                })
+            end
+        end)
     end)
 end)
 
 -- Разделитель пунктов меню.
 function C.MenuDivider()
     local c = T.current().colors
-    Box({ modifier = M:fill_max_width():padding(4, 3):height(1):background(c.hover) })
+    Box({
+        modifier = M:fill_max_width():padding(4, 3):height(1):background(c.hover),
+    })
 end
+
+C.Select = require("kompot:ui/components/select")(C.Button, C.Menu, C.MenuItem)
 
 -- Строка меню: название слева, кнопки меню, действия справа.
 -- props: brand (текст), menus ({{text, width, items = {{text, shortcut, on_click, divider}}}}),
@@ -958,8 +1126,12 @@ C.Toast = K.component(function(props)
         key = "toast",
         z = -1,
     }, function()
-        Box({ modifier = mods(props):alpha(v) }, function()
-            Skin.Surface({ color = bg })
+        Box({
+            modifier = mods(props):alpha(v),
+        }, function()
+            Skin.Surface(Common.surface("toast", "panel", props, nil, {
+                color = bg,
+            }))
             Row({
                 modifier = M:height_in(mt.control, 100000)
                     :width_in(200, props.width or 900)
@@ -970,11 +1142,19 @@ C.Toast = K.component(function(props)
                 if icon ~= false then
                     any_icon(icon, 18, accent)
                 end
-                Text(last.text, { style = th.type.body, color = c.bright, markup = "md" })
+                Text(last.text, {
+                    style = th.type.body,
+                    color = c.bright,
+                    markup = "md",
+                })
             end)
             if last.variant == "accent" then
-                Box({ modifier = M:match_parent_size() }, function()
-                    Box({ modifier = M:width(mt.stripe_w):fill_max_height():background(accent) })
+                Box({
+                    modifier = M:match_parent_size(),
+                }, function()
+                    Box({
+                        modifier = M:width(mt.stripe_w):fill_max_height():background(accent),
+                    })
                 end)
             end
         end)
@@ -987,7 +1167,10 @@ end)
 -- props: text, on_click, selected, on_delete, delete_tooltip, tooltip, trailing
 C.ListRow = K.component(function(props)
     props = T.props("ListRow", props)
-    Row({ modifier = mods(props):fill_max_width(), spacing = 4 }, function()
+    Row({
+        modifier = mods(props):fill_max_width(),
+        spacing = 4,
+    }, function()
         C.Button({
             text = props.text,
             align = "start",
@@ -1022,24 +1205,31 @@ C.Slot = K.component(function(props)
     with_tooltip(props.tooltip, function()
         local m = mods(props):size(s)
         Box({
-            modifier = m:clickable(
-                props.on_click,
-                { interaction = inter, on_right_click = props.on_right_click }
-            ),
+            modifier = m:clickable(props.on_click, {
+                interaction = inter,
+                on_right_click = props.on_right_click,
+            }),
             align = "center",
         }, function()
-            Skin.Surface({ kind = "inset", color = bg, selected = props.selected, edge = c.accent })
+            Skin.Surface(Common.surface("slot", "inset", props, nil, {
+                color = bg,
+                edge = c.accent,
+            }))
             if props.src then
-                Image(props.src, { size = s - 6 })
+                Image(props.src, {
+                    size = s - 6,
+                })
             elseif props.icon then
                 Skin.Icon(props.icon, s - 8, c.text)
             end
             if props.badge then
-                Box({ modifier = M:align("bottom_end"):padding(0, 0, 1, 0) }, function()
-                    Text(
-                        tostring(props.badge),
-                        { style = T.current().type.caption, color = c.bright }
-                    )
+                Box({
+                    modifier = M:align("bottom_end"):padding(0, 0, 1, 0),
+                }, function()
+                    Text(tostring(props.badge), {
+                        style = T.current().type.caption,
+                        color = c.bright,
+                    })
                 end)
             end
         end)
@@ -1061,12 +1251,21 @@ C.Card = K.component(function(props, content)
     )
     local m = mods(props)
     if props.on_click then
-        m = m:clickable(props.on_click, { interaction = inter })
+        m = m:clickable(props.on_click, {
+            interaction = inter,
+        })
     end
     with_tooltip(props.tooltip, function()
-        Box({ modifier = m }, function()
-            Skin.Surface({ color = bg, selected = props.selected, edge = c.accent })
-            Box({ modifier = M:padding(props.padding or T.current().metrics.pad) }, content)
+        Box({
+            modifier = m,
+        }, function()
+            Skin.Surface(Common.surface("card", "panel", props, inter, {
+                color = bg,
+                edge = c.accent,
+            }))
+            Box({
+                modifier = M:padding(props.padding or T.current().metrics.pad),
+            }, content)
         end)
     end)
 end)
@@ -1075,7 +1274,11 @@ end)
 function C.Section(text, props)
     props = T.props("Section", props)
     local c = T.current().colors
-    Text(text, { style = T.current().type.strong, color = c.header, modifier = props.modifier })
+    Text(text, {
+        style = T.current().type.strong,
+        color = c.header,
+        modifier = props.modifier,
+    })
 end
 
 -- Мелкий поясняющий текст.
@@ -1116,7 +1319,7 @@ function C.Divider(props)
     end
 end
 
--- Полоса прогресса. props: progress (0..1; nil - бегущая), color, height (4)
+-- progress: 0..1; nil - ожидание. Высота по умолчанию 8.
 C.ProgressBar = K.component(function(props)
     props = T.props("ProgressBar", props)
     local c = T.current().colors
@@ -1124,27 +1327,37 @@ C.ProgressBar = K.component(function(props)
     local h = props.height or 8
     local fill = color.of(props.color) or c.accent
     Box({
-        modifier = mods(props)
-            :fill_max_width()
-            :height(h)
-            :background(c.sunken)
-            :clip()
-            :on_size(function(nw)
-                w.value = nw
-            end),
+        modifier = mods(props):fill_max_width():height(h):clip():on_size(function(nw)
+            w.value = nw
+        end),
     }, function()
+        Skin.Surface(Common.surface("progress_track", "panel", props, nil, {
+            skin = false,
+            color = c.sunken,
+        }))
         if props.progress then
             local p = K.animate(math.max(0, math.min(1, props.progress)), T.current().motion.normal)
-            Box({ modifier = M:width(math.floor(w.value * p)):fill_max_height():background(fill) })
+            Box({
+                modifier = M:width(math.floor(w.value * p)):fill_max_height(),
+            }, function()
+                Skin.Surface(Common.surface("progress_fill", "panel", props, nil, {
+                    skin = false,
+                    color = fill,
+                }))
+            end)
         else
             local t = K.clock()
             local x = ((t * 0.8) % 1.4 - 0.4) * w.value
             Box({
                 modifier = M:offset(math.floor(x), 0)
                     :width(math.floor(w.value * 0.3))
-                    :fill_max_height()
-                    :background(fill),
-            })
+                    :fill_max_height(),
+            }, function()
+                Skin.Surface(Common.surface("progress_fill", "panel", props, nil, {
+                    skin = false,
+                    color = fill,
+                }))
+            end)
         end
     end)
 end)
@@ -1153,76 +1366,50 @@ end)
 function C.Badge(props)
     props = T.props("Badge", props)
     local c = T.current().colors
+    local surface = Common.surface("badge", "panel", props, nil, {
+        skin = false,
+        color = color.of(props.color) or c.key,
+        content_color = c.sunken,
+    })
     Box({
-        modifier = M:height(16)
-            :width_in(16, 300)
-            :background(color.of(props.color) or c.key)
-            :padding(4, 0),
+        modifier = (props.modifier or M):height(props.height or 16):width_in(16, 300),
         align = "center",
     }, function()
-        Text(
-            tostring(props.count or ""),
-            { style = T.current().type.caption, color = c.sunken, wrap = false }
-        )
+        Skin.Surface(surface)
+        Text(tostring(props.count or ""), {
+            style = T.current().type.caption,
+            color = surface.content_color,
+            wrap = false,
+            modifier = M:padding(props.padding or 4, 0),
+        })
     end)
 end
 
--- Клавиша: «колпачок» с подписью (справка, подсказки).
+-- Колпачок клавиши использует отдельную роль оформления.
 function C.Key(text)
     local c = T.current().colors
-    Box({ modifier = M:height(26), align = "center" }, function()
-        Skin.Surface({ kind = "button", color = c.control })
+    local props = T.props("Key")
+    local surface = Common.surface("key", "button", props, nil, {
+        color = c.control,
+        content_color = c.key,
+    })
+    Box({
+        modifier = M:height(props.height or 26),
+        align = "center",
+    }, function()
+        Skin.Surface(surface)
         Text(text, {
             style = T.current().type.caption,
-            color = c.key,
+            color = surface.content_color,
             wrap = false,
-            modifier = M:padding(8, 0),
+            modifier = M:padding(props.padding or 8, 0),
         })
     end)
 end
 
 -- Полоса прокрутки: тонкий прямоугольник у правого края.
 -- props: state (scroll_state / lazy_state), modifier
-C.Scrollbar = K.component(function(props)
-    props = T.props("Scrollbar", props)
-    local c = T.current().colors
-    local st = props.state
-    local frac, visible = st:fraction()
-    local height = K.state(100)
-    local inter = K.interaction()
-    local active = inter.hovered.value or inter.dragged.value
-    local hh = height.value
-    local thumb_h = math.max(20, math.floor(hh * visible))
-    local y = math.floor((hh - thumb_h) * frac)
-    if visible >= 0.999 then
-        return
-    end
-    Box({
-        modifier = mods(props):width(8):fill_max_height():align("top_end"):on_size(function(_, h)
-            height.value = h
-        end),
-    }, function()
-        Box({
-            modifier = M:offset(0, y):size(8, thumb_h):draggable({
-                interaction = inter,
-                on_event = function(e)
-                    if e.type ~= "move" then return end
-                    local track = height:peek() - thumb_h
-                    if track > 0 then
-                        local range = (st.max or ((st.total or 0) - (st.view or 0)))
-                        st:scroll_by(e.parent_dy / track * range)
-                    end
-                end,
-            }),
-            align = "center_end",
-        }, function()
-            Box({
-                modifier = M:size(active and 6 or 4, thumb_h)
-                    :background(active and c.accent or c.hover),
-            })
-        end)
-    end)
-end)
+C.Scrollbar = require "kompot:ui/components/scrollbar"
 
 -- Картинка в рамке-подложке (превью инструментов, миниатюры).
 -- props: src, width, height, source_size = {width, height},
@@ -1237,7 +1424,10 @@ C.Preview = K.component(function(props)
                 :background(c.sunken),
             align = "center",
         }, function()
-            Skin.Surface({ kind = "inset", color = bg, selected = props.selected, edge = c.accent })
+            Skin.Surface(Common.surface("slot", "inset", props, nil, {
+                color = bg,
+                edge = c.accent,
+            }))
             if props.src then
                 Image(props.src, {
                     width = props.width or 240,
@@ -1247,7 +1437,10 @@ C.Preview = K.component(function(props)
                     fit = props.fit,
                 })
             elseif props.placeholder then
-                Text(props.placeholder, { style = T.current().type.body, color = c.dim })
+                Text(props.placeholder, {
+                    style = T.current().type.body,
+                    color = c.dim,
+                })
             end
         end)
     end)

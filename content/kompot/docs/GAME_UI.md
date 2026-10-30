@@ -30,9 +30,9 @@ local V = require "kompot:ui"
     id = "my_pack:hammer",
     name = "Молот",
     src = "my_items:hammer",
-    count = 1,                  -- число рисуется, если > 1
-    durability = 0.75,          -- 0..1, необязательно
-    rarity = "#EAC778",         -- цвет маркера, необязательно
+    count = 1, -- число рисуется, если > 1
+    durability = 0.75, -- 0..1, необязательно
+    rarity = "#EAC778", -- цвет маркера, необязательно
     description = "Для обработки камня.",
 }
 ```
@@ -50,8 +50,17 @@ local V = require "kompot:ui"
 ```lua
 local Inventory = K.component(function()
     local items = K.state({
-        [1] = {id = "my_pack:hammer", name = "Молот", src = "my_items:hammer"},
-        [2] = {id = "my_pack:stone", name = "Камень", src = "my_items:stone", count = 8},
+        [1] = {
+            id = "my_pack:hammer",
+            name = "Молот",
+            src = "my_items:hammer",
+        },
+        [2] = {
+            id = "my_pack:stone",
+            name = "Камень",
+            src = "my_items:stone",
+            count = 8,
+        },
     })
 
     V.InventoryGrid({
@@ -89,9 +98,14 @@ end)
 - `on_drop(payload)` принимает перенос; `false` отклоняет его.
 
 ```lua
-UI.ItemSlot({item = item, on_drag_event = function(e, source_item)
-    if e.type == "start" then return source_item end
-end})
+UI.ItemSlot({
+    item = item,
+    on_drag_event = function(e, source_item)
+        if e.type == "start" then
+            return source_item
+        end
+    end,
+})
 ```
 
 Поля события описаны в [перетаскивании](MOTION.md#перетаскивание).

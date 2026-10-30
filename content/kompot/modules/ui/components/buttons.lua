@@ -4,8 +4,16 @@ local Common = require "kompot:ui/components/common"
 local Skin = require "kompot:ui/skin"
 local M = K.M
 local C = {}
-local sizes = { sm = "control_sm", md = "control", lg = "control_lg" }
--- При нажатии меняем край и сдвигаем содержимое вниз.
+local sizes = {
+    sm = "control_sm",
+    md = "control",
+    lg = "control_lg",
+}
+-- Кнопка со своим оформлением; фон не меняет область нажатия.
+-- props: text, icon, on_click, on_right_click, variant ("default"|"primary"|"secondary"|"danger"|"ghost"|"toggle"),
+--   enabled, selected, focusable, size ("sm"|"md"|"lg"), align ("start"|"center"),
+--   trailing, compact, min_width, press_offset, padding, spacing, text_style,
+--   icon_size, radius, surface, tooltip, modifier
 C.Button = K.component(function(p, content)
     p = T.props("Button", p)
     local t, inter = T.current(), K.interaction()
@@ -21,51 +29,72 @@ C.Button = K.component(function(p, content)
         fg = K.color.on(bg, c.shadow, c.bright)
     end
     local down = enabled and inter.pressed.value
+    local surface = Skin.resolve({
+        role = "button",
+        kind = "button",
+        variant = p.variant,
+        color = bg,
+        content_color = fg,
+        shape = t.shapes.control,
+        shape_override = p.radius,
+        hovered = inter.hovered.value,
+        pressed = down,
+        focused = inter.focused.value,
+        selected = selected,
+        enabled = enabled,
+        edge = c.primary,
+        surface = p.surface,
+    })
+    fg = surface.content_color or fg
+    local shift = p.press_offset or surface.press_offset or mt.press_offset
+
     Common.with_tooltip(p.tooltip, function()
         K.Box({
             modifier = (p.modifier or M)
-                :height(mt[sizes[p.size or "md"]] or mt.control)
+                :height(
+                    type(p.size) == "number" and p.size or mt[sizes[p.size or "md"]] or mt.control
+                )
                 :width_in(p.min_width or 0, 100000)
                 :clickable(p.on_click, {
                     interaction = inter,
                     enabled = enabled,
+                    focusable = p.focusable,
                     on_right_click = p.on_right_click,
-                    focus_color = c.primary,
-                    focus_radius = p.radius or t.shapes.control,
+                    focus_color = surface.focus_color or c.primary,
+                    focus_shape = surface.shape,
                 }),
             align = p.align == "start" and "center_start" or "center",
         }, function()
-            Skin.Surface({
-                kind = "button",
-                color = bg,
-                pressed = down,
-                selected = selected,
-                edge = c.primary,
-            })
+            surface.resolved = true
+            Skin.Surface(surface)
             K.Row({
                 modifier = M:fill_max_height()
-                    :offset(0, down and 2 or 0)
-                    :padding(p.compact and 6 or mt.button_pad, 0),
-                spacing = 8,
+                    :offset(0, down and shift or 0)
+                    :padding(p.padding or (p.compact and 6 or mt.button_pad), 0),
+                spacing = p.spacing or mt.gap,
                 align = "center",
                 arrangement = p.align == "start" and "start" or "center",
             }, function()
                 K.ContentColor(fg, function()
                     if p.icon then
-                        Common.any_icon(p.icon, 16, fg)
+                        Common.any_icon(p.icon, p.icon_size or 16, fg)
                     end
                     if content then
                         content()
                     elseif p.text then
                         K.Text(p.text, {
-                            style = t.type.body,
+                            style = surface.text_style or p.text_style or t.type.body,
                             color = fg,
                             wrap = false,
                             modifier = p.trailing and M:weight(1) or nil,
                         })
                     end
                     if p.trailing then
-                        K.Text(p.trailing, { style = t.type.caption, color = fg, wrap = false })
+                        K.Text(p.trailing, {
+                            style = t.type.caption,
+                            color = fg,
+                            wrap = false,
+                        })
                     end
                 end)
             end)

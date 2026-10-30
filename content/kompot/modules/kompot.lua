@@ -12,7 +12,7 @@ local Th = require "kompot:kompot/theme"
 local preview = require "kompot:kompot/preview"
 
 local K = {
-    VERSION = "1.2.2",
+    VERSION = "1.3.1",
 }
 
 -- Модификаторы
@@ -20,9 +20,12 @@ K.Modifier = Mod
 K.M = Mod
 local Shape = require "kompot:kompot/core/shape"
 K.Shape = {
-    rectangle = Shape.rectangle, circle = Shape.circle,
-    rounded = Shape.rounded, cut = Shape.cut,
-    px = Shape.px, percent = Shape.percent,
+    rectangle = Shape.rectangle,
+    circle = Shape.circle,
+    rounded = Shape.rounded,
+    cut = Shape.cut,
+    px = Shape.px,
+    percent = Shape.percent,
 }
 -- Радиусы углов: число или {top_left, top_right, bottom_right, bottom_left}.
 K.rounded_corners = require("kompot:kompot/core/corners").of
@@ -48,6 +51,10 @@ K.copy = require "kompot:kompot/core/copy"
 
 -- Анимации
 K.animate = anim.animate
+local transition = require "kompot:kompot/core/transition"
+K.transition_state = transition.state
+K.new_transition_state = transition.new_state
+K.transition = transition.transition
 K.tween = anim.tween
 K.spring = anim.spring
 K.snap = anim.snap

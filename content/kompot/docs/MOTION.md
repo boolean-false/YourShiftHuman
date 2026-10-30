@@ -6,6 +6,84 @@
 Фрагменты ниже выполняются внутри `content` для `K.mount` или `K.preview`.
 Полный пример подключения есть в [первом экране](QUICKSTART.md).
 
+
+## Состояние перехода и действия после анимации
+
+`K.animate(target, spec)` остаётся коротким способом получить анимированное
+значение. Для наблюдения за завершением или нескольких связанных анимаций
+используйте состояние перехода и группу:
+
+```lua
+local panel = K.transition_state("small")
+local transition = K.transition(panel)
+local width = transition:animate(function(state)
+    return state == "small" and 100 or 300
+end, K.tween(0.2))
+local color = transition:animate(function(state)
+    return K.hex(state == "small" and "#386F94" or "#81C9BC")
+end, K.tween(0.5))
+UI.Button({
+    text = "Развернуть",
+    on_click = function()
+        panel.target_state = "large"
+    end,
+})
+K.Box({
+    modifier = K.M:size(width, 80):background(color),
+})
+local completion = panel.completion
+K.effect(function()
+    if completion > 0 and panel.is_idle then
+        print("Вся группа завершена: " .. panel.current_state)
+    end
+end, completion)
+```
+
+`K.transition_state(initial)` сохраняет состояние в компоненте.
+`K.new_transition_state(initial)` создаёт такую же модель вне композиции.
+Начальное значение применяется только при создании. Это отдельный тип,
+а не обычный State с полем `.value`.
+
+| Поле | Значение |
+|---|---|
+| `target_state` | Записываемая цель: например boolean, строка или число |
+| `current_state` | Последнее завершённое состояние; только чтение |
+| `is_idle` | Нет незавершённого запроса или работающих анимаций; только чтение |
+| `completion` | Счётчик завершений, изначально 0; только чтение |
+
+Чтение полей в композиции подписывает компонент на изменения.
+`transition:animate(value_of, spec)` преобразует цель в число или массив чисел,
+включая цвет и координаты. Функция `value_of` должна быть чистой. Вызовы
+`K.transition` и `:animate` являются хуками и сохраняют порядок между кадрами.
+Все анимации группы объявляются в компоненте, вызвавшем `K.transition`;
+полученные значения можно передавать дочерним компонентам.
+
+Группа завершена, когда остановились все её анимации, даже если у них разные
+длительности. Сравнивать значение с целью недостаточно: кривая с отскоком
+может пересечь цель до завершения. `current_state`, `is_idle` и `completion`
+публикуются после применения конечного кадра. `K.effect` по `completion`
+наблюдает уже применённый результат; проверка `completion > 0` пропускает
+начальное состояние.
+Если модель живёт дольше наблюдателя, эффект при повторном подключении
+снова выполняется по правилам `K.effect`. Чтобы не повторять прошлое действие,
+запомните начальный счётчик через `K.remember(panel.completion, panel)`
+и реагируйте только на значения больше него.
+
+Новая цель прерывает прежний переход и начинает движение с текущих
+анимированных значений. Завершение будет опубликовано для последней цели.
+Запросы, отменённые до композиции и вернувшиеся в исходное состояние,
+не увеличивают счётчик. Мгновенный переход `K.snap` использует тот же контракт.
+При изменении отображения `value_of` группа также отслеживает новые значения,
+даже если сама цель не менялась.
+
+Одно состояние обслуживает одна группа. Удаление владельца отменяет его
+анимации без увеличения `completion`. При новом подключении незавершённая
+цель продолжит переход от последнего завершённого состояния.
+
+Окна и диалоги принимают `visible_state`, меню - `expanded_state` вместо
+обычного флага. Они сами создают группу; отдельный `K.transition` для того же
+состояния снаружи не нужен. Пример приведён в [Kompot UI](UI.md).
+
 ## Вращение и масштаб
 
 ```lua
@@ -13,7 +91,7 @@ local K = require "kompot:kompot"
 local M = K.M
 
 K.Image("my_pack:head", {
-    modifier = M:size(64):rotate(30):scale(1.5)
+    modifier = M:size(64):rotate(30):scale(1.5),
 })
 ```
 
@@ -49,7 +127,9 @@ M:background("#386F94"):rotate(30):clickable(on_click)
 ```lua
 local expanded = K.state(false)
 local angle = K.animate(expanded.value and 180 or 0, K.tween(0.6))
-K.Image("my_pack:head", {modifier = M:size(64):rotate(angle)})
+K.Image("my_pack:head", {
+    modifier = M:size(64):rotate(angle),
+})
 ```
 
 ### Ограничения
@@ -97,7 +177,11 @@ K.Text(string.format("%.1f с", elapsed.value))
 защищает симуляцию от большого скачка после паузы:
 
 ```lua
-local simulation = K.remember(function() return {rest = 0} end)
+local simulation = K.remember(function()
+    return {
+        rest = 0,
+    }
+end)
 K.on_frame(function(dt)
     simulation.rest = simulation.rest + math.min(dt, 0.1)
     while simulation.rest >= 1 / 120 do
@@ -115,23 +199,28 @@ end)
 `accepted = false` само по себе не означает отмену.
 
 ```lua
-local position = K.state({x = 20, y = 20})
+local position = K.state({
+    x = 20,
+    y = 20,
+})
 local p = position.value
-K.Box({modifier = M:offset(p.x, p.y):size(100, 40):draggable({
-    on_event = function(e)
-        if e.type == "move" then
-            local old = position:peek()
-            position.value = {
-                x = old.x + e.parent_dx,
-                y = old.y + e.parent_dy
-            }
-        elseif e.type == "end" then
+K.Box({
+    modifier = M:offset(p.x, p.y):size(100, 40):draggable({
+        on_event = function(e)
+            if e.type == "move" then
+                local old = position:peek()
+                position.value = {
+                    x = old.x + e.parent_dx,
+                    y = old.y + e.parent_dy,
+                }
+            elseif e.type == "end" then
             -- e.velocity_x, e.velocity_y: скорость отпускания в px/с.
-        elseif e.type == "cancel" then
-            -- Остановить перетаскивание; e.reason содержит причину.
-        end
-    end
-})})
+            elseif e.type == "cancel" then
+                -- Остановить перетаскивание; e.reason содержит причину.
+            end
+        end,
+    }),
+})
 ```
 
 | Поле события | Значение |
@@ -154,15 +243,20 @@ K.Box({modifier = M:offset(p.x, p.y):size(100, 40):draggable({
 `start`. Возвращённые значения в остальных фазах игнорируются:
 
 ```lua
-M:draggable({on_event = function(e)
-    if e.type == "start" then
-        return {id = "apple", count = 3}
-    elseif e.type == "end" then
+M:draggable({
+    on_event = function(e)
+        if e.type == "start" then
+            return {
+                id = "apple",
+                count = 3,
+            }
+        elseif e.type == "end" then
         -- e.accepted: цель приняла или отклонила предмет.
-    elseif e.type == "cancel" then
-        -- e.reason: причина отмены.
-    end
-end})
+        elseif e.type == "cancel" then
+            -- e.reason: причина отмены.
+        end
+    end,
+})
 ```
 
 `axis = 1` ограничивает смещения горизонталью, `axis = 2` - вертикалью.
@@ -172,17 +266,24 @@ end})
 ## Изображения на Canvas
 
 ```lua
-K.Canvas({width = 200, height = 120, version = angle, draw = function(cv)
-    cv:clear(37, 43, 49, 255)
-    cv:image("my_pack:head", {
-        x = 50, y = 30,
-        width = 64, height = 64,
-        angle = angle,
-        scale = {1.2, 0.8},
-        pivot = {0.5, 0.5},
-        alpha = 0.75
-    })
-end})
+K.Canvas({
+    width = 200,
+    height = 120,
+    version = angle,
+    draw = function(cv)
+        cv:clear(37, 43, 49, 255)
+        cv:image("my_pack:head", {
+            x = 50,
+            y = 30,
+            width = 64,
+            height = 64,
+            angle = angle,
+            scale = { 1.2, 0.8 },
+            pivot = { 0.5, 0.5 },
+            alpha = 0.75,
+        })
+    end,
+})
 ```
 
 Источник - загруженная текстура, регион атласа или `K.raster`.

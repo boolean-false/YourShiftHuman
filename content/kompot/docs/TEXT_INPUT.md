@@ -7,18 +7,28 @@
 - `UI.TextField` добавляет оформление поля и подписи.
 - `UI.Lua` использует `BasicTextField` напрямую и добавляет оформление фрагмента кода.
 
+В `UI.Lua` нативное поле вмещает весь исходник, а видимая область прокручивается
+средствами Kompot. Это сохраняет нативное выделение и копирование, позволяет
+оставлять под последней строкой запас в одну строку и передавать колесо странице на границе.
+Параметры высоты и ручка изменения размера описаны в [Kompot UI](UI.md).
+
 ```lua
 local K = require "kompot:kompot"
 local UI = require "kompot:ui"
 
 local FieldDemo = K.component(function()
     local text = K.state("Привет")
-    K.Column({spacing = 8}, function()
+    K.Column({
+        spacing = 8,
+    }, function()
         K.BasicTextField({
             state = text,
             modifier = K.M:width(320):height(40),
         })
-        UI.TextField({state = text, label = "Тот же текст"})
+        UI.TextField({
+            state = text,
+            label = "Тот же текст",
+        })
     end)
 end)
 ```
@@ -100,15 +110,17 @@ undo-истории при программной замене текста ли
 | Ctrl+Z / Ctrl+Y | Нативные undo / redo до программной замены текста |
 | Стрелки, Shift+стрелки | Перемещение и выделение в редактируемом поле |
 | Enter | Однострочное поле вызывает `on_submit`; многострочное вставляет перевод строки |
-| Tab | Текущая интеграция Kompot передаёт фокус навигации, не вставляя отступ и не закрывая HUD |
-| Escape в HUD-оверлее | Движок закрывает оверлей целиком |
+| Tab | При `keyboard_navigation = true` переводит фокус без вставки отступа; иначе остаётся у нативного поля |
+| Escape в HUD-оверлее | Kompot запрашивает отмену верхнего меню или модального окна; без них действует обработчик движка |
 
 Стрелки и Shift+стрелки в нативном режиме только для чтения ограничены
 движком; гарантируются выделение мышью и Ctrl+A. Поле получает текстовые
 клавиши вместо контролов Kompot. Горячие клавиши своего мода следует
 отключать через `on_focus` / `on_defocus`: BasicTextField не управляет
 произвольными обработчиками других модов. Политика навигации зависит от
-интеграции поля в HUD.
+интеграции поля в HUD. По умолчанию общий обход по Tab выключен;
+при фокусе нативного поля Kompot блокирует стандартное действие
+`hud.inventory`, если не задано `lock_inventory = false`.
 
 ## Состояние редактора и собственная отрисовка
 
@@ -118,13 +130,27 @@ UI.TextField({
     editor_state = editor,
     lines = 4,
     presentation = {
-        spans = {{start = 0, finish = 5, color = "#E3AF67"}},
+        spans = {
+            {
+                start = 0,
+                finish = 5,
+                color = "#E3AF67",
+            },
+        },
         selection_color = "#386F94AA",
-        caret = {shape = "block", color = "#E3AF6770", blink = 0.5},
+        caret = {
+            shape = "block",
+            color = "#E3AF6770",
+            blink = 0.5,
+        },
     },
 })
 -- Внешняя замена текста и направленного выделения одним обновлением:
-editor.value = {text = "Привет", anchor = 6, caret = 0}
+editor.value = {
+    text = "Привет",
+    anchor = 6,
+    caret = 0,
+}
 ```
 
 Вне композиции используйте `K.new_text_field_state(text)`. Начальное
@@ -155,8 +181,16 @@ UTF-8. Концы за пределами текста ограничивают�
 ```lua
 presentation = {
     draw_caret = function(r, context)
-        return {{kind = "rect", x = r[1], y = r[2] + r[4] - 2,
-            w = r[3], h = 2, color = "#60D5FF"}}
+        return {
+            {
+                kind = "rect",
+                x = r[1],
+                y = r[2] + r[4] - 2,
+                w = r[3],
+                h = 2,
+                color = "#60D5FF",
+            },
+        }
     end,
 }
 ```

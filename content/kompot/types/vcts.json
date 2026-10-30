@@ -1,0 +1,21 @@
+{
+    "schemaVersion": 1,
+    "modules": {
+        "kompot": {
+            "declaration": "kompot.d.ts",
+            "apiVersion": 1
+        },
+        "ui": {
+            "declaration": "ui.d.ts",
+            "apiVersion": 1
+        },
+        "kompot/core/scroll": {
+            "declaration": "scroll.d.ts",
+            "apiVersion": 1
+        },
+        "kompot/backend/inventory_lock": {
+            "declaration": "inventory_lock.d.ts",
+            "apiVersion": 1
+        }
+    }
+}

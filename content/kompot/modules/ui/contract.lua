@@ -6,11 +6,17 @@ local K = require "kompot:kompot"
 local T = require "kompot:ui/tokens"
 local C = require "kompot:ui/components"
 local Skin = require "kompot:ui/skin"
+local Common = require "kompot:ui/components/common"
 
 local M = K.M
 local UI = {}
 
-local VARIANTS = { primary = "primary", secondary = "default", ghost = "ghost", danger = "danger" }
+local VARIANTS = {
+    primary = "primary",
+    secondary = "default",
+    ghost = "ghost",
+    danger = "danger",
+}
 
 function UI.Button(props, content)
     local p = {}
@@ -27,7 +33,11 @@ UI.Switch = C.Switch
 UI.Tabs = C.Tabs
 UI.Divider = function(props)
     props = props or {}
-    C.Divider({ thickness = props.thickness or 1, vertical = props.vertical, inset = props.inset })
+    C.Divider({
+        thickness = props.thickness or 1,
+        vertical = props.vertical,
+        inset = props.inset,
+    })
 end
 UI.Badge = C.Badge
 UI.ProgressBar = C.ProgressBar
@@ -35,6 +45,7 @@ UI.Tooltip = C.Tooltip
 UI.Dialog = C.Dialog
 UI.Scrollbar = C.Scrollbar
 UI.MenuItem = C.MenuItem
+UI.Select = C.Select
 
 function UI.Slider(props)
     local p = {}
@@ -52,9 +63,15 @@ end
 function UI.TextField(props)
     props = T.props("TextField", props)
     local c = T.current().colors
-    K.Column({ modifier = (props.modifier or M):fill_max_width(), spacing = 4 }, function()
+    K.Column({
+        modifier = (props.modifier or M):fill_max_width(),
+        spacing = 4,
+    }, function()
         if props.label then
-            K.Text(props.label, { style = T.current().type.body, color = c.muted })
+            K.Text(props.label, {
+                style = T.current().type.body,
+                color = c.muted,
+            })
         end
         local field = {}
         for k, v in pairs(props) do
@@ -63,10 +80,10 @@ function UI.TextField(props)
         field.modifier, field.mod = nil, nil
         C.Field(field)
         if props.supporting or type(props.error) == "string" then
-            K.Text(
-                type(props.error) == "string" and props.error or props.supporting,
-                { style = T.current().type.caption, color = props.error and c.error or c.dim }
-            )
+            K.Text(type(props.error) == "string" and props.error or props.supporting, {
+                style = T.current().type.caption,
+                color = props.error and c.error or c.dim,
+            })
         end
     end)
 end
@@ -98,6 +115,8 @@ function UI.Panel(props, content)
         width = false,
         modifier = props.modifier,
         padding = props.padding,
+        radius = props.radius,
+        surface = props.surface,
     }, content)
 end
 
@@ -111,31 +130,55 @@ UI.ListItem = K.component(function(props)
         props.on_click and inter.hovered.value and c.hover or base,
         T.current().motion.hover
     )
-    local m = (props.modifier or M):fill_max_width():background(bg)
+    local m = (props.modifier or M):fill_max_width()
     if props.on_click then
-        m = m:clickable(props.on_click, { interaction = inter })
+        m = m:clickable(props.on_click, {
+            interaction = inter,
+        })
     end
-    K.Row({ modifier = m:padding(10, 6), align = "center", spacing = 10 }, function()
-        if props.icon then
-            Skin.Icon(props.icon, 18, c.muted)
-        end
-        K.Column({ modifier = M:weight(1), spacing = 0 }, function()
-            K.Text(
-                props.headline or "",
-                { style = T.current().type.body, color = c.text, max_lines = 1 }
-            )
-            if props.supporting then
-                K.Text(
-                    props.supporting,
-                    { style = T.current().type.caption, color = c.dim, max_lines = 2 }
-                )
+    local surface = Common.surface("list_item", "panel", props, inter, {
+        skin = false,
+        color = bg,
+        content_color = c.text,
+    })
+    K.Box({
+        modifier = m,
+    }, function()
+        Skin.Surface(surface)
+        K.Row({
+            modifier = M:fill_max_width():padding(10, 6),
+            align = "center",
+            spacing = 10,
+        }, function()
+            if props.icon then
+                Skin.Icon(props.icon, 18, c.muted)
+            end
+            K.Column({
+                modifier = M:weight(1),
+                spacing = 0,
+            }, function()
+                K.Text(props.headline or "", {
+                    style = T.current().type.body,
+                    color = surface.content_color,
+                    max_lines = 1,
+                })
+                if props.supporting then
+                    K.Text(props.supporting, {
+                        style = T.current().type.caption,
+                        color = c.dim,
+                        max_lines = 2,
+                    })
+                end
+            end)
+            if type(props.trailing) == "function" then
+                props.trailing()
+            elseif props.trailing then
+                K.Text(tostring(props.trailing), {
+                    style = T.current().type.body,
+                    color = c.muted,
+                })
             end
         end)
-        if type(props.trailing) == "function" then
-            props.trailing()
-        elseif props.trailing then
-            K.Text(tostring(props.trailing), { style = T.current().type.body, color = c.muted })
-        end
     end)
 end)
 

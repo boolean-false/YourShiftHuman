@@ -5,11 +5,15 @@ return function(G)
         "Настройки игры",
         "Законченная форма: звук, дальность прорисовки и применение настроек. Изменения локальны этому примеру.",
         { "UI.TextField", "UI.Switch", "UI.Slider", "UI.Button", "UI.Hint" },
-        [[local name = K.state("Игрок")
+        [[
+local name = K.state("Игрок")
 local sound = K.state(true)
 local distance = K.state(8)
 local saved = K.state("Изменения не применены")
-UI.TextField({ state = name, label = "Имя игрока" })
+UI.TextField({
+    state = name,
+    label = "Имя игрока",
+})
 UI.Switch({
     label = "Звук",
     checked = sound.value,
@@ -38,7 +42,8 @@ UI.Button({
             .. (sound:peek() and "вкл" or "выкл")
     end,
 })
-UI.Hint(saved.value)]]
+UI.Hint(saved.value)
+]]
     )
     G.add(
         "recipes",
@@ -46,9 +51,20 @@ UI.Hint(saved.value)]]
         "Инвентарь",
         "Сетка настоящих игровых предметов. Выберите ячейку или перетащите предмет в другую; пустые ячейки задаются через count.",
         { "UI.ItemSlot", "UI.InventoryGrid", "on_move", "accepts" },
-        [[local items = K.state({
-    { id = "base:stone", name = "Камень", src = "block-previews:base:stone", count = 64 },
-    { id = "base:wood", name = "Древесина", src = "block-previews:base:wood", count = 24 },
+        [[
+local items = K.state({
+    {
+        id = "base:stone",
+        name = "Камень",
+        src = "block-previews:base:stone",
+        count = 64,
+    },
+    {
+        id = "base:wood",
+        name = "Древесина",
+        src = "block-previews:base:wood",
+        count = 24,
+    },
 })
 local selected = K.state(1)
 UI.InventoryGrid({
@@ -69,7 +85,8 @@ UI.InventoryGrid({
         return true
     end,
 })
-UI.Hint("Перенос меняет локальные данные примера.")]]
+UI.Hint("Перенос меняет локальные данные примера.")
+]]
     )
     G.add(
         "recipes",
@@ -77,9 +94,12 @@ UI.Hint("Перенос меняет локальные данные приме�
         "Игровой HUD",
         "Панель быстрых предметов, ресурсы и подсказка действия. Кнопка имитирует получение урона.",
         { "UI.HUD", "UI.Hotbar", "UI.ResourceBar", "UI.ActionHint" },
-        [[local health = K.state(80)
+        [[
+local health = K.state(80)
 local selected = K.state(1)
-K.Box({ modifier = M:fill_max_width():height(240) }, function()
+K.Box({
+    modifier = M:fill_max_width():height(240),
+}, function()
     UI.HUD({
         count = 5,
         items = {
@@ -103,7 +123,10 @@ K.Box({ modifier = M:fill_max_width():height(240) }, function()
         health = health.value,
         energy = 65,
         experience = 35,
-        prompt = { binding = "E", text = "Открыть" },
+        prompt = {
+            binding = "E",
+            text = "Открыть",
+        },
     })
 end)
 UI.Button({
@@ -111,7 +134,8 @@ UI.Button({
     on_click = function()
         health.value = math.max(0, health:peek() - 10)
     end,
-})]]
+})
+]]
     )
     G.add(
         "integration",
@@ -119,7 +143,8 @@ UI.Button({
         "Всплывающий слой",
         "Popup привязывается к месту вызова. Размещение можно менять, пока слой открыт.",
         { "K.Popup", "placement", "z" },
-        [[local open = K.state(false)
+        [[
+local open = K.state(false)
 local placement = K.state("below")
 UI.Choice({
     options = { "below", "above", "right", "center" },
@@ -136,8 +161,15 @@ K.Box(function()
         end,
     })
     if open.value then
-        K.Popup({ placement = placement.value, gap = 6, z = 10 }, function()
-            UI.Panel({ title = "Всплывающий слой", width = 240 }, function()
+        K.Popup({
+            placement = placement.value,
+            gap = 6,
+            z = 10,
+        }, function()
+            UI.Panel({
+                title = "Всплывающий слой",
+                width = 240,
+            }, function()
                 UI.Button({
                     text = "Закрыть",
                     on_click = function()
@@ -147,7 +179,8 @@ K.Box(function()
             end)
         end)
     end
-end)]]
+end)
+]]
     )
     G.add(
         "integration",
@@ -155,11 +188,14 @@ end)]]
         "Подключение и освобождение",
         "Самостоятельный пример для скрипта мода. Открывает интерфейс поверх игры и освобождает его по кнопке.",
         { "K.mount", "handle.dispose", "handle.set_content", "handle.set_theme", "handle.is_over" },
-        [[local K = require "kompot:kompot"
+        [[
+local K = require "kompot:kompot"
 local UI = require "kompot:ui"
 local handle
 local function Screen()
-    UI.Panel({ title = "Мой интерфейс" }, function()
+    UI.Panel({
+        title = "Мой интерфейс",
+    }, function()
         UI.Button({
             text = "Закрыть",
             on_click = function()
@@ -173,7 +209,12 @@ local function Screen()
         })
     end)
 end
-handle = K.mount({ theme = UI.theme(), content = Screen, z_index = 5 })]],
+handle = K.mount({
+    theme = UI.theme(),
+    content = Screen,
+    z_index = 5,
+})
+]],
         {
             standalone = true,
             note = "Для встраивания передайте target = document.panel в K.mount. handle:set_content заменяет экран, handle:set_theme меняет тему, handle:is_over(x, y) проверяет попадание в UI. В обработчике закрытия вашего HUD вызывайте handle:dispose().",
@@ -185,7 +226,8 @@ handle = K.mount({ theme = UI.theme(), content = Screen, z_index = 5 })]],
         "Превью в Kompot Lens",
         "Регистрация превью для плагина Kompot Lens. Этот фрагмент сохраняется в модуле с превью, а не выполняется внутри открытого интерфейса.",
         { "K.preview", "K.previews", "Kompot Lens", "превью" },
-        [[local K = require "kompot:kompot"
+        [[
+local K = require "kompot:kompot"
 local UI = require "kompot:ui"
 K.preview("Моя кнопка", {
     width = 360,
@@ -200,7 +242,8 @@ K.preview("Моя кнопка", {
             count.value = count:peek() + 1
         end,
     })
-end)]],
+end)
+]],
         {
             standalone = true,
             note = "Сохраните модуль и выполните «Kompot: Открыть превью» в VS Code. Режим «Интерактивно» позволяет проверять кнопки, состояния и анимации. Нативный текстовый ввод и presentation проверяйте в игре.",

@@ -1,23 +1,41 @@
 return function(G)
     G.add(
-        "media", "shapes", "Общая форма Shape",
+        "media",
+        "shapes",
+        "Общая форма Shape",
         "Одна форма для фона, рамки, тени и обрезки. Размеры углов можно смешивать: пиксели и проценты меньшей стороны.",
         { "K.Shape", "K.Shape.cut", "K.Shape.rounded", "K.Shape.percent", "M.clip" },
-        [[local S = K.Shape
+        [[
+local S = K.Shape
 local shape = S.cut({
-    top_left = S.percent(50), top_right = 8,
-    bottom_right = 0, bottom_left = S.px(16),
+    top_left = S.percent(50),
+    top_right = 8,
+    bottom_right = 0,
+    bottom_left = S.px(16),
 })
-K.Box({modifier = M:size(240, 120)
-    :shadow(8, shape):background("#386F94", shape)
-    :border(2, "#FFFFFF", shape):clip(shape):padding(24)
+K.Box({
+    modifier = M:size(240, 120)
+        :shadow(8, shape)
+        :background("#386F94", shape)
+        :border(2, "#FFFFFF", shape)
+        :clip(shape)
+        :padding(24),
 }, function()
-    K.Text("Пиксели и проценты", {color = "#FFFFFF"})
+    K.Text("Пиксели и проценты", {
+        color = "#FFFFFF",
+    })
 end)
-K.Row({spacing = 12}, function()
-    K.Box({modifier = M:size(80, 48):background("#50C0A0", S.circle())})
-    K.Box({modifier = M:size(80, 48):background("#F0C050", S.rounded(S.percent(25)))})
-end)]]
+K.Row({
+    spacing = 12,
+}, function()
+    K.Box({
+        modifier = M:size(80, 48):background("#50C0A0", S.circle()),
+    })
+    K.Box({
+        modifier = M:size(80, 48):background("#F0C050", S.rounded(S.percent(25))),
+    })
+end)
+]]
     )
     G.add(
         "media",
@@ -25,28 +43,38 @@ end)]]
         "Радиус каждого угла",
         "Общая форма для фона, рамки, тени и обрезки. Прямой нижний угол и три разных скругления; содержимое и клики обрезаются по маске.",
         { "K.rounded_corners", "M.background", "M.border", "M.shadow", "M.clip" },
-        [[local corners = K.rounded_corners({
-    top_left = 32, top_right = 8,
-    bottom_right = 0, bottom_left = 16,
+        [[
+local corners = K.rounded_corners({
+    top_left = 32,
+    top_right = 8,
+    bottom_right = 0,
+    bottom_left = 16,
 })
-K.Box({modifier = M:size(240, 120)
-    :shadow(8, corners)
-    :background("#386F94", corners)
-    :border(2, "#FFFFFF", corners)
-    :clip(corners)
-    :padding(16)
+K.Box({
+    modifier = M:size(240, 120)
+        :shadow(8, corners)
+        :background("#386F94", corners)
+        :border(2, "#FFFFFF", corners)
+        :clip(corners)
+        :padding(16),
 }, function()
-    K.Text("Четыре разных угла", {color = "#FFFFFF"})
-    K.Box({modifier = M:offset(100, 50):size(180, 60):background("#50C0A0")})
-end)]]
+    K.Text("Четыре разных угла", {
+        color = "#FFFFFF",
+    })
+    K.Box({
+        modifier = M:offset(100, 50):size(180, 60):background("#50C0A0"),
+    })
+end)
+]]
     )
     G.add(
         "media",
         "nine_patch",
-        "Текстурные фоны",
-        "Меняйте ширину панели: края сохраняют толщину, середина повторяется на GPU. Маленькая текстура общая для всех размеров.",
+        "Nine-patch: рамки и повторение",
+        "Рамка сохраняет толщину, середина повторяется на GPU. Для фоновой картинки с cover используйте K.Image, а не nine-patch.",
         { "K.nine_patch", "K.raster", "M.background_image" },
-        [[local width = K.state(260)
+        [[
+local width = K.state(260)
 local material = K.remember(function()
     local source = K.raster({
         key = "kompot:guide/material",
@@ -61,7 +89,11 @@ local material = K.remember(function()
             cv:rect(4, 4, 2, 2, 65, 80, 60, 255)
         end,
     })
-    return K.nine_patch(source, { border = 2, center = "tile", scale = 2 })
+    return K.nine_patch(source, {
+        border = 2,
+        center = "tile",
+        scale = 2,
+    })
 end)
 UI.Slider({
     label = "Ширина",
@@ -72,14 +104,14 @@ UI.Slider({
         width.value = v
     end,
 })
-K.Box(
-    { modifier = M:width(width.value):height(120):background_image(material):padding(12) },
-    function()
-        K.Text("Один материал для всех размеров")
-    end
-)]],
+K.Box({
+    modifier = M:width(width.value):height(120):background_image(material):padding(12),
+}, function()
+    K.Text("Один материал для всех размеров")
+end)
+]],
         {
-            note = "Для PNG или спрайта атласа передайте имя текстуры и source_size. Полный API: docs/SKINS.md.",
+            note = "Источник: texture/path или atlas:sprite, без префикса пака; source_size - размер PNG или спрайта. Nine-patch не поддерживает fit. Полный API: docs/SKINS.md.",
         }
     )
     G.add(
@@ -88,7 +120,8 @@ K.Box(
         "Row, Column и Spacer",
         "Одинаковые элементы в строке и колонке. Spacer с weight занимает свободное пространство строки.",
         { "K.Row", "K.Column", "K.Spacer", "M.weight" },
-        [[local gap = K.state(8)
+        [[
+local gap = K.state(8)
 UI.Slider({
     label = "Расстояние",
     value = gap.value,
@@ -99,15 +132,21 @@ UI.Slider({
         gap.value = v
     end,
 })
-K.Row({ modifier = M:fill_max_width(), spacing = gap.value }, function()
+K.Row({
+    modifier = M:fill_max_width(),
+    spacing = gap.value,
+}, function()
     UI.Key("Слева")
     K.Spacer(M:weight(1))
     UI.Key("Справа")
 end)
-K.Column({ spacing = gap.value }, function()
+K.Column({
+    spacing = gap.value,
+}, function()
     UI.Key("Сверху")
     UI.Key("Снизу")
-end)]]
+end)
+]]
     )
     G.add(
         "layout",
@@ -115,7 +154,8 @@ end)]]
         "FlowRow и переносы",
         "Изменяйте ширину области. Элементы переносятся целиком, сохраняя расстояние между строками.",
         { "K.FlowRow", "M.width", "M.width_in" },
-        [[local width = K.state(280)
+        [[
+local width = K.state(280)
 UI.Slider({
     label = "Ширина области",
     value = width.value,
@@ -141,7 +181,8 @@ K.FlowRow({
     }) do
         UI.Key(name)
     end
-end)]]
+end)
+]]
     )
     G.add(
         "layout",
@@ -149,14 +190,20 @@ end)]]
         "Порядок модификаторов",
         "Сравните фон до padding и после него. Порядок цепочки определяет, какую область занимает оформление.",
         { "M.padding", "M.background", "M.border", "M.size", "M.required_size" },
-        [[K.Text("background -> padding")
-K.Box({ modifier = M:background("#386F94"):padding(20) }, function()
+        [[
+K.Text("background -> padding")
+K.Box({
+    modifier = M:background("#386F94"):padding(20),
+}, function()
     K.Text("Внутренний отступ")
 end)
 K.Text("padding -> background")
-K.Box({ modifier = M:padding(20):background("#386F94") }, function()
+K.Box({
+    modifier = M:padding(20):background("#386F94"),
+}, function()
     K.Text("Внешний отступ")
-end)]]
+end)
+]]
     )
     G.add(
         "layout",
@@ -164,7 +211,8 @@ end)]]
         "Выравнивание и слои",
         "Меняйте положение элемента внутри Box. Второй слой расположен поверх фона.",
         { "K.Box", "M.align", "M.z_index", "M.offset", "M.match_parent_size" },
-        [[local align = K.state("center")
+        [[
+local align = K.state("center")
 UI.Choice({
     options = { "top_start", "center", "bottom_end" },
     selected = align.value,
@@ -172,17 +220,19 @@ UI.Choice({
         align.value = v
     end,
 })
-K.Box(
-    {
-        modifier = M:fill_max_width():height(140):background(K.theme().colors.surface_raised),
-        align = align.value,
-    },
-    function()
-        K.Box({ modifier = M:match_parent_size():border(1, K.theme().colors.outline) })
-        UI.Key("Положение: " .. align.value)
-        K.Text("Слой 2", { modifier = M:align("top_end"):padding(6):z_index(2) })
-    end
-)]]
+K.Box({
+    modifier = M:fill_max_width():height(140):background(K.theme().colors.surface_raised),
+    align = align.value,
+}, function()
+    K.Box({
+        modifier = M:match_parent_size():border(1, K.theme().colors.outline),
+    })
+    UI.Key("Положение: " .. align.value)
+    K.Text("Слой 2", {
+        modifier = M:align("top_end"):padding(6):z_index(2),
+    })
+end)
+]]
     )
     G.add(
         "layout",
@@ -201,7 +251,8 @@ K.Box(
             "M.alpha",
             "M.shadow",
         },
-        [[local alpha = K.state(1)
+        [[
+local alpha = K.state(1)
 UI.Slider({
     label = "Прозрачность",
     value = alpha.value,
@@ -220,11 +271,11 @@ K.Box({
         :clip()
         :padding(12),
 }, function()
-    K.Text(
-        "Длинный текст внутри ограниченной области",
-        { color = "#181818" }
-    )
-end)]]
+    K.Text("Длинный текст внутри ограниченной области", {
+        color = "#181818",
+    })
+end)
+]]
     )
     G.add(
         "layout",
@@ -232,7 +283,8 @@ end)]]
         "Своя раскладка",
         "Layout измеряет детей и размещает их по диагонали. Подпись показывает итоговый размер после раскладки.",
         { "K.Layout", "M.on_size", "M.on_placed" },
-        [[local size = K.state("Ожидание раскладки")
+        [[
+local size = K.state("Ожидание раскладки")
 K.Layout({
     modifier = M:on_size(function(w, h)
         size.value = string.format("Размер: %.0f x %.0f", w, h)
@@ -252,7 +304,8 @@ K.Layout({
     UI.Key("Второй")
     UI.Key("Третий")
 end)
-K.Text(size.value)]]
+K.Text(size.value)
+]]
     )
     G.add(
         "media",
@@ -260,7 +313,8 @@ K.Text(size.value)]]
         "Типографика",
         "Стили текста из текущей темы. Выравнивание и высота строк видны на одной и той же фразе.",
         { "K.Text", "K.TextStyle", "K.style", "K.fonts" },
-        [[for _, name in ipairs({
+        [[
+for _, name in ipairs({
     "caption",
     "body",
     "label",
@@ -270,8 +324,11 @@ K.Text(size.value)]]
     "display",
     "mono",
 }) do
-    K.Text(name .. " - Kompot / Абв 0123", { style = name })
-end]],
+    K.Text(name .. " - Kompot / Абв 0123", {
+        style = name,
+    })
+end
+]],
         {
             note = "Шрифты регистрируются через K.fonts; настройка семейств и метрик описана в docs/FONTS.md.",
         }
@@ -282,21 +339,78 @@ end]],
         "Цвет и форматирование",
         "Обычный Text поддерживает составные фрагменты. Ограничение строк добавляет многоточие.",
         { "K.Text", "spans", "markup", "max_lines", "ellipsis", "K.ContentColor", "K.rgb", "K.hex" },
-        [[K.Text("[#E3AF67]Цвет[#E8E6DF] и **жирный**", { markup = "md" })
+        [[
+K.Text("[#E3AF67]Цвет[#E8E6DF] и **жирный**", {
+    markup = "md",
+})
 K.Text("", {
     spans = {
-        { text = "Первый ", color = K.theme().colors.primary },
-        { text = "второй ", style = "strong" },
-        { text = "третий", color = K.theme().colors.success },
+        {
+            text = "Первый ",
+            color = K.theme().colors.primary,
+        },
+        {
+            text = "второй ",
+            style = "strong",
+        },
+        {
+            text = "третий",
+            color = K.theme().colors.success,
+        },
     },
 })
 K.Text(string.rep("Длинное описание предмета. ", 8), {
     modifier = M:width(240),
     max_lines = 2,
     ellipsis = true,
-})]],
+})
+]],
         {
             note = "Это форматирование обычного Text. Диапазоны presentation у редактируемого поля пока поддерживают только цвет.",
+        }
+    )
+    G.add(
+        "media",
+        "background_cover",
+        "Картинка фоном: cover",
+        "Меняйте ширину области: фон сохраняет пропорции и обрезает лишнее. Картинка не задаёт размер Box и не перехватывает кнопки поверх неё.",
+        { "K.Image", "fit", "cover", "M.match_parent_size" },
+        [[
+local width = K.state(360)
+local count = K.state(0)
+UI.Slider({
+    label = "Ширина области",
+    min = 180,
+    max = 460,
+    value = width.value,
+    on_change = function(value)
+        width.value = value
+    end,
+})
+K.Box({
+    modifier = M:width(width.value):height(180),
+}, function()
+    K.Image("kompot_ui_skin:panel", {
+        source_size = { 264, 264 },
+        fit = "cover",
+        modifier = M:match_parent_size(),
+    })
+    K.Column({
+        modifier = M:fill_max_size():padding(16),
+        spacing = 8,
+    }, function()
+        K.Text("Содержимое поверх картинки")
+        UI.Button({
+            text = "Нажатий: " .. count.value,
+            on_click = function()
+                count.value = count:peek() + 1
+            end,
+        })
+    end)
+end)
+]],
+        {
+            note = "Здесь panel - спрайт атласа kompot_ui_skin. Для обычного PNG используйте gui/menu_background и его размер. На весь экран: замените размер Box на M:fill_max_size(). clip() и nine_patch для cover не нужны. Рецепт: docs/SKINS.md.",
         }
     )
     G.add(
@@ -305,9 +419,15 @@ K.Text(string.rep("Длинное описание предмета. ", 8), {
         "Изображения и атласы",
         "Одинаковая иконка в режимах fill, contain и cover. Последний пример показывает половину исходника через region.",
         { "K.Image", "K.Icon", "region", "source_size", "fit" },
-        [[K.FlowRow({ spacing = 12, run_spacing = 12 }, function()
+        [[
+K.FlowRow({
+    spacing = 12,
+    run_spacing = 12,
+}, function()
     for _, fit in ipairs({ "fill", "contain", "cover" }) do
-        K.Column({ spacing = 6 }, function()
+        K.Column({
+            spacing = 6,
+        }, function()
             K.Text(fit)
             K.Image("kompot_ui_icons:star", {
                 width = 100,
@@ -318,23 +438,26 @@ K.Text(string.rep("Длинное описание предмета. ", 8), {
             })
         end)
     end
-    K.Column({ spacing = 6 }, function()
+    K.Column({
+        spacing = 6,
+    }, function()
         K.Text("region")
-        K.Image(
-            "kompot_ui_icons:star",
-            {
-                width = 100,
-                height = 56,
-                source_size = { 32, 32 },
-                fit = "contain",
-                region = { 0, 0, 0.5, 1 },
-            }
-        )
+        K.Image("kompot_ui_icons:star", {
+            width = 100,
+            height = 56,
+            source_size = { 32, 32 },
+            fit = "contain",
+            region = { 0, 0, 0.5, 1 },
+        })
     end)
 end)
-K.Icon("settings", { size = 32, color = K.theme().colors.primary })]],
+K.Icon("settings", {
+    size = 32,
+    color = K.theme().colors.primary,
+})
+]],
         {
-            note = "region = {u1, v1, u2, v2} в координатах 0..1. source_size задаёт размер всей исходной картинки.",
+            note = "Обычная текстура: gui/menu_background; спрайт атласа: kompot_ui_icons:star. Двоеточие не обозначает пак. region = {u1, v1, u2, v2} в координатах 0..1; source_size - размер PNG или спрайта.",
         }
     )
     G.add(
@@ -343,7 +466,8 @@ K.Icon("settings", { size = 32, color = K.theme().colors.primary })]],
         "Canvas",
         "Кнопка изменяет version и перерисовывает холст. Так можно создавать графики и процедурные изображения.",
         { "K.Canvas", "version" },
-        [[local value = K.state(1)
+        [[
+local value = K.state(1)
 UI.Button({
     text = "Следующий кадр",
     on_click = function()
@@ -361,7 +485,8 @@ K.Canvas({
             canvas:rect(8 + i * 28, h - bar, 20, bar, 227, 175, 103, 255)
         end
     end,
-})]]
+})
+]]
     )
     G.add(
         "input",
@@ -369,7 +494,8 @@ K.Canvas({
         "Наведение и подсказки",
         "Наведите указатель на область. Состояние наведения меняет цвет и подпись.",
         { "K.interaction", "M.hoverable", "M.cursor", "UI.Tooltip" },
-        [[local inter = K.interaction()
+        [[
+local inter = K.interaction()
 K.Box({
     modifier = M:fill_max_width()
         :height(80)
@@ -382,7 +508,8 @@ K.Box({
         inter.hovered.value and "Указатель внутри"
             or "Наведите указатель"
     )
-end)]]
+end)
+]]
     )
     G.add(
         "input",
@@ -390,8 +517,11 @@ end)]]
         "Перетаскивание",
         "Потяните плашку по горизонтали. Смещение ограничено шириной дорожки.",
         { "M.draggable", "M.offset", "M.block_pointer" },
-        [[local x = K.state(0)
-K.Box({ modifier = M:width(300):height(80):background("#25252B"):block_pointer() }, function()
+        [[
+local x = K.state(0)
+K.Box({
+    modifier = M:width(300):height(80):background("#25252B"):block_pointer(),
+}, function()
     K.Box({
         modifier = M:offset(x.value, 16):size(80, 48):background("#386F94", 8):draggable({
             axis = 1,
@@ -406,7 +536,8 @@ K.Box({ modifier = M:width(300):height(80):background("#25252B"):block_pointer()
         K.Text("Тяни")
     end)
 end)
-K.Text(string.format("Смещение: %.0f", x.value))]]
+K.Text(string.format("Смещение: %.0f", x.value))
+]]
     )
     G.add(
         "input",
@@ -414,8 +545,11 @@ K.Text(string.format("Смещение: %.0f", x.value))]]
         "Цель перетаскивания",
         "Перетащите предмет в ячейку. Цель получает события входа и отпускания.",
         { "M.draggable", "M.drop_target", "M.block_pointer" },
-        [[local status = K.state("Перетащите предмет")
-K.Row({ spacing = 16 }, function()
+        [[
+local status = K.state("Перетащите предмет")
+K.Row({
+    spacing = 16,
+}, function()
     K.Box({
         modifier = M:size(100, 64):background("#386F94", 8):draggable({
             on_event = function(e)
@@ -452,7 +586,8 @@ K.Row({ spacing = 16 }, function()
         K.Text("Ячейка")
     end)
 end)
-K.Text(status.value)]]
+K.Text(status.value)
+]]
     )
     G.add(
         "input",
@@ -460,7 +595,8 @@ K.Text(status.value)]]
         "Указатель и колесо",
         "Нажмите в области или прокрутите колесо. Обработанное колесо не прокручивает страницу справочника.",
         { "M.pointer_input", "M.on_wheel", "M.block_pointer", "M.tag" },
-        [[local last = K.state("Нет событий")
+        [[
+local last = K.state("Нет событий")
 local zoom = K.state(1)
 K.Box({
     modifier = M:fill_max_width()
@@ -479,7 +615,8 @@ K.Box({
     align = "center",
 }, function()
     K.Text(string.format("Событие: %s; масштаб: %.1f", last.value, zoom.value))
-end)]]
+end)
+]]
     )
     G.add(
         "input",
@@ -487,7 +624,8 @@ end)]]
         "Клавиатура и фокус",
         "Кликните область, затем нажимайте стрелки. Tab перемещает фокус между доступными контролами.",
         { "M.focusable", "M.clickable", "K.interaction" },
-        [[local value = K.state(0)
+        [[
+local value = K.state(0)
 local inter = K.interaction()
 K.Box({
     modifier = M:fill_max_width():height(56):background("#25252B"):focusable(function(key)
@@ -497,7 +635,9 @@ K.Box({
         if key == "left" then
             value.value = value:peek() - 1
         end
-    end, { interaction = inter }),
+    end, {
+        interaction = inter,
+    }),
     align = "center",
 }, function()
     K.Text((inter.focused.value and "В фокусе: " or "Без фокуса: ") .. value.value)
@@ -507,7 +647,8 @@ UI.Button({
     on_click = function()
         value.value = 0
     end,
-})]],
+})
+]],
         {
             note = "В HUD Escape может закрывать весь оверлей. Горячие клавиши мира следует согласовывать с фокусом интерфейса.",
         }
@@ -518,7 +659,8 @@ UI.Button({
         "Реактивное состояние",
         "Два независимых счётчика. .value подписывает компонент, :peek() читает значение без подписки.",
         { "K.state", "K.new_state", "K.component", "K.remember", "K.untracked", "K.is_state" },
-        [[local Counter = K.remember(function()
+        [[
+local Counter = K.remember(function()
     return K.component(function(props)
         local count = K.state(0)
         UI.Button({
@@ -529,71 +671,145 @@ UI.Button({
         })
     end)
 end)
-Counter({ name = "Первый" })
-Counter({ name = "Второй" })]],
+Counter({
+    name = "Первый",
+})
+Counter({
+    name = "Второй",
+})
+]],
         {
             note = "K.new_state создаёт состояние вне композиции. K.untracked(fn) выполняет чтения без подписки; K.is_state проверяет тип состояния.",
         }
     )
     G.add(
-        "state", "table_state", "Обновление полей State",
+        "state",
+        "table_state",
+        "Обновление полей State",
         "patch меняет несколько полей, update_field вычисляет одно поле; вложенность обновляется явно через K.copy.",
         { "State.patch", "State.update_field", "K.copy", "K.state" },
-        [[local player = K.state({
-    name = "Петя", health = 100, coins = 0,
-    stats = { armor = 50, level = 1 },
+        [[
+local player = K.state({
+    name = "Петя",
+    health = 100,
+    coins = 0,
+    stats = {
+        armor = 50,
+        level = 1,
+    },
 })
 local p = player.value
 K.Text(p.name .. ": " .. p.health .. " HP; " .. p.coins .. " монет")
 K.Text("Уровень: " .. p.stats.level .. "; броня: " .. p.stats.armor)
-UI.Button({text = "Урон и монеты", on_click = function()
-    player:patch({health = 90, coins = 100})
-end})
-UI.Button({text = "+100 монет", on_click = function()
-    player:update_field("coins", function(coins) return coins + 100 end)
-end})
-UI.Button({text = "+1 уровень", on_click = function()
-    player:update_field("stats", function(stats)
-        return K.copy(stats, {level = stats.level + 1})
-    end)
-end})]],
-        { note = "Копирование поверхностное. Старое значение не изменяется; nil в update_field удаляет поле." }
+UI.Button({
+    text = "Урон и монеты",
+    on_click = function()
+        player:patch({
+            health = 90,
+            coins = 100,
+        })
+    end,
+})
+UI.Button({
+    text = "+100 монет",
+    on_click = function()
+        player:update_field("coins", function(coins)
+            return coins + 100
+        end)
+    end,
+})
+UI.Button({
+    text = "+1 уровень",
+    on_click = function()
+        player:update_field("stats", function(stats)
+            return K.copy(stats, {
+                level = stats.level + 1,
+            })
+        end)
+    end,
+})
+]],
+        {
+            note = "Копирование поверхностное. Старое значение не изменяется; nil в update_field удаляет поле.",
+        }
     )
     G.add(
-        "state", "form_state", "Форма с независимыми полями",
+        "state",
+        "form_state",
+        "Форма с независимыми полями",
         "K.form сохраняет введённые значения. Новая область с ключом сбрасывает форму; каждое поле остаётся обычным State.",
         { "K.form", "K.key", "UI.TextField", "UI.Switch", "UI.Slider" },
-        [[local generation = K.state(0)
-UI.Button({text = "Сбросить форму", on_click = function()
-    generation.value = generation:peek() + 1
-end})
+        [[
+local generation = K.state(0)
+UI.Button({
+    text = "Сбросить форму",
+    on_click = function()
+        generation.value = generation:peek() + 1
+    end,
+})
 K.key(generation.value, function()
-    local form = K.form({ name = "Петя", enabled = true, size = 10 })
-    UI.TextField({state = form.name, label = "Имя"})
-    UI.Switch({text = "Включено", checked = form.enabled.value,
-        on_change = function(value) form.enabled.value = value end})
-    UI.Slider({label = "Размер", min = 1, max = 20, value = form.size.value,
-        on_change = function(value) form.size.value = value end})
+    local form = K.form({
+        name = "Петя",
+        enabled = true,
+        size = 10,
+    })
+    UI.TextField({
+        state = form.name,
+        label = "Имя",
+    })
+    UI.Switch({
+        text = "Включено",
+        checked = form.enabled.value,
+        on_change = function(value)
+            form.enabled.value = value
+        end,
+    })
+    UI.Slider({
+        label = "Размер",
+        min = 1,
+        max = 20,
+        value = form.size.value,
+        on_change = function(value)
+            form.size.value = value
+        end,
+    })
     K.Text(form.name.value .. "; размер: " .. form.size.value)
-end)]],
-        { note = "Схема фиксирована. Повторная композиция не сбрасывает ввод; глубоких прокси и автоматической валидации нет." }
+end)
+]],
+        {
+            note = "Схема фиксирована. Повторная композиция не сбрасывает ввод; глубоких прокси и автоматической валидации нет.",
+        }
     )
     G.add(
-        "state", "hook_order", "Порядок хуков и условные области",
+        "state",
+        "hook_order",
+        "Порядок хуков и условные области",
         "Включайте и выключайте дочерний счётчик. K.key отделяет его хуки от родительских; удаление области освобождает её состояние.",
         { "K.key", "K.state", "K.component", "hook_diagnostics" },
-        [[local visible = K.state(false)
-UI.Button({text = visible.value and "Скрыть счётчик" or "Показать счётчик",
-    on_click = function() visible.value = not visible:peek() end})
+        [[
+local visible = K.state(false)
+UI.Button({
+    text = visible.value and "Скрыть счётчик" or "Показать счётчик",
+    on_click = function()
+        visible.value = not visible:peek()
+    end,
+})
 if visible.value then
     K.key("counter", function()
         local count = K.state(0)
-        UI.Button({text = "Нажатий: " .. count.value,
-            on_click = function() count.value = count:peek() + 1 end})
+        UI.Button({
+            text = "Нажатий: " .. count.value,
+            on_click = function()
+                count.value = count:peek() + 1
+            end,
+        })
     end)
 end
-K.Text("Хуки родителя остаются на своих местах.")]],
-        { note = "При изменении вида или количества хуков в одной области runtime сообщает Hook order changed. Подробные места вызова включаются через hook_diagnostics; в Lens они включены по умолчанию." }
+K.Text("Хуки родителя остаются на своих местах.")
+]],
+        {
+            note = "При изменении вида или количества хуков в одной области runtime сообщает Hook order changed. Подробные места вызова включаются через hook_diagnostics; в Lens они включены по умолчанию.",
+        }
     )
     G.add(
         "state",
@@ -601,7 +817,8 @@ K.Text("Хуки родителя остаются на своих местах.
         "Ключи и перестановка",
         "Увеличьте счётчики, затем поменяйте порядок. Значения останутся у своих элементов благодаря K.key.",
         { "K.key", "K.component", "K.state" },
-        [[local reversed = K.state(false)
+        [[
+local reversed = K.state(false)
 UI.Button({
     text = "Изменить порядок",
     on_click = function()
@@ -619,7 +836,8 @@ for _, id in ipairs(ids) do
             end,
         })
     end)
-end]]
+end
+]]
     )
     G.add(
         "state",
@@ -627,7 +845,8 @@ end]]
         "Эффекты и освобождение",
         "Скрытие дочернего компонента вызывает on_dispose. При повторном появлении effect выполняется снова.",
         { "K.effect", "K.on_dispose", "K.component" },
-        [[local visible = K.state(true)
+        [[
+local visible = K.state(true)
 local status = K.state("Ожидание")
 UI.Button({
     text = visible.value and "Скрыть компонент"
@@ -647,7 +866,8 @@ if visible.value then
         UI.Key("Дочерний компонент")
     end)
 end
-K.Text(status.value)]]
+K.Text(status.value)
+]]
     )
     G.add(
         "state",
@@ -655,14 +875,16 @@ K.Text(status.value)]]
         "Локальные значения",
         "Вложенный provide меняет значение только для своих потомков.",
         { "K.local_of", "K.provide" },
-        [[local LocalName = K.remember(function()
+        [[
+local LocalName = K.remember(function()
     return K.local_of("Гость")
 end)
 K.Text("Снаружи: " .. LocalName:get())
 K.provide(LocalName, "Игрок", function()
     K.Text("Внутри: " .. LocalName:get())
 end)
-K.Text("Снова снаружи: " .. LocalName:get())]]
+K.Text("Снова снаружи: " .. LocalName:get())
+]]
     )
     G.add(
         "state",
@@ -670,8 +892,11 @@ K.Text("Снова снаружи: " .. LocalName:get())]]
         "Внешние данные",
         "Обычная Lua-таблица не реактивна. poll опрашивает её и обновляет UI при изменении значения.",
         { "K.poll", "K.remember" },
-        [[local model = K.remember(function()
-    return { health = 100 }
+        [[
+local model = K.remember(function()
+    return {
+        health = 100,
+    }
 end)
 local health = K.poll(function()
     return model.health
@@ -683,7 +908,10 @@ UI.Button({
     end,
 })
 K.Text("Здоровье: " .. health)
-UI.ProgressBar({ progress = health / 100 })]]
+UI.ProgressBar({
+    progress = health / 100,
+})
+]]
     )
     G.add(
         "motion",
@@ -691,7 +919,8 @@ UI.ProgressBar({ progress = health / 100 })]]
         "Tween и spring",
         "Одна цель, два разных перехода. Нажимайте кнопку повторно до завершения движения.",
         { "K.animate", "K.tween", "K.spring", "K.snap", "K.EASING" },
-        [[local open = K.state(false)
+        [[
+local open = K.state(false)
 UI.Button({
     text = "Переключить цель",
     on_click = function()
@@ -703,10 +932,15 @@ local tween = K.animate(target, K.tween(0.6))
 local spring = K.animate(target, K.spring())
 for _, item in ipairs({ { "tween", tween }, { "spring", spring } }) do
     K.Text(item[1])
-    K.Box({ modifier = M:width(260):height(32):background("#25252B"):clip() }, function()
-        K.Box({ modifier = M:offset(item[2], 0):size(60, 32):background("#386F94", 6) })
+    K.Box({
+        modifier = M:width(260):height(32):background("#25252B"):clip(),
+    }, function()
+        K.Box({
+            modifier = M:offset(item[2], 0):size(60, 32):background("#386F94", 6),
+        })
     end)
-end]],
+end
+]],
         {
             note = "K.snap переключает значение без анимации. Доступные функции плавности перечислены в K.EASING.",
         }
@@ -717,7 +951,8 @@ end]],
         "Время и задержка",
         "Таймер отсчитывает время жизни примера. Кнопка перезапускает отдельную задержку.",
         { "K.clock", "K.after" },
-        [[local restart = K.state(0)
+        [[
+local restart = K.state(0)
 local elapsed = K.clock()
 local ready = K.after(2, restart.value)
 K.Text(string.format("Прошло %.1f с", elapsed))
@@ -727,7 +962,8 @@ UI.Button({
         restart.value = restart:peek() + 1
     end,
 })
-K.Text(ready and "Готово" or "Ожидание...")]]
+K.Text(ready and "Готово" or "Ожидание...")
+]]
     )
     G.add(
         "scroll",
@@ -735,24 +971,30 @@ K.Text(ready and "Готово" or "Ожидание...")]]
         "Обычная прокрутка",
         "Внутренняя область имеет свою полосу прокрутки. Кнопка переводит её в конец.",
         { "K.scroll_state", "M.vertical_scroll", "M.horizontal_scroll", "UI.Scrollbar" },
-        [[local scroll = K.scroll_state()
+        [[
+local scroll = K.scroll_state()
 UI.Button({
     text = "В конец",
     on_click = function()
         scroll:scroll_to(scroll.max)
     end,
 })
-K.Box({ modifier = M:fill_max_width():height(180) }, function()
-    K.Column(
-        { modifier = M:fill_max_size():vertical_scroll(scroll):padding(0, 0, 16, 0), spacing = 8 },
-        function()
-            for i = 1, 30 do
-                K.Text("Строка " .. i)
-            end
+K.Box({
+    modifier = M:fill_max_width():height(180),
+}, function()
+    K.Column({
+        modifier = M:fill_max_size():vertical_scroll(scroll):padding(0, 0, 16, 0),
+        spacing = 8,
+    }, function()
+        for i = 1, 30 do
+            K.Text("Строка " .. i)
         end
-    )
-    UI.Scrollbar({ state = scroll })
-end)]]
+    end)
+    UI.Scrollbar({
+        state = scroll,
+    })
+end)
+]]
     )
     G.add(
         "scroll",
@@ -760,8 +1002,12 @@ end)]]
         "Ленивый список",
         "Список из 10 000 элементов создаёт содержимое видимой области. Кнопки выполняют переход к элементу.",
         { "K.LazyColumn", "K.lazy_state", "scroll_to_item", "key_of" },
-        [[local list = K.lazy_state()
-K.FlowRow({ spacing = 8, run_spacing = 8 }, function()
+        [[
+local list = K.lazy_state()
+K.FlowRow({
+    spacing = 8,
+    run_spacing = 8,
+}, function()
     for _, index in ipairs({ 1, 500, 10000 }) do
         UI.Button({
             text = "К " .. index,
@@ -780,9 +1026,12 @@ K.LazyColumn({
         return "item_" .. i
     end,
     item = function(i)
-        K.Text("Элемент " .. i, { modifier = M:height(24) })
+        K.Text("Элемент " .. i, {
+            modifier = M:height(24),
+        })
     end,
-})]]
+})
+]]
     )
     G.add(
         "scroll",
@@ -790,13 +1039,18 @@ K.LazyColumn({
         "Ленивая сетка и строка",
         "Сетка размещает предметы по колонкам. Ниже находится независимая горизонтальная лента.",
         { "K.LazyGrid", "K.LazyRow" },
-        [[K.LazyGrid({
+        [[
+K.LazyGrid({
     count = 120,
     columns = 4,
     spacing = 8,
     modifier = M:fill_max_width():height(180),
     item = function(i)
-        UI.Slot({ icon = "star", badge = i, size = 44 })
+        UI.Slot({
+            icon = "star",
+            badge = i,
+            size = 44,
+        })
     end,
 })
 K.LazyRow({
@@ -804,9 +1058,135 @@ K.LazyRow({
     spacing = 8,
     modifier = M:fill_max_width():height(56),
     item = function(i)
-        UI.Slot({ icon = "folder", badge = i, size = 44 })
+        UI.Slot({
+            icon = "folder",
+            badge = i,
+            size = 44,
+        })
     end,
-})]]
+})
+]]
+    )
+    G.add(
+        "theme",
+        "appearance",
+        "Смена оформления",
+        "Те же компоненты в плоской и текстурной теме. Состояние кнопки и поля сохраняется при переключении.",
+        { "UI.Theme", "surfaces", "states", "skin", "shape" },
+        [[
+local wood = K.remember(function()
+    return K.nine_patch(
+        K.raster({
+            width = 16,
+            height = 16,
+            key = "guide:wood",
+            draw = function(cv)
+                cv:clear(102, 62, 35, 255)
+                cv:rect(0, 0, 16, 2, 161, 112, 58, 255)
+                cv:rect(0, 7, 16, 1, 74, 42, 27, 255)
+                cv:rect(0, 14, 16, 2, 54, 31, 20, 255)
+            end,
+        }),
+        {
+            border = 2,
+            center = "tile",
+        }
+    )
+end)
+local paper = K.state(true)
+local count = K.state(0)
+local text = K.state("Имя игрока")
+UI.Switch({
+    label = "Плоское оформление",
+    checked = paper.value,
+    on_change = function(v)
+        paper.value = v
+    end,
+})
+local opts = paper.value
+        and {
+            colors = {
+                surface = "#EDF2FA",
+                surface_raised = "#CFDBEC",
+                background = "#FFFFFF",
+                on_surface = "#172A45",
+                muted = "#425A79",
+                outline = "#879AB3",
+            },
+            shapes = {
+                control = 10,
+                panel = 12,
+                card = 12,
+                field = 8,
+            },
+            metrics = {
+                press_offset = 0,
+            },
+            surfaces = {
+                default = {
+                    skin = false,
+                    border_width = 1,
+                    border_color = "#879AB3",
+                },
+                code = {
+                    color = "#262A23",
+                },
+                button = {
+                    states = {
+                        hovered = {
+                            color = "#B7CBE7",
+                        },
+                        pressed = {
+                            color = "#93AFD6",
+                        },
+                    },
+                },
+            },
+        }
+    or {
+        accent = "#E8BC62",
+        surfaces = {
+            button = {
+                skin = wood,
+                color = "#FFFFFF",
+                content_color = "#FFF2CD",
+                border_width = 1,
+                border_color = "#D9AC62",
+                states = {
+                    pressed = {
+                        color = "#BBA078",
+                    },
+                },
+            },
+        },
+    }
+UI.Theme(opts, function()
+    UI.Panel({
+        title = "Настройки",
+        width = false,
+    }, function()
+        UI.TextField({
+            state = text,
+            label = "Игрок",
+        })
+        UI.Button({
+            text = "Нажатий: " .. count.value,
+            on_click = function()
+                count.value = count:peek() + 1
+            end,
+        })
+        UI.Checkbox({
+            label = "Недоступный вариант",
+            checked = true,
+            enabled = false,
+        })
+        UI.Slider({
+            value = 0.6,
+            label = "Дальность",
+        })
+    end)
+end)
+]]
     )
     G.add(
         "theme",
@@ -814,7 +1194,11 @@ K.LazyRow({
         "Палитра и плотность",
         "Цветовые роли текущей темы. Мод может переопределить их через UI.theme.",
         { "UI.theme", "K.theme", "density", "colors" },
-        [[K.FlowRow({ spacing = 12, run_spacing = 12 }, function()
+        [[
+K.FlowRow({
+    spacing = 12,
+    run_spacing = 12,
+}, function()
     for _, role in ipairs({
         "primary",
         "surface",
@@ -824,12 +1208,19 @@ K.LazyRow({
         "success",
         "warning",
     }) do
-        K.Column({ spacing = 6 }, function()
-            K.Box({ modifier = M:size(100, 44):background(K.theme().colors[role], 6) })
-            K.Text(role, { style = "caption" })
+        K.Column({
+            spacing = 6,
+        }, function()
+            K.Box({
+                modifier = M:size(100, 44):background(K.theme().colors[role], 6),
+            })
+            K.Text(role, {
+                style = "caption",
+            })
         end)
     end
-end)]]
+end)
+]]
     )
     G.add(
         "theme",
@@ -845,17 +1236,39 @@ end)]]
             "metrics",
             "shapes",
         },
-        [[UI.Button({ text = "Текущая тема", variant = "primary" })
+        [[
+UI.Button({
+    text = "Текущая тема",
+    variant = "primary",
+})
 UI.Theme({
-    colors = { primary = "#A8B493" },
-    shapes = { control = 12 },
+    colors = {
+        primary = "#A8B493",
+    },
+    shapes = {
+        control = 12,
+    },
     density = "compact",
-    components = { Button = { size = "lg" } },
+    components = {
+        Button = {
+            size = "lg",
+        },
+    },
 }, function()
-    UI.Button({ text = "Вложенная тема", variant = "primary" })
-    UI.TextField({ value = "Локальное оформление", editable = false })
+    UI.Button({
+        text = "Вложенная тема",
+        variant = "primary",
+    })
+    UI.TextField({
+        value = "Локальное оформление",
+        editable = false,
+    })
 end)
-UI.Button({ text = "Снова текущая тема", variant = "primary" })]]
+UI.Button({
+    text = "Снова текущая тема",
+    variant = "primary",
+})
+]]
     )
     G.add(
         "theme",
@@ -870,16 +1283,21 @@ UI.Button({ text = "Снова текущая тема", variant = "primary" })]
             "K.ContentColor",
             "K.TextStyle",
         },
-        [[local Controls = K.ui()
+        [[
+local Controls = K.ui()
 local checked = K.state(true)
-Controls.Button({ text = "Кнопка из темы", variant = "primary" })
+Controls.Button({
+    text = "Кнопка из темы",
+    variant = "primary",
+})
 Controls.Checkbox({
     label = "Компонент из темы",
     checked = checked.value,
     on_change = function(v)
         checked.value = v
     end,
-})]],
+})
+]],
         {
             note = "Состав контракта и правила наследования описаны в docs/DESIGN_SYSTEM.md. Цвет и стиль текста также передаются через K.ContentColor и K.TextStyle.",
         }

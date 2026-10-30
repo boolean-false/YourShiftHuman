@@ -1,4 +1,118 @@
-# Текстурные фоны и скины
+# Изображения, фоны и скины
+
+## Как выбрать API
+
+| Задача | API |
+|---|---|
+| Картинка, иллюстрация, фон меню без искажения пропорций | `K.Image` с `fit = "cover"` или `"contain"` |
+| Рамка панели с углами постоянной толщины | `K.nine_patch` и `M:background_image` |
+| Повторяющаяся фактура | `K.nine_patch` с `center = "tile"` |
+| Скругление или другая форма обрезки содержимого | `M:clip(shape)` |
+
+`background_image` принимает материал nine-patch, а не произвольную картинку.
+`fit` - параметр `K.Image`; у `K.nine_patch` его нет. Передача `fit` в
+`nine_patch` вызывает ошибку с подсказкой. При `border = 0` nine-patch всё ещё
+растягивает или повторяет центр и не выполняет `cover`.
+
+## Имена текстур и атласов
+
+Kompot передаёт имя ресурса движку без изменения. Синтаксис изображений
+отличается от `require "pack:module"`:
+
+| Запись | Значение |
+|---|---|
+| `"gui/menu_background"` | Обычная текстура с таким именем |
+| `"my_ui:panel"` | Спрайт `panel` из атласа `my_ui` |
+| `"wooden_meat_menu:gui/menu_background"` | Спрайт `gui/menu_background` из атласа `wooden_meat_menu`; это не путь к PNG внутри пака |
+
+Например, для обычной текстуры в паке `wooden_meat_menu`:
+
+```text
+wooden_meat_menu/
+  preload.json
+  textures/
+    gui/
+      menu_background.png
+```
+
+Загрузите её в `preload.json`:
+
+```json
+{
+    "textures": ["gui/menu_background"]
+}
+```
+
+Затем используйте `"gui/menu_background"`, без `textures/`, расширения PNG
+и префикса пака. Чтобы имена разных паков не сталкивались, можно разместить
+PNG в `textures/wooden_meat_menu/gui/menu_background.png` и использовать
+`"wooden_meat_menu/gui/menu_background"` с тем же именем в `preload.json`.
+
+Для `"my_ui:panel"` нужен объявленный в `preload.json` атлас `my_ui` и спрайт
+`panel` в его каталоге `textures/my_ui/`. Имена атласов тоже общие для ресурсов.
+Двоеточие у корректного имени атласа убирать не нужно.
+
+`source_size` содержит размер выбранного PNG или спрайта, а не всего атласа.
+Размеры в примерах замените фактическими размерами своей картинки.
+
+## Картинка фоном на весь экран
+
+Фон и элементы интерфейса располагаются детьми одного `Box`. Контейнер
+занимает экран, картинка подстраивается под него, содержимое рисуется поверх.
+`cover` сохраняет пропорции и симметрично обрезает лишнее, без пустых полос.
+
+```lua
+local K = require "kompot:kompot"
+local UI = require "kompot:ui"
+local M = K.M
+
+local Screen = K.component(function()
+    K.Box({
+        modifier = M:fill_max_size(),
+    }, function()
+        K.Image("gui/menu_background", {
+            source_size = { 1920, 1080 },
+            fit = "cover",
+            modifier = M:match_parent_size(),
+        })
+        K.Column({
+            modifier = M:fill_max_size():padding(24),
+            spacing = 12,
+        }, function()
+            K.Text("Главное меню")
+            UI.Button({
+                text = "Продолжить",
+            })
+        end)
+    end)
+end)
+
+K.mount({
+    theme = UI.theme(),
+    content = Screen,
+})
+```
+
+Картинка не перехватывает ввод. `match_parent_size()` исключает её из
+определения размера `Box` и измеряет по готовому размеру родителя.
+Он работает для прямого ребёнка `Box`. Контейнеру нужен определённый размер:
+`fill_max_size()` в области экрана либо явные ширина и высота внутри раскладки.
+
+| `K.Image.fit` | Поведение |
+|---|---|
+| `fill` | Растягивает картинку до размера элемента; пропорции могут измениться. Режим по умолчанию |
+| `contain` | Вписывает целиком с сохранением пропорций; возможны пустые полосы |
+| `cover` | Заполняет область с сохранением пропорций; лишнее обрезается по центру |
+
+Для `contain` и `cover` обязателен `source_size`. `clip()` не выбирает способ
+масштабирования и для обычного прямоугольного фона с `cover` не нужен.
+Для скруглённой области задайте `M:clip(K.Shape.rounded(16))` родительскому
+`Box`, внутри которого рисуется `K.Image`. Это отдельно от выбора `fit`.
+
+В F12 доступны примеры «Картинка фоном: cover», «Изображения и атласы»
+и «Nine-patch: рамки и повторение».
+
+## Nine-patch: рамки и повторение
 
 `K.nine_patch` описывает материал, `M:background_image` рисует его на любом
 контейнере. Фон не влияет на измерение и не перехватывает ввод. Порядок
@@ -10,7 +124,7 @@ local K = require "kompot:kompot"
 local M = K.M
 
 local panel = K.nine_patch("my_ui:panel", {
-    source_size = {32, 32},
+    source_size = { 32, 32 },
     border = 4,
     center = "tile",
     edges = "stretch",
@@ -18,13 +132,16 @@ local panel = K.nine_patch("my_ui:panel", {
 })
 
 local Panel = K.component(function()
-    K.Box({modifier = M:background_image(panel):padding(12)}, function()
+    K.Box({
+        modifier = M:background_image(panel):padding(12),
+    }, function()
         K.Text("Содержимое панели")
     end)
 end)
 ```
 
-Источник - уже загруженная текстура или спрайт атласа, как для `K.Image`.
+Источник - уже загруженная текстура `"gui/panel"` или спрайт атласа
+`"my_ui:panel"`. В примере `my_ui` - имя атласа, а не имя пака.
 `source_size` - размер самого спрайта. Координаты и границы источника
 отсчитываются от верхнего левого угла.
 
@@ -69,12 +186,14 @@ PNG: `panel.png` (панели) и `inset.png` (углубления и слот
 ```lua
 local UI = require "kompot:ui"
 
-local theme = UI.theme({skin = {
-    panel = "my_pack_skin:panel",
-    button = "my_pack_skin:button",
-    button_pressed = "my_pack_skin:button_pressed",
-    inset = "my_pack_skin:inset",
-}})
+local theme = UI.theme({
+    skin = {
+        panel = "my_pack_skin:panel",
+        button = "my_pack_skin:button",
+        button_pressed = "my_pack_skin:button_pressed",
+        inset = "my_pack_skin:inset",
+    },
+})
 ```
 
 Для своих файлов, заданных строкой, Kompot UI предполагает размер 72×72.
@@ -94,14 +213,18 @@ local theme = UI.theme({skin = {
 local source = K.raster({
     key = "my_pack:stone", -- общая идентичность ресурса
     version = 1,
-    width = 32, height = 32,
+    width = 32,
+    height = 32,
     draw = function(canvas, w, h)
         canvas:clear(60, 65, 55, 255)
         canvas:rect(0, 0, w, 2, 90, 95, 75, 255)
         canvas:rect(0, h - 2, w, 2, 30, 35, 25, 255)
     end,
 })
-local material = K.nine_patch(source, {border = 2, center = "tile"})
+local material = K.nine_patch(source, {
+    border = 2,
+    center = "tile",
+})
 ```
 
 Храните описание вне композиции или в `K.remember`. Без `key` каждый вызов

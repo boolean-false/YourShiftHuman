@@ -6,8 +6,10 @@
 или установить отдельным паком.
 
 Для игрового оформления достаточно одного пака `kompot`.
+
 - [Игровые компоненты: ItemSlot, InventoryGrid, Hotbar, HUD, MachinePanel](GAME_UI.md).
 - [Полный пример первого мода](QUICKSTART.md).
+- [Картинка фоном, пути текстур, cover и nine-patch](SKINS.md).
 
 ## Общая форма Shape
 
@@ -33,12 +35,14 @@ local shape = S.cut({
     bottom_left = 16,
 })
 
-K.Box({modifier = K.M:size(240, 120)
-    :shadow(8, shape)
-    :background("#386F94", shape)
-    :border(2, "#FFFFFF", shape)
-    :clip(shape)
-    :padding(12)
+K.Box({
+    modifier = K.M
+        :size(240, 120)
+        :shadow(8, shape)
+        :background("#386F94", shape)
+        :border(2, "#FFFFFF", shape)
+        :clip(shape)
+        :padding(12),
 }, function()
     K.Text("Общая форма")
 end)
@@ -83,7 +87,8 @@ local corners = K.rounded_corners({
 })
 
 K.Box({
-    modifier = K.M:size(240, 120)
+    modifier = K.M
+        :size(240, 120)
         :shadow(8, corners)
         :background("#386F94", corners)
         :border(2, "#FFFFFF", corners)
@@ -103,9 +108,12 @@ end)
 
 Фон рисует только свою форму. `clip(corners)` обрезает последующие модификаторы,
 картинки и дочерние элементы, включая области ввода. Поэтому тень и рамку
-обычно задают перед `clip`, а внутренний отступ - после него. Для картинки
-или текстурного фона используйте `clip(corners):background_image(material)`.
-`fit = "cover"` у картинки управляет масштабированием, а `clip` - формой обрезки.
+обычно задают перед `clip`, а внутренний отступ - после него.
+Для nine-patch подходит `clip(corners):background_image(material)`.
+Для обычной картинки задайте `clip(corners)` контейнеру `Box` и поместите
+внутрь `K.Image` с нужным `fit`. `fit = "cover"` сохраняет пропорции и
+заполняет область, а `clip` задаёт форму её обрезки. У `K.nine_patch` параметра
+`fit` нет. Готовый рецепт: [картинка фоном](SKINS.md#картинка-фоном-на-весь-экран).
 
 В VoxelCore скруглённый `clip` использует растровый слой с прозрачной маской.
 Вложенные маски и преобразования поддерживаются; обновление содержимого
@@ -182,6 +190,48 @@ source, opts)`. `id` уникален, `apis` участвует в поиске
 компилирует и компонует все примеры отдельно, чтобы они не зависели от
 состояния соседних страниц. Пользовательский код этот загрузчик не принимает.
 
+### Выбор из списка
+
+```lua
+local quality = K.state("medium")
+UI.Select({
+    label = "Качество",
+    options = {
+        {
+            value = "low",
+            text = "Низкое",
+        },
+        {
+            value = "medium",
+            text = "Среднее",
+        },
+        {
+            value = "high",
+            text = "Высокое",
+            enabled = false,
+        },
+    },
+    selected = quality.value,
+    on_select = function(value)
+        quality.value = value
+    end,
+})
+```
+
+`selected` принадлежит владельцу. `on_select(value)` сообщает о выборе;
+Select закрывает свой список и возвращает фокус полю. Строки в `options`
+используются одновременно как подписи и значения. У варианта могут быть
+`value`, `text`, `icon` и `enabled`. Значение `false` также поддерживается.
+`hint` показывается при отсутствии выбранного варианта, `error` выделяет
+поле; строковое значение ошибки выводится под ним. `enabled = false` и
+`read_only = true` запрещают открытие списка.
+
+Enter или Space открывает список. Стрелки вверх/вниз, Home и End перемещают
+фокус, Enter или Space выбирает вариант. Недоступные варианты пропускаются.
+Escape и щелчок снаружи отменяют выбор. Длинный список прокручивается колесом
+или полосой; клавиатурный фокус сам прокручивает нужный пункт в видимую область.
+`max_height` ограничивает высоту списка, `width` задаёт его ширину.
+
 ### Фрагменты Lua в своём интерфейсе
 
 `UI.Lua` и `UI.TextField` используют общее основание `K.BasicTextField`,
@@ -189,6 +239,13 @@ source, opts)`. `id` уникален, `apis` участвует в поиске
 с нативной подсветкой Lua, выделением и копированием. Поле имеет
 `editable = false`: код не редактируется и не выполняется.
 Параметры `lines` и `height` ограничивают видимую область длинного фрагмента.
+
+При фокусе поля стрелки вверх/вниз прокручивают по строке, PageUp/PageDown -
+по странице, Home/End - к началу и концу. Выделение остаётся нативным.
+Необязательный `height_state = K.state(nil)` хранит выбранную пользователем
+высоту вне экземпляра компонента. Галерея F12 сохраняет эту высоту в сессии
+при переключении примеров и скрытии кода. Подсказка нижней ручки объясняет
+изменение размера.
 
 ```lua
 UI.Lua({
@@ -201,16 +258,35 @@ K.Text(count.value)]],
 -- Для короткого фрагмента: UI.Lua("K.Text('Привет')")
 ```
 
+`lines` задаёт высоту видимой области, `height` переопределяет её в пикселях.
+Под последней строкой предусмотрен запас прокрутки высотой в одну строку.
+Он не добавляется к исходному тексту и не попадает в буфер обмена.
+Для обычной прокрутки до нижнего края задайте `scroll_past_end = false`.
+На границе поля колесо продолжает прокрутку страницы.
+
+`resizable = true` добавляет нижнюю ручку изменения высоты. Её можно
+перетаскивать мышью или менять высоту стрелками вверх/вниз после перехода
+к ручке клавишей Tab при `keyboard_navigation = true`. По умолчанию высота ограничена диапазоном от 120 px
+до 70% высоты экрана; `min_height` и `max_height` переопределяют границы.
+В галерее F12 начальная высота соответствует коду плюс одной строке запаса,
+но не превышает 40 строк и ограничения по экрану. Ручка позволяет менять её вручную.
+
 ## Плотность и поверхности
 
 По умолчанию используется `density = "comfortable"`: кнопки высотой
 28/36/44 px, отступ панели 16 px, промежуток 12 px. Для плотных инструментов:
 
 ```lua
-local theme = UI.theme({density = "compact"})
+local theme = UI.theme({
+    density = "compact",
+})
 -- Или только для части экрана:
-UI.Theme({density = "compact"}, function()
-    UI.Button({text = "Действие"})
+UI.Theme({
+    density = "compact",
+}, function()
+    UI.Button({
+        text = "Действие",
+    })
 end)
 ```
 
@@ -244,16 +320,33 @@ local UI = require "kompot:ui"
 local function Screen()
     local enabled = K.state(true)
     local applied = K.state(false)
-    UI.Panel({title = "Настройки"}, function()
-        UI.Checkbox({checked = enabled.value, label = "Звуки",
-            on_change = function(v) enabled.value = v end})
-        UI.Button({text = "Применить", variant = "primary",
-            on_click = function() applied.value = true end})
-        if applied.value then K.Text("Настройки применены") end
+    UI.Panel({
+        title = "Настройки",
+    }, function()
+        UI.Checkbox({
+            checked = enabled.value,
+            label = "Звуки",
+            on_change = function(v)
+                enabled.value = v
+            end,
+        })
+        UI.Button({
+            text = "Применить",
+            variant = "primary",
+            on_click = function()
+                applied.value = true
+            end,
+        })
+        if applied.value then
+            K.Text("Настройки применены")
+        end
     end)
 end
 
-local handle = K.mount({theme = UI.theme(), content = Screen})
+local handle = K.mount({
+    theme = UI.theme(),
+    content = Screen,
+})
 -- handle:dispose()
 ```
 
@@ -290,12 +383,39 @@ local theme = UI.theme({
     name = "my-mod",
     accent = "#E3AF67", -- свой цвет мода
     panel_alpha = 0.96,
-    colors = {surface = "#20242B", on_surface = "#F4F4F4"},
-    type = {body = {font = "kompot_16", size = 16}},
-    metrics = {control = 32, control_lg = 38, pad = 12, gap = 8},
-    shapes = {control = 4, panel = 6, card = 4, field = 4},
-    motion = {hover = K.tween(0.12)},
-    components = {Button = {size = "lg"}, Panel = {spacing = 10}},
+    colors = {
+        surface = "#20242B",
+        on_surface = "#F4F4F4",
+    },
+    type = {
+        body = {
+            font = "kompot_16",
+            size = 16,
+        },
+    },
+    metrics = {
+        control = 32,
+        control_lg = 38,
+        pad = 12,
+        gap = 8,
+    },
+    shapes = {
+        control = 4,
+        panel = 6,
+        card = 4,
+        field = 4,
+    },
+    motion = {
+        hover = K.tween(0.12),
+    },
+    components = {
+        Button = {
+            size = "lg",
+        },
+        Panel = {
+            spacing = 10,
+        },
+    },
 })
 ```
 
@@ -303,6 +423,7 @@ local theme = UI.theme({
 |---|---|
 | `colors` | Общие роли `primary`, `on_primary`, `surface`, `on_surface`, `background`, `surface_raised`, `outline`, `error`, `success`, `warning`; подробные роли `action`, `action_hover`, `panel_bg`, `sunken`, `control`, `text`, `muted`, `dim`, `key` и другие |
 | `accents` | Необязательные имена цветов, определённые самим модом; встроенных наборов нет |
+| `surfaces` | Оформление ролей и состояний: заливка, текстура, форма, рамка, основной текст или собственная композиция фона |
 | `skin` | PNG для `panel`, `button`, `button_pressed`, `inset`; можно заменить отдельные источники |
 | `type` | `caption`, `body`, `label`, `strong`, `title`, `heading`, `display`, `mono`; частичное переопределение стилей |
 | `metrics` | Размеры контролов, ширина и отступы панелей, промежутки, размеры панелей инструментов |
@@ -316,6 +437,140 @@ local theme = UI.theme({
 акцента также обновляет заливку главного действия; явно указанные `action`
 и `action_hover` имеют приоритет. Строковые цвета принимаются в формате hex.
 
+## Оформление компонентов
+
+Палитра и `skin` сохраняют прежнее поведение. `surfaces` позволяет заменить
+оформление готовых компонентов, включая штатные PNG, сохранив их обработчики
+ввода, состояния и раскладку. Пример «Смена оформления» в F12 показывает
+плоскую и деревянную тему на тех же компонентах.
+
+```lua
+UI.Theme({
+    shapes = {
+        control = 10,
+        panel = 12,
+        card = 12,
+        field = 8,
+    },
+    metrics = {
+        press_offset = 0,
+    },
+    surfaces = {
+        default = {
+            skin = false,
+            border_width = 1,
+            border_color = "#879AB3",
+        },
+        button = {
+            color = "#DCE7F5",
+            content_color = "#172A45",
+            states = {
+                hovered = {
+                    color = "#B7CBE7",
+                },
+                pressed = {
+                    color = "#93AFD6",
+                },
+                disabled = {
+                    color = "#D8DCE2",
+                    content_color = "#77808E",
+                },
+            },
+            variants = {
+                danger = {
+                    color = "#F4CDCD",
+                },
+            },
+        },
+    },
+}, function()
+    UI.Button({
+        text = "Применить",
+        on_click = apply,
+    })
+end)
+```
+
+`default` действует на все поверхности; настройка роли уточняет её.
+Состояния и варианты наследуются по именам. `skin`, `shape` и остальные
+значения заменяются целиком: текстура дочерней темы не смешивается с
+описанием текстуры родителя.
+Основные роли: `button`, `icon_button`, `tool_button`, `panel`, `card`,
+`field`, `code`, `menu`, `menu_item`, `tooltip`, `toast`, `slot`, `checkbox`,
+`switch_track`, `switch_thumb`, `slider_track`, `slider_fill`, `slider_thumb`,
+`tab`, `list_item`, `progress_track`, `progress_fill`, `badge`, `key`,
+`scrollbar_thumb`.
+У кнопки `variants` уточняет оформление для `primary`, `danger`, `ghost`
+и других значений `variant`.
+
+После объединения настроек применяются активные состояния: `selected`,
+`hovered`, `focused`, `pressed`, `dragged`, `error`, `disabled`. Более позднее состояние
+имеет приоритет для совпадающих свойств. Недоступный компонент остаётся
+недоступным при любом оформлении.
+
+| Свойство | Действие |
+|---|---|
+| `skin = false` | Однотонный фон вместо штатной текстуры |
+| `skin = "pack:surface"` | Текстура с прежними настройками nine-patch |
+| `skin = K.nine_patch(...)` | Собственная текстура или `K.raster`, границы и повторение |
+| `color` | Заливка или оттенок текстуры; `false` скрывает заливку |
+| `content_color` | Основной текст Button, IconButton, Field, Checkbox, Switch, MenuItem, Tabs и ListItem |
+| `shape` | Число или форма Kompot; для текстуры применяется маска только к фону |
+| `border_width`, `border_color` | Рамка поверхности |
+| `text_style` | Стиль текста Button |
+| `press_offset` | Сдвиг содержимого нажатой Button; можно отключить значением 0 |
+| `draw` | Собственная композиция фона вместо встроенной |
+
+При смене заливки задавайте `content_color` для читаемого текста.
+Индивидуальный `surface` компонента объединяется с оформлением роли.
+`radius`, если передан явно, задаёт форму поверх настроек поверхности:
+
+```lua
+UI.Button({
+    text = "Особая",
+    radius = 0,
+    surface = {
+        color = "#80542F",
+    },
+})
+```
+
+Для полного изменения рисунка используйте `draw`. Функция получает цвет,
+форму, рамку и снимок состояний, но не обработчики пользовательских событий:
+
+```lua
+local function draw_button(p)
+    K.Box({
+        modifier = (p.modifier or M:match_parent_size())
+            :background(p.color, p.shape)
+            :border(p.border_width, p.border_color or "#00000000", p.shape),
+    })
+end
+UI.Theme({
+    surfaces = {
+        button = {
+            draw = draw_button,
+        },
+    },
+}, content)
+```
+
+Такой фон должен заполнять родителя без изменения его размеров. Внутри
+разрешены хуки Kompot: при смене `draw` его локальная композиция очищается,
+а фокус и нажатие самой кнопки сохраняются. `draw = false` отключает
+унаследованную функцию и возвращает встроенную отрисовку. Нативное поле
+остаётся соседним элементом фона и не попадает внутрь его фигурной маски.
+
+Для вкладок `components = {Tabs = {indicator = false}}` отключает штатную
+полосу выбранного пункта. Оформление нативной syntax-подсветки не задаётся
+через `surfaces`: в светлой теме можно отдельно оставить тёмный фон роли
+`code`, например `surfaces = {code = {color = "#262A23"}}`.
+
+Размеры по-прежнему задаются через `metrics` и `components`. Дополнительно
+доступны `checkbox_size`, `check_icon`, `switch_width`, `switch_height`,
+`switch_pad`, `switch_thumb`, `slider_height`, `slider_track`,
+`slider_thumb_width`, `slider_thumb_height` и `press_offset`.
+
 ## Вложенная тема
 
 `UI.Theme(overrides, content)` наследует **текущую** тему Kompot UI и меняет
@@ -323,9 +578,22 @@ local theme = UI.theme({
 родителя. Компоненты читают шрифты, цвета и анимации из текущей темы.
 
 ```lua
-UI.Theme({accent = "#E3AF67", components = {Button = {size = "lg"}}}, function()
-    UI.Button({text = "Крупная кнопка", variant = "primary"})
-    UI.Button({text = "Маленькая", size = "sm"}) -- явное свойство важнее
+UI.Theme({
+    accent = "#E3AF67",
+    components = {
+        Button = {
+            size = "lg",
+        },
+    },
+}, function()
+    UI.Button({
+        text = "Крупная кнопка",
+        variant = "primary",
+    })
+    UI.Button({
+        text = "Маленькая",
+        size = "sm",
+    }) -- явное свойство важнее
 end)
 ```
 
@@ -345,14 +613,21 @@ end)
 можно заменить для поддерева, сохранив остальные:
 
 ```lua
-UI.Theme({ui = {
-    Button = function(props, content)
-        -- Своя реализация или обёртка над UI.Button.
-        UI.Button(props, content)
-    end,
-}}, function()
-    K.ui().Button({text = "Своя кнопка"})
-    K.ui().Checkbox({checked = true, label = "Стандартный флажок"})
+UI.Theme({
+    ui = {
+        Button = function(props, content)
+            -- Своя реализация или обёртка над UI.Button.
+            UI.Button(props, content)
+        end,
+    },
+}, function()
+    K.ui().Button({
+        text = "Своя кнопка",
+    })
+    K.ui().Checkbox({
+        checked = true,
+        label = "Стандартный флажок",
+    })
 end)
 ```
 
@@ -374,6 +649,7 @@ end)
 | `Checkbox`, `Switch` | Квадратный флажок, плоский переключатель |
 | `Choice` | Выбор значения рядом кнопок: `options = {{value, text}}`, `columns` |
 | `Stepper` | «Подпись: значение [-] [+]» - числовые настройки |
+| `Select` | Управляемый выбор из прокручиваемого списка с клавиатурной навигацией |
 | `Slider` | Плоская дорожка, прямоугольный бегунок, подпись и значение |
 | `Tabs` | Текстовые вкладки с полосой снизу |
 | `Field`, `LabeledField`, `VectorField` | Поле ввода (рамка в фокусе, набранный текст не перетирается извне), с подписью, три поля X/Y/Z |
@@ -396,14 +672,109 @@ end)
 
 ### Уведомления и диалоги
 
+Общий обход элементов включается явно:
+
+```lua
+K.mount({
+    keyboard_navigation = true,
+    content = Settings,
+})
+```
+
+По умолчанию он выключен: обычные кнопки работают мышью без фокуса,
+Tab остаётся у игры или нативного поля. Текстовые поля и открытые списки
+сохраняют локальное управление независимо от этой настройки. Escape
+обрабатывает верхнее модальное окно без необходимости фокусировать его кнопки.
+В F12 `keyboard_navigation` включён. Ту же опцию принимает `K.App.new`.
+
+При включённой навигации Tab и Shift+Tab переводят фокус, в том числе к элементам за пределами обычной
+вертикальной или горизонтальной прокрутки. Ленивые списки участвуют только
+уже созданными элементами. Поля `TextField` и `Lua` входят в общий порядок.
+`enabled = false` исключает поле из ввода, а `editable = false` сохраняет
+выделение и копирование без редактирования.
+
+Escape отправляет запрос `on_dismiss` верхнему меню или модальному окну;
+для окна используется `on_close`, если `on_dismiss` отсутствует. Окно без
+обработчика остаётся открытым. После удаления области фокуса восстанавливается
+доступный элемент, который был в фокусе до её открытия. У вложенного меню
+это может быть кнопка внутри диалога, у самого диалога - его кнопка открытия
+при включённой навигации. Если прежнего фокуса не было, новый не создаётся.
+При первом показе и открытии мышью рамка клавиатурного фокуса скрыта.
+Она появляется при навигации с клавиатуры; в меню используется цвет темы.
+В меню работают стрелки вверх/вниз, Home и End. `max_height` ограничивает
+высоту, `focus_index` выбирает начальный фокус среди доступных пунктов.
+
+`Window` и `Dialog` управляются через `visible`, `Menu` - через `expanded`.
+`on_close` запрашивает закрытие кнопкой в заголовке. `on_dismiss` запрашивает
+закрытие кликом снаружи или кнопкой `Dialog.dismiss`; у окна и диалога
+по умолчанию используется `on_close`. Эти обработчики сами не меняют видимость.
+`confirm.on_click` также не закрывает диалог автоматически.
+У кнопки отмены сначала вызывается `dismiss.on_click`, затем `on_dismiss`.
+Основное имя действия отмены - `dismiss`; `cancel` поддерживается как алиас,
+но `dismiss` имеет приоритет.
+
+Чтобы выполнить действие после анимации, передайте общее состояние перехода:
+`visible_state` у окна/диалога или `expanded_state` у меню. Оно заменяет
+булевый флаг; передавать оба варианта одновременно нельзя.
+
+```lua
+local visibility = K.transition_state(false)
+local status = K.state("Диалог закрыт")
+UI.Button({
+    text = "Открыть",
+    on_click = function()
+        visibility.target_state = true
+    end,
+})
+UI.Dialog({
+    visible_state = visibility,
+    title = "Подтверждение",
+    dismiss = {
+        text = "Отмена",
+    },
+    on_dismiss = function()
+        visibility.target_state = false
+    end,
+})
+local completion = visibility.completion
+K.effect(function()
+    if completion > 0 and visibility.is_idle then
+        status.value = visibility.current_state and "Диалог открылся"
+            or "Диалог закрылся"
+    end
+end, completion)
+K.Text(status.value)
+```
+
+Счётчик `completion` меняется после завершения перехода и применения кадра.
+Изначально скрытый или видимый компонент не создаёт завершение.
+Прерванный переход не завершается по старой цели; после повторного открытия
+состояние будет опубликовано для новой цели. Снятие компонента с композиции
+и `dispose()` отменяют анимацию без искусственного завершения.
+
+Для закрывающей анимации оставляйте компонент в композиции и меняйте
+`target_state`. Для освобождения ресурсов при удалении используйте
+`K.on_dispose` в компоненте-владельце. Одно состояние обслуживает один
+переход: переданное в `visible_state`/`expanded_state` уже обслуживается
+компонентом и не требует отдельного `K.transition` снаружи.
+Общие переходы чисел, координат и цветов описаны в [анимациях](MOTION.md).
+
 Окна и диалоги по умолчанию без полосы. `variant = "accent"` включает её,
 `accent` задаёт цвет. Эти свойства
 проходят через `Window` и `Dialog` к `Panel`. `Dialog.icon` задаёт иконку заголовка.
 
 ```lua
-UI.Toast({text = "Настройки сохранены", tone = "success"})
-UI.Toast({text = "Не удалось сохранить", tone = "error"})
-UI.Toast({text = "Обычное уведомление"})
+UI.Toast({
+    text = "Настройки сохранены",
+    tone = "success",
+})
+UI.Toast({
+    text = "Не удалось сохранить",
+    tone = "error",
+})
+UI.Toast({
+    text = "Обычное уведомление",
+})
 ```
 
 `Toast` использует цвета темы, её плотность и пиксельную поверхность. По умолчанию
@@ -433,11 +804,21 @@ UI.Toast({text = "Обычное уведомление"})
 
 ```lua
 local width = K.state(240)
-UI.SplitPane({modifier = K.M:fill_max_width():height(400),
-    size = width.value, min_first = 160, max_first = 400, min_second = 200,
-    on_change = function(value) width.value = value end,
-    first = function() K.Text("Навигация") end,
-    second = function() K.Text("Редактор") end,
+UI.SplitPane({
+    modifier = K.M:fill_max_width():height(400),
+    size = width.value,
+    min_first = 160,
+    max_first = 400,
+    min_second = 200,
+    on_change = function(value)
+        width.value = value
+    end,
+    first = function()
+        K.Text("Навигация")
+    end,
+    second = function()
+        K.Text("Редактор")
+    end,
 })
 ```
 
@@ -467,13 +848,24 @@ UI.SplitPane({modifier = K.M:fill_max_width():height(400),
 
 ```lua
 local bounds = K.state(nil)
-UI.Window({title = "Редактор", draggable = true, resizable = true,
-    width = 520, height = 320, min_width = 300, min_height = 180,
-    max_width = 900, max_height = 700,
+UI.Window({
+    title = "Редактор",
+    draggable = true,
+    resizable = true,
+    width = 520,
+    height = 320,
+    min_width = 300,
+    min_height = 180,
+    max_width = 900,
+    max_height = 700,
     bounds = bounds.value,
-    on_bounds_change = function(value) bounds.value = value end,
+    on_bounds_change = function(value)
+        bounds.value = value
+    end,
 }, function()
-    K.Column({modifier = K.M:fill_max_size()}, function()
+    K.Column({
+        modifier = K.M:fill_max_size(),
+    }, function()
         K.Text("Рабочая область")
     end)
 end)

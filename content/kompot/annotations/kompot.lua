@@ -1,10 +1,10 @@
 ---@meta _
 
 ---@class KompotCorners
----@field top_left? number Upper left radius in pixels; defaults to zero.
----@field top_right? number Upper right radius in pixels; defaults to zero.
----@field bottom_right? number Lower right radius in pixels; defaults to zero.
----@field bottom_left? number Lower left radius in pixels; defaults to zero.
+---@field top_left? number Радиус слева сверху в пикселях; по умолчанию 0.
+---@field top_right? number Радиус справа сверху в пикселях; по умолчанию 0.
+---@field bottom_right? number Радиус справа снизу в пикселях; по умолчанию 0.
+---@field bottom_left? number Радиус слева снизу в пикселях; по умолчанию 0.
 ---@alias KompotRadius number|KompotCorners
 
 ---@class KompotCornerSize
@@ -25,11 +25,11 @@
 
 ---@class KompotShapeApi
 ---@field rectangle fun(): KompotShape
----@field circle fun(): KompotShape Circle for a square, capsule for a rectangle.
+---@field circle fun(): KompotShape Круг для квадрата, капсула для прямоугольника.
 ---@field rounded fun(size?: KompotCornerValue|KompotShapeCorners): KompotShape
 ---@field cut fun(size?: KompotCornerValue|KompotShapeCorners): KompotShape
 ---@field px fun(value: number): KompotCornerSize
----@field percent fun(value: number): KompotCornerSize Percentage of the smaller side, 0..100.
+---@field percent fun(value: number): KompotCornerSize Процент меньшей стороны, 0..100.
 
 ---@alias KompotColor string|number[]
 ---@alias KompotContent fun()
@@ -65,8 +65,8 @@
 ---@field set fun(self: KompotState<T>, value: T)
 ---@field peek fun(self: KompotState<T>): T
 ---@field update fun(self: KompotState<T>, fn: fun(value: T): T)
----@field patch fun(self: KompotState<T>, changes: table) Shallow copy and replace fields; requires a table value. Functions in changes are stored as values.
----@field update_field fun(self: KompotState<T>, key: any, value_or_fn: any|fun(old: any): any) Shallow copy and update one field; nil removes it. A function computes the new value once.
+---@field patch fun(self: KompotState<T>, changes: table) Копирует таблицу и заменяет поля; функции сохраняются как значения.
+---@field update_field fun(self: KompotState<T>, key: any, value_or_fn: any|fun(old: any): any) Копирует таблицу и меняет поле; nil удаляет, функция вычисляет значение один раз.
 
 ---@class KompotLocal<T>
 ---@field default T
@@ -85,36 +85,39 @@
 ---@field cursor? string
 ---@field on_long_click? fun()
 ---@field on_right_click? fun()
----@field focusable? boolean
+---@field focusable? boolean Явный локальный фокус; по умолчанию зависит от keyboard_navigation.
 ---@field focus_scope? boolean
+---@field on_escape? fun() Запрос отмены в верхней области фокуса.
+---@field focus_index? integer Начальный фокус среди доступных элементов области.
+---@field focus_navigation? 'vertical' Стрелки вверх/вниз и Home/End перемещают фокус.
 ---@field on_focus? fun()
 ---@field on_defocus? fun()
 ---@field focus_color? KompotColor
----@field focus_radius? KompotShapeInput Legacy alias of focus_shape.
----@field focus_shape? KompotShapeInput Takes precedence over focus_radius.
+---@field focus_radius? KompotShapeInput Устаревший алиас focus_shape.
+---@field focus_shape? KompotShapeInput Приоритетнее focus_radius.
 
 ---@alias KompotPivot { [1]: number, [2]: number }|{x: number, y: number}
 
 ---@class KompotDragEvent
 ---@field type 'start'|'move'|'end'|'cancel'
----@field x number Local pointer x after inverse transforms.
----@field y number Local pointer y after inverse transforms.
----@field dx number Local pointer delta.
----@field dy number Local pointer delta.
----@field parent_x number Pointer x in the parent's content coordinates.
----@field parent_y number Pointer y in the parent's content coordinates.
----@field parent_dx number Pointer delta in parent coordinates.
----@field parent_dy number Pointer delta in parent coordinates.
----@field velocity_x number Parent pixels per second.
----@field velocity_y number Parent pixels per second.
+---@field x number Локальная координата X после обратного преобразования.
+---@field y number Локальная координата Y после обратного преобразования.
+---@field dx number Локальное смещение указателя.
+---@field dy number Локальное смещение указателя.
+---@field parent_x number Координата X в содержимом родителя.
+---@field parent_y number Координата Y в содержимом родителя.
+---@field parent_dx number Смещение указателя в координатах родителя.
+---@field parent_dy number Смещение указателя в координатах родителя.
+---@field velocity_x number Пиксели родителя в секунду.
+---@field velocity_y number Пиксели родителя в секунду.
 ---@field button 'left'|'right'
----@field accepted? boolean Drop target accepted the payload.
+---@field accepted? boolean Цель приняла переносимые данные.
 ---@field cancelled? boolean
 ---@field reason? 'escape'|'removed'|'blocked'|'reset'|'cancelled'
 
 ---@class KompotDragOptions
 ---@field button? 'left'|'right'
----@field on_event? fun(event: KompotDragEvent): any Return the drop payload during 'start'; other return values are ignored.
+---@field on_event? fun(event: KompotDragEvent): any На start возвращает переносимые данные; остальные результаты игнорируются.
 ---@field axis? 1|2
 ---@field interaction? KompotInteraction
 ---@field cursor? string
@@ -140,6 +143,7 @@
 
 ---@class KompotModifier
 ---@field is fun(value: any): boolean
+---@field equals fun(a: KompotModifier, b: KompotModifier): boolean Сравнивает цепочки слоёв.
 ---@field then_ fun(self: KompotModifier, other: KompotModifier): KompotModifier
 ---@field padding fun(self: KompotModifier, a: number|KompotPadding, b?: number, c?: number, d?: number): KompotModifier
 ---@field size fun(self: KompotModifier, width: number, height?: number): KompotModifier
@@ -162,7 +166,7 @@
 ---@field vertical_scroll fun(self: KompotModifier, state: KompotScrollState): KompotModifier
 ---@field horizontal_scroll fun(self: KompotModifier, state: KompotScrollState): KompotModifier
 ---@field background fun(self: KompotModifier, color: KompotColor, shape?: KompotShapeInput): KompotModifier
----@field background_image fun(self: KompotModifier, paint: KompotNinePatch, tint?: KompotColor): KompotModifier
+---@field background_image fun(self: KompotModifier, paint: KompotNinePatch, tint?: KompotColor): KompotModifier Только nine-patch; фон с cover задаётся через K.Image внутри Box.
 ---@field border fun(self: KompotModifier, width: number, color: KompotColor, shape?: KompotShapeInput): KompotModifier
 ---@field shadow fun(self: KompotModifier, elevation?: number, shape?: KompotShapeInput, color?: KompotColor, dy?: number): KompotModifier
 ---@field rotate fun(self: KompotModifier, angle: number, pivot?: KompotPivot): KompotModifier
@@ -234,8 +238,8 @@
 ---@field width? number
 ---@field height? number
 ---@field size? number
----@field source_size? { [1]: number, [2]: number }|{ width: number, height: number }
----@field fit? KompotImageFit
+---@field source_size? { [1]: number, [2]: number }|{ width: number, height: number } Размер PNG или спрайта, не всего атласа; обязателен для contain/cover.
+---@field fit? KompotImageFit fill растягивает, contain вписывает, cover заполняет с обрезкой; по умолчанию fill.
 ---@field color? KompotColor
 ---@field region? number[]
 
@@ -244,16 +248,16 @@
 ---@field color? KompotColor
 
 ---@class KompotCanvasImageOptions
----@field x? number Top-left position before rotation; default 0.
+---@field x? number Положение левого верхнего угла до поворота; по умолчанию 0.
 ---@field y? number
----@field width? number Unscaled display width; default source width.
----@field height? number Unscaled display height; default source height.
----@field angle? number Clockwise degrees; default 0.
+---@field width? number Ширина до масштаба; по умолчанию ширина источника.
+---@field height? number Высота до масштаба; по умолчанию высота источника.
+---@field angle? number Градусы по часовой стрелке; по умолчанию 0.
 ---@field scale? number|{ [1]: number, [2]: number }|{x: number, y: number}
----@field pivot? KompotPivot Fractions of display size; default {0.5,0.5}.
----@field alpha? number Opacity 0..1.
----@field color? KompotColor Color multiplication.
----@field region? number[] UV {u0,v0,u1,v1}; default {0,0,1,1}.
+---@field pivot? KompotPivot Доли размера; по умолчанию {0.5, 0.5}.
+---@field alpha? number Непрозрачность 0..1.
+---@field color? KompotColor Умножение цвета.
+---@field region? number[] UV {u0, v0, u1, v1}; по умолчанию {0, 0, 1, 1}.
 
 ---@class KompotCanvas
 ---@field width number
@@ -265,8 +269,8 @@
 ---@field clear fun(self: KompotCanvas, r?: number, g?: number, b?: number, a?: number)
 
 ---@class KompotRasterOptions
----@field key? string Shared resource identity; namespace with your pack name.
----@field version? string|number Change when source pixels change.
+---@field key? string Общий ключ ресурса с префиксом имени пака.
+---@field version? string|number Меняется при изменении исходных пикселей.
 ---@field width integer
 ---@field height integer
 ---@field draw fun(canvas: KompotCanvas, width: integer, height: integer)
@@ -275,8 +279,8 @@
 ---@field kind 'raster'
 
 ---@class KompotNinePatchOptions
----@field source_size? number[] Required for texture/atlas sources: {width, height}.
----@field border? number|number[] Source pixels: number or {left, top, right, bottom}.
+---@field source_size? number[] Размер PNG или спрайта: {width, height}; обязателен для строкового источника. fit не поддерживается.
+---@field border? number|number[] Пиксели источника: число или {left, top, right, bottom}.
 ---@field center? 'stretch'|'tile'|'none'
 ---@field edges? 'stretch'|'tile'
 ---@field scale? number
@@ -314,6 +318,7 @@
 ---@field on_defocus? fun()
 ---@field syntax? 'lua'|string
 ---@field line_numbers? boolean
+---@field enabled? boolean Нельзя фокусировать, выделять или менять недоступное поле.
 ---@field editable? boolean
 ---@field wrap? boolean
 ---@field presentation? any
@@ -365,6 +370,7 @@
 ---@field columns? integer
 
 ---@class KompotPopupProps
+---@field interactive? boolean false отключает ввод содержимого, сохраняя отрисовку.
 ---@field placement? KompotPlacement
 ---@field gap? number
 ---@field key? any
@@ -396,13 +402,32 @@
 
 ---@alias KompotAnimationSpec KompotTween|KompotSpring|KompotSnap
 
+---@class KompotTransitionState<T>
+---@field target_state T Записываемая цель перехода.
+---@field current_state T Последнее завершённое состояние; только чтение.
+---@field is_idle boolean Завершены все анимации; только чтение.
+---@field completion integer Число завершений после применения кадра; изначально 0, только чтение.
+
+---@class KompotTransition<T>
+local Transition = {}
+
+-- Число или массив чисел; каналы завершаются вместе.
+---@generic T
+---@generic V: number|number[]
+---@param self KompotTransition<T>
+---@param value_of fun(state: T): V
+---@param spec? KompotAnimationSpec
+---@return V
+function Transition:animate(value_of, spec) end
+
 ---@class KompotPreviewOptions
 ---@field width? number
 ---@field height? number
 ---@field theme? KompotTheme|fun(): KompotTheme
 ---@field padding? number
 ---@field group? string
----@field hook_diagnostics? boolean Detailed hook locations and previous/current order; enabled by default in previews.
+---@field hook_diagnostics? boolean Подробная диагностика хуков; по умолчанию true.
+---@field keyboard_navigation? boolean Обход по Tab; по умолчанию false.
 
 ---@class KompotPreviewEntry
 ---@field name string
@@ -418,8 +443,9 @@
 ---@field fullscreen? boolean
 ---@field interactive? boolean
 ---@field z_index? number
----@field lock_inventory? boolean False leaves Tab/hud.inventory untouched, including hover and focus (default true).
----@field hook_diagnostics? boolean Collect detailed hook locations; order/type checks are always enabled.
+---@field keyboard_navigation? boolean Обход по Tab и фокус обычных кнопок; по умолчанию false.
+---@field lock_inventory? boolean true блокирует инвентарь для UI; false полностью отключает блокировку. По умолчанию зависит от навигации и ввода текста.
+---@field hook_diagnostics? boolean Подробные места вызова хуков; порядок и типы проверяются всегда.
 
 ---@class KompotMountHandle
 ---@field disposed boolean
@@ -431,6 +457,7 @@
 ---@field dispose fun(self: KompotMountHandle)
 ---@field set_content fun(self: KompotMountHandle, content: KompotContent)
 ---@field set_theme fun(self: KompotMountHandle, theme: KompotTheme)
+---@field is_over fun(self: KompotMountHandle, x: number, y: number): boolean Экранная точка над областью ввода UI; после dispose возвращает false.
 
 ---@class KompotColorApi
 ---@field rgb fun(r: number, g: number, b: number, a?: number): number[]
@@ -450,7 +477,7 @@
 ---@field contrast fun(a: number[], b: number[]): number
 ---@field on fun(background: number[], dark?: number[], light?: number[]): number[]
 ---@field tone fun(value: number[], tone: number, chroma?: number): number[]
----@field palette fun(value: number[], chroma?: number): table<string, number[]>
+---@field palette fun(value: number[], chroma?: number): table<integer, number[]> Тоны с числовыми ключами из набора 0..100.
 ---@field to255 fun(value: number[], alpha_mul?: number): number[]
 ---@field WHITE number[]
 ---@field BLACK number[]
@@ -488,8 +515,19 @@
 ---@field metrics_measurer fun(): KompotTextMeasurer
 ---@field field_line_height fun(measurer: KompotTextMeasurer, font: string): number
 
+---@class KompotAppOptions
+---@field content KompotContent
+---@field width? number
+---@field height? number
+---@field measurer? KompotTextMeasurer
+---@field backend? any
+---@field locals? table
+---@field on_error? fun(message: string)
+---@field hook_diagnostics? boolean
+---@field keyboard_navigation? boolean Обход по Tab; по умолчанию false.
+
 ---@class KompotApp
----@field new fun(opts: table): KompotAppInstance
+---@field new fun(opts: KompotAppOptions): KompotAppInstance
 
 ---@class KompotAppInstance
 ---@field rt table<string, any>
@@ -503,12 +541,12 @@
 
 ---@class KompotApi
 ---@field VERSION string
----@field copy fun<T>(source: T, changes?: table): T Shallow copy of a table with optional field replacements; nested values share references, metatable is not copied.
+---@field copy fun<T>(source: T, changes?: table): T Копия таблицы с заменой полей; вложенные значения общие, метатаблица не копируется.
 ---@field Modifier KompotModifier
 ---@field M KompotModifier
 ---@field Shape KompotShapeApi
----@field rounded_corners fun(radius?: KompotRadius): KompotRadius Copy and validate corner radii.
----@field nine_patch fun(source: string|KompotRaster, opts?: KompotNinePatchOptions): KompotNinePatch
+---@field rounded_corners fun(radius?: KompotRadius): KompotRadius Копирует и проверяет радиусы углов.
+---@field nine_patch fun(source: string|KompotRaster, opts?: KompotNinePatchOptions): KompotNinePatch Рамки и повторение. source - texture/path или atlas:sprite; для cover используйте K.Image.
 ---@field raster fun(opts: KompotRasterOptions): KompotRaster
 ---@field Box fun(a: KompotBoxProps|KompotModifier|KompotContent, content?: KompotContent)
 ---@field Row fun(a: KompotLinearProps|KompotModifier|KompotContent, content?: KompotContent)
@@ -516,7 +554,7 @@
 ---@field FlowRow fun(a: KompotFlowProps|KompotModifier|KompotContent, content?: KompotContent)
 ---@field Spacer fun(width: number|KompotModifier, height?: number)
 ---@field Text fun(text: string|number|nil, props?: KompotTextProps)
----@field Image fun(source: string, props?: KompotImageProps)
+---@field Image fun(source: string, props?: KompotImageProps) source - texture/path или atlas:sprite, без префикса пака. Поддерживает fit и фоновый слой в Box.
 ---@field Icon fun(name: string, props?: KompotIconProps)
 ---@field Canvas fun(props: KompotCanvasProps)
 ---@field Layout fun(props: KompotLayoutProps, content: KompotContent)
@@ -530,21 +568,24 @@
 ---@field LazyRow fun(props: KompotLazyProps)
 ---@field LazyGrid fun(props: KompotLazyGridProps)
 ---@field Popup fun(props: KompotPopupProps, content: KompotContent)
----@field state fun(initial: any, eq?: fun(a: any, b: any): boolean): KompotState<any>
----@field form fun(initial: table): table<any, KompotState<any>> Remember a fixed set of independent field states. Initial values apply once; recreate with K.key to change schema.
+---@field state fun<T>(initial: T, eq?: fun(a: T, b: T): boolean): KompotState<T>
+---@field form fun(initial: table): table<any, KompotState<any>> Фиксированный набор состояний полей; для новой схемы пересоздайте через K.key.
 ---@field new_state fun<T>(initial: T, eq?: fun(a: T, b: T): boolean): KompotState<T>
 ---@field remember fun<T>(initial: fun(): T, ...: any): T
 ---@field effect fun(fn: function, ...: any)
 ---@field on_dispose fun(fn: fun())
----@field on_frame fun(fn: fun(dt: number)) Once per frame; removed with the component.
+---@field on_frame fun(fn: fun(dt: number)) Раз в кадр; удаляется вместе с компонентом.
 ---@field key fun(key: any, content: KompotContent)
 ---@field component fun<T>(fn: T): T
 ---@field provide fun<T>(local_value: KompotLocal<T>, value: T, content: KompotContent)
 ---@field local_of fun<T>(default: T, name?: string): KompotLocal<T>
 ---@field untracked fun<T>(fn: fun(...: any): T, ...: any): T
 ---@field is_state fun(value: any): boolean
----@field poll fun(getter: function, eq?: function): any
+---@field poll fun<T>(getter: fun(): T, eq?: fun(a: T, b: T): boolean): T
 ---@field animate fun<T>(target: T, spec?: KompotAnimationSpec): T
+---@field transition_state fun<T>(initial: T): KompotTransitionState<T>
+---@field new_transition_state fun<T>(initial: T): KompotTransitionState<T>
+---@field transition fun<T>(state: KompotTransitionState<T>): KompotTransition<T>
 ---@field tween fun(duration?: number, easing?: string): KompotTween
 ---@field spring fun(stiffness?: number, damping?: number): KompotSpring
 ---@field snap KompotSnap

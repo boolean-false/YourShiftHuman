@@ -140,7 +140,13 @@ function text.layout(m, font, s, max_w, max_lines, wrap, ellipsis)
             w = lw
         end
     end
-    local result = { lines = lines, widths = widths, w = w, h = lh * #lines, lh = lh }
+    local result = {
+        lines = lines,
+        widths = widths,
+        w = w,
+        h = lh * #lines,
+        lh = lh,
+    }
     cache_n = cache_n + 1
     if cache_n > CACHE_LIMIT then
         cache, cache_n = {}, 0
@@ -167,7 +173,11 @@ function text.parse_md(s)
     local buf = {}
     local function flush()
         if #buf > 0 then
-            runs[#runs + 1] = { text = table.concat(buf), color = cur_color, bold = bold }
+            runs[#runs + 1] = {
+                text = table.concat(buf),
+                color = cur_color,
+                bold = bold,
+            }
             buf = {}
         end
     end
@@ -203,7 +213,9 @@ end
 -- Раскладка отрезков {text, font, color} с переносом по словам.
 -- Возвращает {lines = {{runs = {{text, font, color, x, w}}, w}}, widths,
 -- w, h, lh, rich = true}. Высота строки - по самому высокому шрифту.
-local rich_cache = setmetatable({}, { __mode = "k" })
+local rich_cache = setmetatable({}, {
+    __mode = "k",
+})
 
 function text.layout_rich(m, runs, max_w, max_lines, wrap)
     local per = rich_cache[runs]
@@ -231,8 +243,13 @@ function text.layout_rich(m, runs, max_w, max_lines, wrap)
             last.text = last.text .. piece
             last.w = m:width(r.font, last.text)
         else
-            line[#line + 1] =
-                { text = piece, font = r.font, color = r.color, x = lw, w = m:width(r.font, piece) }
+            line[#line + 1] = {
+                text = piece,
+                font = r.font,
+                color = r.color,
+                x = lw,
+                w = m:width(r.font, piece),
+            }
         end
         local total = 0
         for _, p in ipairs(line) do
@@ -264,7 +281,10 @@ function text.layout_rich(m, runs, max_w, max_lines, wrap)
     end
     local function new_line(keep_trailing)
         local w = keep_trailing and lw or trim_line()
-        lines[#lines + 1] = { runs = line, w = w }
+        lines[#lines + 1] = {
+            runs = line,
+            w = w,
+        }
         line, lw = {}, 0
     end
 
@@ -358,7 +378,14 @@ function text.layout_rich(m, runs, max_w, max_lines, wrap)
             w = l.w
         end
     end
-    local result = { lines = lines, widths = widths, w = w, h = lh * #lines, lh = lh, rich = true }
+    local result = {
+        lines = lines,
+        widths = widths,
+        w = w,
+        h = lh * #lines,
+        lh = lh,
+        rich = true,
+    }
     if not per then
         per = {}
         rich_cache[runs] = per

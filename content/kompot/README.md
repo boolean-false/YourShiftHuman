@@ -5,6 +5,7 @@
 что перерисовать.
 
 - [Документация по задачам](docs/README.md) и [первый экран](docs/QUICKSTART.md)
+- [Справочник API](docs/API.md), [общие правила](docs/CONCEPTS.md) и [полные рецепты](docs/RECIPES.md)
 - [Состояние, формы и диагностика хуков](docs/STATE.md)
 
 Ядро `kompot:kompot` не загружает дизайн-систему. Из оформления в нём есть только
@@ -22,43 +23,66 @@ local M = K.M
 
 local function Counter()
     local count = K.state(0)
-    UI.Panel({title = "Счётчик"}, function()
+    UI.Panel({
+        title = "Счётчик",
+    }, function()
         K.Text("Нажато: " .. count.value)
-        UI.Button({text = "+1", variant = "primary", on_click = function()
-            count.value = count.value + 1
-        end})
+        UI.Button({
+            text = "+1",
+            variant = "primary",
+            on_click = function()
+                count.value = count.value + 1
+            end,
+        })
     end)
 end
 
-local ui = K.mount({content = Counter, theme = UI.theme()})   -- поверх экрана
+local ui = K.mount({
+    content = Counter,
+    theme = UI.theme(),
+}) -- поверх экрана
 -- ui:dispose()
 ```
 
 ## Пример подключения
 ```lua
 -- поверх экрана (HUD, оверлей)
-local ui = K.mount({content = App})
+local ui = K.mount({
+    content = App,
+})
 
 -- в элемент макета: layouts/panel.xml + panel.xml.lua
 function on_open()
-    ui = K.mount({target = document.root, content = App, theme = UI.theme()})
+    ui = K.mount({
+        target = document.root,
+        content = App,
+        theme = UI.theme(),
+    })
 end
 
-function on_close() ui:dispose() end
+function on_close()
+    ui:dispose()
+end
 ```
 
 `K.mount(opts)` принимает `content`, `target` (контейнер; по умолчанию весь
-экран), `theme`, `z_index`, `interactive` (перехват мыши) и `lock_inventory`.
+экран), `theme`, `z_index`, `interactive` (перехват мыши), `keyboard_navigation` и `lock_inventory`.
 Возвращает объект с полем `app` и методами `dispose()`, `set_content(fn)`,
-`set_theme(theme)`, `is_over(x, y)` — проверкой, находится ли точка экрана над UI.
+`set_theme(theme)`, `is_over(x, y)` - проверкой, находится ли точка экрана над UI.
 Размер интерфейса следует за размером контейнера. Кадры обновляются через
 его `setInterval`. Для тестов можно подменить ввод:
 `handle.fake_input = {x, y, down, wheel}`.
 
-По умолчанию интерфейс с явно заданным `target` блокирует открытие инвентаря
-по Tab (`hud.inventory`). Без `target` блокировка действует при наведении
-или фокусе на интерфейсе. Параметр `lock_inventory = false` полностью отключает
-эту блокировку — например, для интерфейса, который рисуется в текстуру.
+Обход элементов через Tab по умолчанию выключен. Для настроек, редактора
+или справочника включите `keyboard_navigation = true`. Без этой опции
+обычные кнопки не получают фокус, а текстовые поля и открытые списки
+сохраняют своё локальное управление. В F12 навигация включена явно.
+
+По умолчанию `hud.inventory` блокируется при вводе в нативное текстовое поле.
+При включённой навигации блокировка также действует для явно заданного
+`target`, а без `target` - при наведении или фокусе на интерфейсе.
+`lock_inventory = true` включает эту политику блокировки независимо от
+навигации, `false` полностью отключает её, например при отрисовке в текстуру.
 
 Вызывайте `dispose()`, когда интерфейс больше не нужен. Если его контейнер
 или XML-документ уничтожен без этого вызова, Kompot сам освободит ресурсы
@@ -91,3 +115,17 @@ function on_close() ui:dispose() end
 Kompot - [MPL 2.0](LICENSE).
 Шрифты IBM Plex - [OFL 1.1](fonts/IBMPlex-OFL.txt).
 Иконка ([SVG](art/icon.svg)) - Dagger, 2026, [CC BY 4.0](LICENSES/CC-BY-4.0.txt).
+
+## Проверки
+
+`python3 tests/run.py` запускает одну основную проверку в одном окне движка.
+Подробные проверки выбираются по изменённому механизму; полный набор
+запускается явно через `all`. Подробнее: [tests/README.md](tests/README.md).
+
+
+## TypeScript и VCTS
+
+Пак поставляет декларации API для [VCTS](https://github.com/boolean-false/VCTS). Подключите Kompot командой
+`vcts add /path/to/content/kompot`, затем импортируйте `kompot:kompot` и
+`kompot:ui`. Сборщик использует исходный Lua-пак без дополнительных обёрток.
+Подробности и пример: [VCTS](docs/VCTS.md).

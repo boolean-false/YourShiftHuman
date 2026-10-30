@@ -26,6 +26,7 @@ local InventoryLock = require "kompot:kompot/backend/inventory_lock"
 local RasterCanvas = require "kompot:kompot/core/canvas"
 local Affine = require "kompot:kompot/core/affine"
 local Render = require "kompot:kompot/core/render"
+local LayerCache = require "kompot:kompot/backend/layer_cache"
 local B = {}
 local free_layer_frames, layer_frame_counter = {}, 0
 
@@ -33,20 +34,25 @@ local floor, max, min, sqrt, exp = math.floor, math.max, math.min, math.sqrt, ma
 
 local mount_counter = 0
 
--- This observer belongs to the GUI root, not to any mount/document being
--- watched. Hidden layouts remain alive; only missing hosts are disposed.
+-- Сторож живёт в корне GUI; скрытые макеты сохраняет, уничтоженные освобождает.
 local mounts, mount_watcher = {}, nil
 local function watch_mount(handle, prefix)
     mounts[handle] = true
-    if mount_watcher then return end
+    if mount_watcher then
+        return
+    end
     local id = prefix .. "watcher"
-    gui.root.root:add("<container id='" .. id .. "' size='0,0' color='#00000000' interactive='false'/>")
+    gui.root.root:add(
+        "<container id='" .. id .. "' size='0,0' color='#00000000' interactive='false'/>"
+    )
     mount_watcher = gui.root[id]
     mount_watcher:setInterval(50, function()
         for mounted in pairs(mounts) do
             if not mounted.host.exists then
                 local ok, err = pcall(mounted.dispose, mounted)
-                if not ok then print("[kompot] " .. tostring(err)) end
+                if not ok then
+                    print("[kompot] " .. tostring(err))
+                end
             end
         end
         if not next(mounts) then
@@ -55,7 +61,6 @@ local function watch_mount(handle, prefix)
         end
     end)
 end
-
 
 local function hex(c)
     return color.to_hex(c)
@@ -138,16 +143,28 @@ local function make_texture(name, w, h, f)
     canvas:set_data(data)
     canvas:update()
     canvas:create_texture(name)
-    textures[name] = { canvas = canvas, w = w, h = h }
+    textures[name] = {
+        canvas = canvas,
+        w = w,
+        h = h,
+    }
     return name
 end
 
 -- Круг диаметром 2r: четвертинки - углы скруглённого прямоугольника.
-local function circle_texture(r)
+local function circle_texture(r, under_border)
     r = max(1, floor(r + 0.5))
-    return make_texture("kompot_circle_" .. r, r * 2, r * 2, function(x, y)
+    local suffix = under_border
+            and ("_under_" .. under_border.width .. "_" .. floor(under_border.alpha * 255 + 0.5))
+        or ""
+    return make_texture("kompot_circle_" .. r .. suffix, r * 2, r * 2, function(x, y)
         local d = sqrt((x - r) ^ 2 + (y - r) ^ 2)
-        return r - d + 0.5
+        local outer = max(0, min(1, r - d + 0.5))
+        if not under_border then
+            return outer
+        end
+        local stroke = max(0, min(1, min(r - d + 0.5, d - (r - under_border.width) + 0.5)))
+        return Corners.under_border(outer, stroke, under_border.alpha)
     end),
         r
 end
@@ -243,17 +260,14 @@ local Measurer = {}
 Measurer.__index = Measurer
 
 function Measurer.new(backend)
-    return setmetatable(
-        {
-            backend = backend,
-            rulers = {},
-            widths = {},
-            width_n = {},
-            heights = {},
-            pending = false,
-        },
-        Measurer
-    )
+    return setmetatable({
+        backend = backend,
+        rulers = {},
+        widths = {},
+        width_n = {},
+        heights = {},
+        pending = false,
+    }, Measurer)
 end
 
 local approx = text.approx_measurer()
@@ -278,7 +292,11 @@ function Measurer:_ruler(font, multiline)
             tostring(multiline == true)
         )
     )
-    r = { el = b.doc[id], ready = false, ready_after = (b.measure_epoch or 0) + 1 }
+    r = {
+        el = b.doc[id],
+        ready = false,
+        ready_after = (b.measure_epoch or 0) + 1,
+    }
     self.rulers[key] = r
     return r
 end
@@ -408,7 +426,10 @@ function Backend:_create(container, tag, attrs, inner, data)
         xml = xml .. "/>"
     end
     self:_add(container.el, xml, data)
-    return { id = id, el = self.doc[id] }
+    return {
+        id = id,
+        el = self.doc[id],
+    }
 end
 
 local function pos_attr(x, y, w, h)
@@ -431,7 +452,7 @@ local function rounded_parts(p)
         return { { x, y, w, h, "rect" } }
     end
     r = min(r, w / 2, h / 2)
-    local tex, tr = circle_texture(r)
+    local tex, tr = circle_texture(r, p.under_border)
     local rr = floor(r + 0.5)
     return {
         { x, y, rr, rr, "image", tex, Q_TL },
@@ -447,7 +468,9 @@ end
 local function border_parts(p)
     local r = p.radius or 0
     local bw = max(0, floor((p.width or 1) + 0.5))
-    if bw == 0 then return {} end
+    if bw == 0 then
+        return {}
+    end
     local x, y, w, h = floor(p.x), floor(p.y), max(0, floor(p.w)), max(0, floor(p.h))
     r = min(floor(r + 0.5), floor(w / 2), floor(h / 2))
     if r < 0.5 then
@@ -496,7 +519,11 @@ end
 -- Сигнатура неизменяемых свойств: при смене - пересоздание.
 local function signature(p)
     local k = p.kind
-    if (p.shape or type(p.radius) == "table") and (k == "rect" or k == "border" or k == "shadow") then return k .. "_corners" end
+    if
+        (p.shape or type(p.radius) == "table") and (k == "rect" or k == "border" or k == "shadow")
+    then
+        return k .. "_corners"
+    end
     if k == "text" then
         return "t" .. p.font
     elseif k == "field" then
@@ -603,7 +630,9 @@ end
 
 function Backend:supports_text_presentation()
     if self.text_presentation_supported == nil then
-        local probe = self:_create({ el = self.host }, "textbox", "visible='false' size='1,1'")
+        local probe = self:_create({
+            el = self.host,
+        }, "textbox", "visible='false' size='1,1'")
         local ok, value = pcall(function()
             return probe.el.externalRendering
         end)
@@ -617,12 +646,14 @@ function Backend:_destroy(entry)
     if entry.layer_backend then
         entry.layer_backend:dispose()
         entry.layer_white_backend:dispose()
-        entry.layer_frame.white_host.size={1,1}
-        entry.layer_frame.white_host.visible=false
-        entry.layer_frame.host.size={1,1}
-        entry.layer_frame.host.visible=false
-        if entry.layer_epoch==texture_epoch then free_layer_frames[#free_layer_frames+1]=entry.layer_frame end
-        entry.layer_backend=nil
+        entry.layer_frame.white_host.size = { 1, 1 }
+        entry.layer_frame.white_host.visible = false
+        entry.layer_frame.host.size = { 1, 1 }
+        entry.layer_frame.host.visible = false
+        if entry.layer_epoch == texture_epoch then
+            free_layer_frames[#free_layer_frames + 1] = entry.layer_frame
+        end
+        entry.layer_backend = nil
     end
     paint_cache:release(entry.patch_resource)
     entry.patch_resource = nil
@@ -680,6 +711,7 @@ end
 
 -- Применяет список примитивов.
 function Backend:apply(dl)
+    LayerCache.reconcile(self, dl)
     local seen = {}
     local containers = self.containers
     local new_order = {}
@@ -722,9 +754,16 @@ function Backend:apply(dl)
         end
         local kind = p.kind
         local c = p.color and p.color or color.WHITE
-        local rgba = { c = c, c255 = color.to255(c) }
+        local rgba = {
+            c = c,
+            c255 = color.to255(c),
+        }
         if not entry then
-            entry = { sig = sig, container = container, cache = {} }
+            entry = {
+                sig = sig,
+                container = container,
+                cache = {},
+            }
             self.entries[p.key] = entry
             self.order_dirty[ckey] = true
             if kind == "input" then
@@ -745,7 +784,10 @@ function Backend:apply(dl)
                 entry.is_clip = true
                 entry.cache.pos = { floor(p.x), floor(p.y) }
                 entry.cache.size = { floor(p.w), floor(p.h) }
-                containers[p.key] = { key = p.key, el = e.el }
+                containers[p.key] = {
+                    key = p.key,
+                    el = e.el,
+                }
             elseif kind == "text" then
                 local e = self:_create(
                     container,
@@ -801,6 +843,15 @@ function Backend:apply(dl)
                         end
                     end,
                     focus = function()
+                        if self.input and entry.field_props then
+                            local by_key = self.input:sync_regions(self.input.rt.app.regions)
+                            self.input:set_focus(
+                                entry.field_props.input_key,
+                                by_key,
+                                self.input.focus_key == entry.field_props.input_key
+                                    and self.input.focus_visible
+                            )
+                        end
                         if entry.handlers.on_focus then
                             entry.handlers.on_focus()
                         end
@@ -865,7 +916,10 @@ function Backend:apply(dl)
             set_prop(entry, entry.el, "size", { max(0, floor(p.w)), max(0, floor(p.h)) })
         elseif kind == "nine_patch" then
             self:_apply_patch(entry, container, p, rgba)
-        elseif (p.shape or type(p.radius) == "table") and (kind == "rect" or kind == "border" or kind == "shadow") then
+        elseif
+            (p.shape or type(p.radius) == "table")
+            and (kind == "rect" or kind == "border" or kind == "shadow")
+        then
             self:_apply_corner_shape(entry, container, p)
         elseif kind == "rect" then
             self:_apply_parts(entry, container, rounded_parts(p), rgba)
@@ -889,11 +943,12 @@ function Backend:apply(dl)
         elseif kind == "field" then
             local el = entry.el
             entry.field_props, entry.field_container = p, container
-            if p.input_blocked and el.focused and not self.host.focused then
+            local disabled = p.input_blocked or p.enabled == false
+            if disabled and el.focused and not self.host.focused then
                 self.host.focused = true
             end
-            set_prop(entry, el, "interactive", not p.input_blocked)
-            set_prop(entry, el, "enabled", not p.input_blocked)
+            set_prop(entry, el, "interactive", not disabled)
+            set_prop(entry, el, "enabled", not disabled)
             if p.presentation or p.editor_state then
                 if entry.extended == nil then
                     local ok, supported = pcall(function()
@@ -940,7 +995,7 @@ function Backend:apply(dl)
                 entry.paint.el:destruct()
                 entry.paint = nil
             end
-            if p.focus and not p.input_blocked and not entry.focused_once then
+            if p.focus and not disabled and not entry.focused_once then
                 entry.focused_once = true
                 el.focused = true
             end
@@ -1009,219 +1064,489 @@ end
 
 -- VoxelCore сохраняет кадры в GUI. Пул ограничен пиковым числом слоёв;
 -- освобождённые кадры очищены, скрыты и уменьшены до 1x1.
-local function layer_frame(w,h)
-    local f=table.remove(free_layer_frames)
+local function layer_frame(w, h)
+    local f = table.remove(free_layer_frames)
     if not f then
-        layer_frame_counter=layer_frame_counter+1
-        local id="kompot_layer_frame_"..layer_frame_counter
-        local host,doc=gui.create_frame(id,id.."_texture",{w,h})
-        local white_host,white_doc=gui.create_frame(id.."_white",id.."_white_texture",{w,h})
+        layer_frame_counter = layer_frame_counter + 1
+        local id = "kompot_layer_frame_" .. layer_frame_counter
+        local host, doc = gui.create_frame(id, id .. "_texture", { w, h })
+        local white_host, white_doc =
+            gui.create_frame(id .. "_white", id .. "_white_texture", { w, h })
         -- При resize framebuffer VoxelCore сбрасывает GL texture binding,
         -- но Batch2D сохраняет свой кэш. Одноцветный фон может нарисоваться
         -- без blank texture и испортить пару снимков для восстановления alpha.
         -- Image принудительно привязывает текстуру перед заливкой подложки.
-        local matte=make_texture("kompot_layer_matte",1,1,function() return 1 end)
-        local attrs=" src='"..matte.."' pos='0,0' size='1,1' interactive='false' z-index='-1'"
-        host:add("<image id='matte'"..attrs.." color='#000000'/>")
-        white_host:add("<image id='matte'"..attrs.." color='#FFFFFF'/>")
-        f={id=id,host=host,doc=doc,white_host=white_host,white_doc=white_doc,
-            matte=doc.matte,white_matte=white_doc.matte}
+        local matte = make_texture("kompot_layer_matte", 1, 1, function()
+            return 1
+        end)
+        local attrs = " src='" .. matte .. "' pos='0,0' size='1,1' interactive='false' z-index='-1'"
+        host:add("<image id='matte'" .. attrs .. " color='#000000'/>")
+        white_host:add("<image id='matte'" .. attrs .. " color='#FFFFFF'/>")
+        f = {
+            id = id,
+            host = host,
+            doc = doc,
+            white_host = white_host,
+            white_doc = white_doc,
+            matte = doc.matte,
+            white_matte = white_doc.matte,
+        }
     end
-    f.host.size={w,h}
-    f.host.visible=true
-    f.host.color={0,0,0,0}
-    f.host.interactive=false
-    f.white_host.size={w,h}
-    f.white_host.visible=true
-    f.white_host.color={0,0,0,0}
-    f.white_host.interactive=false
-    f.matte.size={w,h}
-    f.white_matte.size={w,h}
+    f.host.size = { w, h }
+    f.host.visible = true
+    f.host.color = { 0, 0, 0, 0 }
+    f.host.interactive = false
+    f.white_host.size = { w, h }
+    f.white_host.visible = true
+    f.white_host.color = { 0, 0, 0, 0 }
+    f.white_host.interactive = false
+    f.matte.size = { w, h }
+    f.white_matte.size = { w, h }
+    -- Удаление отложено: новые элементы не должны повторять ещё живые ID.
+    f.generation = (f.generation or 0) + 1
     return f
 end
-local function same_source(a,b)
-    if not a or #a~=#b then return false end
-    for i,p in ipairs(a) do
-        local q=b[i]
-        for k,v in pairs(p) do
-            if k=="prims" then
-                if not same_source(v,q[k]) then return false end
-            elseif k=="draw" and p.version~=nil then
+local function same_source(a, b)
+    if not a or #a ~= #b then
+        return false
+    end
+    for i, p in ipairs(a) do
+        local q = b[i]
+        for k, v in pairs(p) do
+            if k == "prims" then
+                if not same_source(v, q[k]) then
+                    return false
+                end
+            elseif k == "draw" and p.version ~= nil then
                 -- version является контрактом перерисовки Canvas.
-            elseif type(v)=="table" then
-                if not R.shallow_equal(v,q[k]) then return false end
-            elseif v~=q[k] then return false end
+            elseif type(v) == "table" then
+                if not R.shallow_equal(v, q[k]) then
+                    return false
+                end
+            elseif v ~= q[k] then
+                return false
+            end
         end
-        for k in pairs(q) do if p[k]==nil then return false end end
+        for k in pairs(q) do
+            if p[k] == nil then
+                return false
+            end
+        end
     end
     return true
 end
 -- Положение самого слоя не меняет его текстуру. Версия зависит только от
 -- источника и преобразования внутри холста; копируем числа, а не ссылки
 -- на изменяемые таблицы цвета/UV/матрицы.
-local function raster_version(entry,source,w,h,m,opts,top)
-    opts=opts or {}
-    local c,uv=opts.color or color.WHITE,opts.region or {0,0,1,1}
-    local signature={source,w,h,top==true,m[1],m[2],m[3],m[4],m[5],m[6],
-        c[1],c[2],c[3],c[4] or 1,uv[1],uv[2],uv[3],uv[4],
-        opts.mask_w or 0,opts.mask_h or 0,
-        type(opts.mask_radius)=="table" and opts.mask_radius.kind or "rounded",
-        (table.unpack or unpack)(Corners.values(opts.mask_radius))}
-    if not R.shallow_equal(entry.raster_signature,signature) then
-        entry.raster_signature=signature
+local function raster_version(entry, source, w, h, m, opts, top)
+    opts = opts or {}
+    local c, uv = opts.color or color.WHITE, opts.region or { 0, 0, 1, 1 }
+    local signature = {
+        source,
+        w,
+        h,
+        top == true,
+        m[1],
+        m[2],
+        m[3],
+        m[4],
+        m[5],
+        m[6],
+        c[1],
+        c[2],
+        c[3],
+        c[4] or 1,
+        uv[1],
+        uv[2],
+        uv[3],
+        uv[4],
+        opts.mask_w or 0,
+        opts.mask_h or 0,
+        type(opts.mask_radius) == "table" and opts.mask_radius.kind or "rounded",
+        (table.unpack or unpack)(Corners.values(opts.mask_radius)),
+    }
+    if not R.shallow_equal(entry.raster_signature, signature) then
+        entry.raster_signature = signature
     end
     return entry.raster_signature
 end
-function Backend:_apply_corner_shape(entry,container,p)
-    local shape=p.shape or p.radius
-    local version={p.w,p.h,p.kind,p.width or 0,p.blur or 0,shape.kind or "rounded",(table.unpack or unpack)(Corners.values(shape))}
-    if not R.shallow_equal(entry.shape_version,version) then entry.shape_version=version end
-    self:_apply_canvas(entry,container,{x=p.x,y=p.y,w=p.w,h=p.h,color=p.color,
-        version=entry.shape_version,draw=function(cv,w,h)
-            if p.w<=0 or p.h<=0 then return end
-            cv.raw:set_data(Corners.pixels(w,h,shape,p.kind=="border" and p.width or nil,
-                p.kind=="shadow" and p.blur or nil))
-        end})
+function Backend:_apply_corner_shape(entry, container, p)
+    local shape = p.shape or p.radius
+    local version = {
+        p.w,
+        p.h,
+        p.kind,
+        p.width or 0,
+        p.blur or 0,
+        p.under_border and p.under_border.width or 0,
+        p.under_border and p.under_border.alpha or 0,
+        shape.kind or "rounded",
+        (table.unpack or unpack)(Corners.values(shape)),
+    }
+    if not R.shallow_equal(entry.shape_version, version) then
+        entry.shape_version = version
+    end
+    self:_apply_canvas(entry, container, {
+        x = p.x,
+        y = p.y,
+        w = p.w,
+        h = p.h,
+        color = p.color,
+        version = entry.shape_version,
+        draw = function(cv, w, h)
+            if p.w <= 0 or p.h <= 0 then
+                return
+            end
+            cv.raw:set_data(
+                Corners.pixels(
+                    w,
+                    h,
+                    shape,
+                    p.kind == "border" and p.width or nil,
+                    p.kind == "shadow" and p.blur or nil,
+                    p.under_border
+                )
+            )
+        end,
+    })
 end
 
-local function mask_layer(cv,w,h,p,x0,y0)
-    if not (p.mask_shape or p.mask_radius) then return end
-    local buffer=cv:get_data()
-    local data=buffer.bytes
-    local r=Corners.values(p.mask_shape or p.mask_radius)
-    for y=0,h-1 do for x=0,w-1 do
-        local a=max(0,min(1,Corners.distance(x+x0+0.5,y+y0+0.5,p.w,p.h,r)+0.5))
-        local i=(y*w+x)*4+3
-        data[i]=floor(data[i]*a+0.5)
-    end end
+local function mask_segments(w, h, p, x0, y0, r)
+    local segments = {}
+    local function append(first, last, alpha)
+        if alpha < 1 then
+            local n = #segments
+            segments[n + 1], segments[n + 2], segments[n + 3] = first, last, alpha
+        end
+    end
+    for y = 0, h - 1 do
+        local first, previous = y * w * 4 + 3, nil
+        for x = 0, w - 1 do
+            local a =
+                max(0, min(1, Corners.distance(x + x0 + 0.5, y + y0 + 0.5, p.w, p.h, r) + 0.5))
+            local i = (y * w + x) * 4 + 3
+            if previous ~= a then
+                if previous ~= nil then
+                    append(first, i - 4, previous)
+                end
+                first, previous = i, a
+            end
+        end
+        append(first, ((y + 1) * w - 1) * 4 + 3, previous)
+    end
+    return segments
+end
+local function mask_layer(entry, cv, w, h, p, x0, y0)
+    if not (p.mask_shape or p.mask_radius) then
+        return
+    end
+    local r = Corners.values(p.mask_shape or p.mask_radius)
+    local signature = { w, h, p.w, p.h, x0, y0, r.kind or "rounded", r[1], r[2], r[3], r[4] }
+    if not R.shallow_equal(entry.mask_signature, signature) then
+        entry.mask_signature = signature
+        -- Храним только изменяемые отрезки, без массива на каждый пиксель.
+        entry.mask_segments = mask_segments(w, h, p, x0, y0, r)
+    end
+    local segments = entry.mask_segments
+    if #segments == 0 then
+        return
+    end
+    local buffer = cv:get_data()
+    local data = buffer.bytes
+    for index = 1, #segments, 3 do
+        local first, last, a = segments[index], segments[index + 1], segments[index + 2]
+        if a == 0 then
+            for i = first, last, 4 do
+                data[i] = 0
+            end
+        else
+            for i = first, last, 4 do
+                data[i] = floor(data[i] * a + 0.5)
+            end
+        end
+    end
     cv:set_data(buffer)
 end
 
-function Backend:_apply_layer(entry,container,p)
-    -- Один PNG не требует промежуточного GUI-кадра. Это основной путь
-    -- для вращающихся голов, иконок и других отдельных изображений.
-    if not p.mask_shape and not p.mask_radius and not entry.layer_backend and #p.prims==1 and p.prims[1].kind=="image" then
-        local image=p.prims[1]
-        local source,top=RasterCanvas.engine_loader(image.src)
-        assert(source,"transformed image not loaded: "..image.src)
-        local m=Affine.multiply(p.transform,{1,0,0,1,image.x,image.y})
-        local x0,y0,x1,y1=Affine.bounds(m,0,0,image.w,image.h)
-        x0,y0=floor(x0),floor(y0)
-        local w,h=max(1,math.ceil(x1)-x0),max(1,math.ceil(y1)-y0)
-        assert(w<=2048 and h<=2048,"transformed layer output exceeds 2048 pixels")
-        m[5],m[6]=m[5]-x0,m[6]-y0
-        local opts={region=image.region,color=image.color}
-        self:_apply_canvas(entry,container,{x=p.x+x0,y=p.y+y0,w=w,h=h,color=color.WHITE,
-            version=raster_version(entry,source,image.w,image.h,m,opts,top),
-            draw=function(cv)
-                RasterCanvas.composite(cv.raw,w,h,source,image.w,image.h,m,opts,top)
-            end})
+function Backend:_apply_layer(entry, container, p)
+    if self.layer_peer then
+        entry.layer_peer_key = p.key
+        self:_sync_layer(entry, container)
         return
     end
-    local bx,by,bw,bh=Render.bounds(p.prims)
-    assert(bw<=2048 and bh<=2048,"transformed layer source exceeds 2048 pixels")
-    local changed=not same_source(entry.source_prims,p.prims)
-        or entry.source_x~=bx or entry.source_y~=by
-    if not entry.layer_backend or entry.layer_epoch~=texture_epoch then
-        if entry.layer_backend then entry.layer_backend:dispose(); entry.layer_white_backend:dispose() end
-        local f=layer_frame(bw,bh)
-        entry.layer_frame=f
-        entry.layer_epoch=texture_epoch
-        entry.layer_backend=setmetatable({doc=f.doc,host=f.host,prefix=f.id.."_",counter=0,
-            entries={},orders={},order_dirty={},texture_epoch=texture_epoch,
-            containers={[""]={key="",el=f.host}}},Backend)
-        entry.layer_white_backend=setmetatable({doc=f.white_doc,host=f.white_host,prefix=f.id.."_white_",counter=0,
-            entries={},orders={},order_dirty={},texture_epoch=texture_epoch,
-            containers={[""]={key="",el=f.white_host}}},Backend)
-        changed=true
+    -- Один PNG не требует промежуточного GUI-кадра. Это основной путь
+    -- для вращающихся голов, иконок и других отдельных изображений.
+    if
+        not p.mask_shape
+        and not p.mask_radius
+        and not entry.layer_backend
+        and #p.prims == 1
+        and p.prims[1].kind == "image"
+    then
+        local image = p.prims[1]
+        local source, top = RasterCanvas.engine_loader(image.src)
+        assert(source, "transformed image not loaded: " .. image.src)
+        local m = Affine.multiply(p.transform, { 1, 0, 0, 1, image.x, image.y })
+        local x0, y0, x1, y1 = Affine.bounds(m, 0, 0, image.w, image.h)
+        x0, y0 = floor(x0), floor(y0)
+        local w, h = max(1, math.ceil(x1) - x0), max(1, math.ceil(y1) - y0)
+        assert(w <= 2048 and h <= 2048, "transformed layer output exceeds 2048 pixels")
+        m[5], m[6] = m[5] - x0, m[6] - y0
+        local opts = {
+            region = image.region,
+            color = image.color,
+        }
+        entry.image_geometry = entry.image_geometry or {}
+        local previous = entry.image_geometry.raster_signature
+        local geometry = raster_version(entry.image_geometry, source, image.w, image.h, m, {
+            region = image.region,
+        }, top)
+        if previous ~= geometry then
+            entry.image_base_buffer = nil
+        end
+        local draw
+        if previous ~= geometry then
+            draw = function(cv)
+                RasterCanvas.composite(cv.raw, w, h, source, image.w, image.h, m, opts, top)
+            end
+        else
+            draw = function(cv)
+                -- Кеш появляется только при смене цвета без смены геометрии.
+                -- Отдельный проход сохраняет округление RGBA исходного пути.
+                if not entry.image_base_buffer then
+                    local base = Canvas({ w, h })
+                    base:clear()
+                    RasterCanvas.composite(base, w, h, source, image.w, image.h, m, {
+                        region = image.region,
+                    }, top)
+                    entry.image_base_buffer = base:get_data()
+                end
+                RasterCanvas.tint_buffer(cv.raw, w, h, entry.image_base_buffer, image.color)
+            end
+        end
+        self:_apply_canvas(entry, container, {
+            x = p.x + x0,
+            y = p.y + y0,
+            w = w,
+            h = h,
+            color = color.WHITE,
+            version = raster_version(entry, source, image.w, image.h, m, opts, top),
+            draw = draw,
+        })
+        return
     end
-    local stage=entry.layer_backend
+    local bx, by, bw, bh = Render.bounds(p.prims)
+    assert(bw <= 2048 and bh <= 2048, "transformed layer source exceeds 2048 pixels")
+    local changed = not same_source(entry.source_prims, p.prims)
+        or entry.source_x ~= bx
+        or entry.source_y ~= by
+    if not entry.layer_backend or entry.layer_epoch ~= texture_epoch then
+        if entry.layer_backend then
+            entry.layer_backend:dispose()
+            entry.layer_white_backend:dispose()
+        end
+        local f = layer_frame(bw, bh)
+        entry.layer_frame = f
+        entry.layer_epoch = texture_epoch
+        entry.layer_backend = setmetatable({
+            doc = f.doc,
+            host = f.host,
+            prefix = f.id .. "_g" .. f.generation .. "_",
+            counter = 0,
+            entries = {},
+            orders = {},
+            order_dirty = {},
+            texture_epoch = texture_epoch,
+            containers = {
+                [""] = {
+                    key = "",
+                    el = f.host,
+                },
+            },
+        }, Backend)
+        entry.layer_white_backend = setmetatable({
+            layer_peer = entry.layer_backend,
+            doc = f.white_doc,
+            host = f.white_host,
+            prefix = f.id .. "_white_g" .. f.generation .. "_",
+            counter = 0,
+            entries = {},
+            orders = {},
+            order_dirty = {},
+            texture_epoch = texture_epoch,
+            containers = {
+                [""] = {
+                    key = "",
+                    el = f.white_host,
+                },
+            },
+        }, Backend)
+        changed = true
+    end
+    local stage = entry.layer_backend
     if changed then
-        entry.layer_frame.host.size={bw,bh}
-        entry.layer_frame.white_host.size={bw,bh}
-        entry.layer_frame.matte.size={bw,bh}
-        entry.layer_frame.white_matte.size={bw,bh}
-        local prims={}
-        for _,q in ipairs(p.prims) do
-            assert(q.kind~="field","native TextInput cannot be transformed or placed inside a rounded clip")
-            local c={}
-            for k,v in pairs(q) do c[k]=v end
-            if c.clip=="" then c.x,c.y=c.x-bx,c.y-by end
-            prims[#prims+1]=c
+        entry.layer_frame.host.size = { bw, bh }
+        entry.layer_frame.white_host.size = { bw, bh }
+        entry.layer_frame.matte.size = { bw, bh }
+        entry.layer_frame.white_matte.size = { bw, bh }
+        local prims = {}
+        for _, q in ipairs(p.prims) do
+            assert(
+                q.kind ~= "field",
+                "native TextInput cannot be transformed or placed inside a rounded clip"
+            )
+            local c = {}
+            for k, v in pairs(q) do
+                c[k] = v
+            end
+            if c.clip == "" then
+                c.x, c.y = c.x - bx, c.y - by
+            end
+            prims[#prims + 1] = c
         end
         stage:apply(prims)
         entry.layer_white_backend:apply(prims)
-        entry.source_prims=p.prims
-        entry.source_x,entry.source_y=bx,by
-        entry.source_width,entry.source_height=bw,bh
-        entry.pending_source=entry.pending_source or 2
+        entry.source_prims = p.prims
+        entry.source_x, entry.source_y = bx, by
+        entry.source_width, entry.source_height = bw, bh
+        entry.source_changed_since_refresh = true
+        entry.pending_source = entry.pending_source or 2
     end
-    entry.layer_props,entry.layer_container=p,container
+    entry.layer_props, entry.layer_container = p, container
     -- Содержимое кадра становится доступно после GPU draw. Поворот уже
     -- готового источника обновляется сразу, без повторного снятия кадра.
-    if entry.source_canvas then self:_raster_layer(entry) end
+    if entry.source_canvas then
+        self:_raster_layer(entry)
+    end
 end
 function Backend:_raster_layer(entry)
-    local p=entry.layer_props
-    local bx,by=entry.source_canvas_x,entry.source_canvas_y
-    local source=entry.source_canvas
-    local m=Affine.multiply(p.transform,{1,0,0,1,bx,by})
-    local x0,y0,x1,y1=Affine.bounds(m,0,0,source.width,source.height)
-    x0,y0=math.floor(x0),math.floor(y0)
-    local w,h=math.max(1,math.ceil(x1)-x0),math.max(1,math.ceil(y1)-y0)
-    assert(w<=2048 and h<=2048,"transformed layer output exceeds 2048 pixels")
-    m[5],m[6]=m[5]-x0,m[6]-y0
-    local q={key=p.key,kind="canvas",x=p.x+x0,y=p.y+y0,w=w,h=h,
-        color=color.WHITE,version=raster_version(entry,source,source.width,source.height,m,
-            {mask_radius=p.mask_shape or p.mask_radius,mask_w=p.w,mask_h=p.h}),draw=function(cv)
-            RasterCanvas.composite(cv.raw,w,h,source,source.width,source.height,m,nil,false)
-            mask_layer(cv.raw,w,h,p,x0,y0)
-        end}
-    self:_apply_canvas(entry,entry.layer_container,q)
-    if entry.el then set_prop(entry,entry.el,"zIndex",entry.z or 0) end
+    local p = entry.layer_props
+    local bx, by = entry.source_canvas_x, entry.source_canvas_y
+    local source = entry.source_canvas
+    local m = Affine.multiply(p.transform, { 1, 0, 0, 1, bx, by })
+    local x0, y0, x1, y1 = Affine.bounds(m, 0, 0, source.width, source.height)
+    x0, y0 = math.floor(x0), math.floor(y0)
+    local w, h = math.max(1, math.ceil(x1) - x0), math.max(1, math.ceil(y1) - y0)
+    assert(w <= 2048 and h <= 2048, "transformed layer output exceeds 2048 pixels")
+    m[5], m[6] = m[5] - x0, m[6] - y0
+    local q = {
+        key = p.key,
+        kind = "canvas",
+        x = p.x + x0,
+        y = p.y + y0,
+        w = w,
+        h = h,
+        color = color.WHITE,
+        version = raster_version(entry, source, source.width, source.height, m, {
+            mask_radius = p.mask_shape or p.mask_radius,
+            mask_w = p.w,
+            mask_h = p.h,
+        }),
+        draw = function(cv)
+            RasterCanvas.composite(cv.raw, w, h, source, source.width, source.height, m, {
+                source_buffer = entry.source_buffer,
+            }, false)
+            mask_layer(entry, cv.raw, w, h, p, x0, y0)
+        end,
+    }
+    self:_apply_canvas(entry, entry.layer_container, q)
+    if entry.el then
+        set_prop(entry, entry.el, "zIndex", entry.z or 0)
+    end
+end
+-- Вложенный слой уже имеет RGBA-текстуру: обе подложки используют один результат.
+function Backend:_sync_layer(entry, container)
+    local peer = self.layer_peer.entries[entry.layer_peer_key]
+    local p = peer and peer.canvas_props
+    if not p or not peer.canvas then
+        return false
+    end
+    local changed = entry.peer_version ~= peer.version
+        or entry.peer_name ~= peer.canvas_name
+        or entry.peer_x ~= p.x
+        or entry.peer_y ~= p.y
+        or entry.peer_w ~= peer.cv_w
+        or entry.peer_h ~= peer.cv_h
+    if not changed and entry.el then
+        return false
+    end
+    if not entry.el then
+        entry.el = self:_create(container, "image", "interactive='false'").el
+        self.order_dirty[container.key] = true
+    end
+    set_prop(entry, entry.el, "src", peer.canvas_name)
+    set_prop(entry, entry.el, "region", FLIP_V)
+    set_prop(entry, entry.el, "pos", { floor(p.x), floor(p.y) })
+    set_prop(entry, entry.el, "size", { peer.cv_w, peer.cv_h })
+    set_prop(entry, entry.el, "color", color.to255(p.color or color.WHITE))
+    set_prop(entry, entry.el, "zIndex", entry.z or 0)
+    entry.peer_version, entry.peer_name = peer.version, peer.canvas_name
+    entry.peer_x, entry.peer_y = p.x, p.y
+    entry.peer_w, entry.peer_h = peer.cv_w, peer.cv_h
+    return true
 end
 function Backend:refresh_layers()
-    local changed=false
-    for _,entry in pairs(self.entries) do
+    local changed = false
+    for _, entry in pairs(self.entries) do
+        if entry.layer_peer_key then
+            changed = self:_sync_layer(entry, entry.container) or changed
+        end
         if entry.layer_backend then
+            local source_changed = entry.source_changed_since_refresh
+            entry.source_changed_since_refresh = nil
             if entry.pending_source then
-                entry.pending_source=entry.pending_source-1
-                if entry.pending_source<=0 then
-                    local black=gui.screenshot(entry.layer_frame.id)
-                    local white=gui.screenshot(entry.layer_frame.id.."_white")
-                    if black and white and black.width==white.width and black.height==white.height
-                        and black.width==entry.source_width and black.height==entry.source_height then
+                entry.pending_source = entry.pending_source - 1
+                if entry.pending_source <= 0 then
+                    local black = gui.screenshot(entry.layer_frame.id)
+                    local white = gui.screenshot(entry.layer_frame.id .. "_white")
+                    if
+                        black
+                        and white
+                        and black.width == white.width
+                        and black.height == white.height
+                        and black.width == entry.source_width
+                        and black.height == entry.source_height
+                    then
                         -- Две непрозрачные подложки восстанавливают настоящий RGBA,
                         -- независимо от alpha blend режима framebuffer движка.
-                        local cv=Canvas({black.width,black.height})
-                        local buffer,white_buffer=black:get_data(),white:get_data()
-                        local data,white_data=buffer.bytes,white_buffer.bytes
-                        for i=0,black.width*black.height*4-1,4 do
-                            local br,bg,bb=data[i],data[i+1],data[i+2]
-                            local wr,wg,wb=white_data[i],white_data[i+1],white_data[i+2]
-                            local a=255-max(wr-br,wg-bg,wb-bb)
-                            data[i],data[i+1],data[i+2],data[i+3]=
-                                a>0 and min(255,floor(br*255/a+0.5)) or 0,
-                                a>0 and min(255,floor(bg*255/a+0.5)) or 0,
-                                a>0 and min(255,floor(bb*255/a+0.5)) or 0,a
+                        local cv = Canvas({ black.width, black.height })
+                        local buffer, white_buffer = black:get_data(), white:get_data()
+                        local data, white_data = buffer.bytes, white_buffer.bytes
+                        for i = 0, black.width * black.height * 4 - 1, 4 do
+                            local br, bg, bb = data[i], data[i + 1], data[i + 2]
+                            local wr, wg, wb = white_data[i], white_data[i + 1], white_data[i + 2]
+                            local a = 255 - max(wr - br, wg - bg, wb - bb)
+                            data[i], data[i + 1], data[i + 2], data[i + 3] =
+                                a > 0 and min(255, floor(br * 255 / a + 0.5)) or 0,
+                                a > 0 and min(255, floor(bg * 255 / a + 0.5)) or 0,
+                                a > 0 and min(255, floor(bb * 255 / a + 0.5)) or 0,
+                                a
                         end
                         -- Сохраняем владельца памяти белой подложки до конца
                         -- прохода с указателем; bytearray освобождается через GC.
-                        assert(white_buffer.size==buffer.size,"layer matte data size mismatch")
+                        assert(white_buffer.size == buffer.size, "layer matte data size mismatch")
                         cv:set_data(buffer)
-                        entry.source_canvas=cv
-                        entry.source_canvas_x,entry.source_canvas_y=entry.source_x,entry.source_y
-                        entry.pending_source=nil
+                        entry.source_canvas = cv
+                        entry.source_buffer = buffer
+                        entry.source_canvas_x, entry.source_canvas_y =
+                            entry.source_x, entry.source_y
+                        -- Последняя правка могла прийти до чтения прежнего GPU-кадра.
+                        entry.pending_source = source_changed and 1 or nil
                         self:_raster_layer(entry)
-                        changed=true
-                    else entry.pending_source=1 end
+                        changed = true
+                    else
+                        entry.pending_source = 1
+                    end
                 end
             end
             -- Снимок выше читает предыдущий GPU draw. Обновлённый дочерний
             -- холст попадёт в него только в следующем кадре.
-            local child_changed=entry.layer_backend:refresh_layers()
-            local white_changed=entry.layer_white_backend:refresh_layers()
-            if child_changed or white_changed then entry.pending_source=entry.pending_source or 1 end
+            local child_changed = entry.layer_backend:refresh_layers()
+            local white_changed = entry.layer_white_backend:refresh_layers()
+            if child_changed or white_changed then
+                entry.source_changed_since_refresh = true
+                entry.pending_source = entry.pending_source or 1
+            end
         end
     end
     return changed
@@ -1238,8 +1563,11 @@ function Backend:refresh_text_fields(dt)
             if p.editor_state and p.editor_state:peek() == entry.editor_applied then
                 local old = entry.editor_applied
                 if old.anchor ~= selection[1] or old.caret ~= selection[2] then
-                    local next_value =
-                        { text = old.text, anchor = selection[1], caret = selection[2] }
+                    local next_value = {
+                        text = old.text,
+                        anchor = selection[1],
+                        caret = selection[2],
+                    }
                     p.editor_state.value = next_value
                     entry.editor_applied = next_value
                     if p.on_selection_change then
@@ -1309,7 +1637,9 @@ function Backend:_paint_text_field(entry, p, prims)
                 attrs = attrs .. " font='" .. esc(primitive.font) .. "' valign='top'"
             end
             n = self:_create(
-                { el = paint.el },
+                {
+                    el = paint.el,
+                },
                 primitive.kind == "text" and "label" or "container",
                 attrs,
                 primitive.kind == "text" and "" or nil
@@ -1339,6 +1669,7 @@ end
 
 -- Растровый холст: перерисовка при смене версии или размера.
 function Backend:_apply_canvas(entry, container, p)
+    entry.canvas_props = p
     local w, h = max(1, floor(p.w)), max(1, floor(p.h))
     -- entry.canvas сбрасывается после app.reset_content(): текстура пропала
     local needs = not entry.canvas
@@ -1370,7 +1701,12 @@ function Backend:_apply_canvas(entry, container, p)
         end
         entry.canvas:clear()
         if p.draw then
-            local ok, err = pcall(p.draw, RasterCanvas.wrap(entry.canvas,w,h,RasterCanvas.engine_loader), w, h)
+            local ok, err = pcall(
+                p.draw,
+                RasterCanvas.wrap(entry.canvas, w, h, RasterCanvas.engine_loader),
+                w,
+                h
+            )
             if not ok then
                 print("kompot canvas: " .. tostring(err))
             end
@@ -1393,7 +1729,9 @@ function Backend:_apply_canvas(entry, container, p)
                 )
         )
         entry.el = e.el
-        entry.cache = { pos = { floor(p.x), floor(p.y) } }
+        entry.cache = {
+            pos = { floor(p.x), floor(p.y) },
+        }
         self.order_dirty[container.key] = true
     end
     set_prop(entry, entry.el, "pos", { floor(p.x), floor(p.y) })
@@ -1455,7 +1793,12 @@ function B.mount(opts)
         orders = {},
         order_dirty = {},
         texture_epoch = current_texture_epoch(),
-        containers = { [""] = { key = "", el = host } },
+        containers = {
+            [""] = {
+                key = "",
+                el = host,
+            },
+        },
     }, Backend)
     local measurer = Measurer.new(backend)
     backend.measurer = measurer
@@ -1485,17 +1828,23 @@ function B.mount(opts)
     local app = App.new({
         content = content,
         hook_diagnostics = opts.hook_diagnostics,
+        keyboard_navigation = opts.keyboard_navigation,
         backend = backend,
         measurer = measurer,
         width = w,
         height = h,
     })
-    local handle = { app = app, backend = backend, host = host }
+    local handle = {
+        app = app,
+        backend = backend,
+        host = host,
+    }
+    backend.input = app.input
 
     local warmup = 0
     local last_down, last_rdown = false, false
     local last_keys = {}
-    local pending_tab
+    local pending_tab, pending_escape
     local pending_field_wheel
     -- снимается сторожем HUD, если хост перестал тикать без dispose()
     local inventory_lock = InventoryLock.new()
@@ -1505,16 +1854,21 @@ function B.mount(opts)
             local p, el = entry.field_props, entry.el
             if p and p.multiline and el and el.visible and el.interactive then
                 local pos, size = el.wpos, el.size
-                if x >= pos[1] and y >= pos[2]
-                    and x < pos[1] + size[1] and y < pos[2] + size[2]
+                if
+                    x >= pos[1]
+                    and y >= pos[2]
+                    and x < pos[1] + size[1]
+                    and y < pos[2] + size[2]
                 then
                     local clipped = false
                     local clip = entry.field_container and entry.field_container.el
                     if clip then
                         local pp, ps = clip.wpos, clip.size
                         clipped = clip.visible == false
-                            or x < pp[1] or y < pp[2]
-                            or x >= pp[1] + ps[1] or y >= pp[2] + ps[2]
+                            or x < pp[1]
+                            or y < pp[2]
+                            or x >= pp[1] + ps[1]
+                            or y >= pp[2] + ps[2]
                     end
                     if not clipped and (not top_z or (entry.z or 0) >= top_z) then
                         found, top_z = entry, entry.z or 0
@@ -1532,17 +1886,20 @@ function B.mount(opts)
         end
         return false
     end
+    local lock_inventory = opts.lock_inventory == true
+        or (opts.lock_inventory ~= false and app.input.keyboard_navigation)
     local function block_inventory(block)
         inventory_lock:set(opts.lock_inventory ~= false and block)
     end
     -- Tab по умолчанию привязан к hud.inventory. Перехватываем событие до
     -- стандартного обработчика игры, затем отдаём его фокусу Kompot в кадре.
     local function intercept_tab()
-        if handle.disposed or not inventory_lock.held then
+        if handle.disposed or not app.input.keyboard_navigation or not inventory_lock.held then
             return false
         end
-        pending_tab =
-            { shift = input.is_pressed("key:left-shift") or input.is_pressed("key:right-shift") }
+        pending_tab = {
+            shift = input.is_pressed("key:left-shift") or input.is_pressed("key:right-shift"),
+        }
         for _, entry in pairs(backend.entries) do
             if entry.is_field and entry.el and entry.el.focused then
                 -- node.focused=false только помечает textbox: GUI ещё может
@@ -1557,12 +1914,20 @@ function B.mount(opts)
         return true
     end
     input.add_callback("key:tab", intercept_tab, host, true)
+    -- Отмена верхнего слоя не должна одновременно открывать игровую паузу.
+    input.add_callback("key:escape", function()
+        if handle.disposed or #app.input.focus_scopes == 0 then
+            return false
+        end
+        pending_escape = true
+        return true
+    end, host, true)
     -- Стандартное действие инвентаря VoxelCore тоже привязано к Tab и
     -- выполняется независимо от результата Lua callback key:tab.
-    -- Отключаем его на время оверлея или пока указатель/фокус в обычном UI.
+    -- Блокируем его для навигации по UI и во время нативного ввода текста.
     -- lock_inventory = false: хост с target не трогает Tab (например, экран
     -- во фрейме-текстуре, который не перекрывает игровой интерфейс).
-    local lock_target = opts.target ~= nil and opts.lock_inventory ~= false
+    local lock_target = opts.target ~= nil and lock_inventory
     if lock_target then
         block_inventory(true)
     end
@@ -1602,9 +1967,13 @@ function B.mount(opts)
             if pending_field_wheel then
                 local pending = pending_field_wheel
                 pending_field_wheel = nil
-                if pending.el.valid and pending.el.scroll == pending.scroll then
+                if pending.el.exists and pending.el.scroll == pending.scroll then
                     app.input:scroll_ancestors(
-                        pending.key, pending.x, pending.y, pending.wheel, app.regions
+                        pending.key,
+                        pending.x,
+                        pending.y,
+                        pending.wheel,
+                        app.regions
                     )
                 end
             end
@@ -1652,13 +2021,31 @@ function B.mount(opts)
                     inside = inside,
                 }
                 local field_focused = text_focused()
-                local keys = { "enter", "space", "escape", "left", "right", "up", "down" }
+                local code_focused = false
+                for _, entry in pairs(backend.entries) do
+                    if entry.is_field and entry.el.focused and entry.field_props.scroll_state then
+                        code_focused = true
+                    end
+                end
+                local keys = {
+                    "enter",
+                    "space",
+                    "escape",
+                    "left",
+                    "right",
+                    "up",
+                    "down",
+                    "home",
+                    "end",
+                    "page-up",
+                    "page-down",
+                }
                 for _, key in ipairs(keys) do
                     local pressed = input.is_pressed("key:" .. key)
                     if
                         pressed
                         and not last_keys[key]
-                        and not field_focused
+                        and (not field_focused or code_focused or key == "escape")
                         and (inside or app.input.focus_key)
                     then
                         ev.key = key
@@ -1670,7 +2057,9 @@ function B.mount(opts)
                 for _, key in ipairs(keys) do
                     last_keys[key] = input.is_pressed("key:" .. key)
                 end
-                if pending_tab then
+                if pending_escape then
+                    ev.key, pending_escape = "escape", nil
+                elseif pending_tab then
                     ev.key, ev.shift = "tab", pending_tab.shift
                     pending_tab = nil
                 end
@@ -1678,12 +2067,32 @@ function B.mount(opts)
                 last_rdown = rdown
             end
             app:frame(dt, ev)
+            local native_target
+            for _, entry in pairs(backend.entries) do
+                local p = entry.field_props
+                if
+                    p
+                    and not p.input_blocked
+                    and p.enabled ~= false
+                    and app.input.focus_key == p.input_key
+                then
+                    native_target = entry.el
+                    break
+                end
+            end
+            if native_target then
+                if not native_target.focused then
+                    native_target.focused = true
+                end
+            elseif text_focused() and not host.focused then
+                host.focused = true
+            end
             backend:refresh_text_fields(dt)
             block_inventory(
-                lock_target
-                    or app.input.over_ui
-                    or app.input.focus_key ~= nil
-                    or text_focused()
+                (
+                    lock_inventory
+                    and (lock_target or app.input.over_ui or app.input.focus_key ~= nil)
+                ) or text_focused()
             )
             -- шрифт стал готов: перераскладка с настоящими размерами
             if measurer.pending then

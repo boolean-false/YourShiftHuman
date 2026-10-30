@@ -6,7 +6,11 @@ local B = {}
 B.__index = B
 
 function B.new()
-    return setmetatable({ dl = {}, applies = 0, cursor = nil }, B)
+    return setmetatable({
+        dl = {},
+        applies = 0,
+        cursor = nil,
+    }, B)
 end
 
 function B:apply(dl)

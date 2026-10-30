@@ -1,5 +1,6 @@
 local K = require "kompot:kompot"
 local T = require "kompot:ui/tokens"
+local visibility = require "kompot:ui/components/visibility"
 local M = K.M
 local min, max = math.min, math.max
 local function clamp(v, lo, hi)
@@ -7,6 +8,11 @@ local function clamp(v, lo, hi)
 end
 
 return function(Panel, Button)
+    -- Окно с управляемой видимостью и геометрией.
+    -- props: visible, visible_state, on_close, on_dismiss, close_text, title, icon,
+    --   accent, variant, width, height, header, placement, z, modal, draggable,
+    --   resizable, bounds, on_bounds_change, min_width, min_height, max_width,
+    --   max_height, padding, spacing, background, radius, surface, modifier, title_modifier
     return K.component(function(props, content)
         props = T.props("Window", props)
         local th, rt = T.current(), K.runtime()
@@ -15,7 +21,11 @@ return function(Panel, Button)
             return {}
         end)
         local bounds = props.bounds or saved.value
-        local v = K.animate(props.visible ~= false and 1 or 0, th.motion.fast)
+        assert(
+            not props.visible_state or props.visible == nil,
+            "use visible or visible_state, not both"
+        )
+        local v, hidden = visibility(props.visible ~= false, th.motion.fast, props.visible_state)
         local function update(dx, dy, edge)
             local g = geometry
             if not g.x then
@@ -63,11 +73,15 @@ return function(Panel, Button)
                 props.on_bounds_change(next_bounds)
             end
         end
-        if v < 0.01 and props.visible == false then
+        if hidden then
             return
         end
         if props.modal then
-            K.Popup({ placement = "fill", key = "win_scrim", z = props.z or 0 }, function()
+            K.Popup({
+                placement = "fill",
+                key = "win_scrim",
+                z = props.z or 0,
+            }, function()
                 K.Box({
                     modifier = M:fill_max_size()
                         :background(K.color.mul_alpha(th.colors.scrim, v))
@@ -80,6 +94,7 @@ return function(Panel, Button)
                             cursor = "arrow",
                             focusable = false,
                             focus_scope = true,
+                            on_escape = props.on_dismiss or props.on_close,
                         }),
                 })
             end)
@@ -107,7 +122,10 @@ return function(Panel, Button)
                 )
             end
         end
-        K.Popup({ placement = placement, z = props.z or 0 }, function()
+        K.Popup({
+            placement = placement,
+            z = props.z or 0,
+        }, function()
             local frame = (props.modifier or M)
                 :alpha(v)
                 :offset(0, math.floor((1 - v) * 10))
@@ -119,7 +137,9 @@ return function(Panel, Button)
                 title = (title or M):draggable({
                     cursor = "all-resize",
                     on_event = function(e)
-                        if e.type == "move" then update(e.parent_dx, e.parent_dy) end
+                        if e.type == "move" then
+                            update(e.parent_dx, e.parent_dy)
+                        end
                     end,
                 })
             end
@@ -195,7 +215,9 @@ return function(Panel, Button)
                                 modifier = M:block_pointer():draggable({
                                     cursor = cursor,
                                     on_event = function(e)
-                                        if e.type == "move" then update(e.parent_dx, e.parent_dy, edge) end
+                                        if e.type == "move" then
+                                            update(e.parent_dx, e.parent_dy, edge)
+                                        end
                                     end,
                                 }),
                             })

@@ -18,6 +18,7 @@
 
 local Corners = require "kompot:kompot/core/corners"
 local color = require "kompot:kompot/core/color"
+local R = require "kompot:kompot/core/runtime"
 local L = require "kompot:kompot/core/layout"
 
 local A = require "kompot:kompot/core/affine"
@@ -51,10 +52,20 @@ local function push(p)
 end
 
 local function region_for(key, x, y, w, h, clip)
-    local r = { key = key, x = x, y = y, w = w, h = h, clip = clip,
+    local r = {
+        key = key,
+        x = x,
+        y = y,
+        w = w,
+        h = h,
+        clip = clip,
+        keyboard_navigation = rt_cur.app.input.keyboard_navigation,
         singular = active_matrix and not A.inverse(active_matrix),
-        inverse = A.inverse(active_matrix), parent_inverse = active_space.inverse,
-        parent_x = active_space.x, parent_y = active_space.y }
+        inverse = A.inverse(active_matrix),
+        parent_inverse = active_space.inverse,
+        parent_x = active_space.x,
+        parent_y = active_space.y,
+    }
     regions[#regions + 1] = r
     return r
 end
@@ -73,7 +84,11 @@ local function ordered(children)
     end
     local arr = {}
     for i, c in ipairs(children) do
-        arr[i] = { c = c, i = i, z = L.parent_data(c).z or 0 }
+        arr[i] = {
+            c = c,
+            i = i,
+            z = L.parent_data(c).z or 0,
+        }
     end
     table.sort(arr, function(a, b)
         if a.z ~= b.z then
@@ -90,10 +105,18 @@ local function ordered(children)
     return res, indices
 end
 
--- Geometry can split/merge adjacent input modifiers. Use the full membership
--- of each group, so a key can never be reassigned to another handler.
-local input_types = {click=true, focus=true, hover=true, drag=true, drop=true,
-    pointer=true, wheel=true, cursor=true, block=true}
+-- Ключ учитывает весь состав группы ввода, чтобы не перейти к другому обработчику.
+local input_types = {
+    click = true,
+    focus = true,
+    hover = true,
+    drag = true,
+    drop = true,
+    pointer = true,
+    wheel = true,
+    cursor = true,
+    block = true,
+}
 local function input_groups(node, path, x, y)
     local groups, group = {}, nil
     local ordinal = 0
@@ -105,10 +128,18 @@ local function input_groups(node, path, x, y)
             ordinal = ordinal + 1
             local id = tostring(ordinal) .. ":" .. t
             if t == "scroll" then
-                groups[i] = {key=path .. "|r" .. id}
+                groups[i] = {
+                    key = path .. "|r" .. id,
+                }
             else
                 if not group or group.x ~= x or group.y ~= y or group.w ~= w or group.h ~= h then
-                    group = {key=path .. "|r" .. id, x=x, y=y, w=w, h=h}
+                    group = {
+                        key = path .. "|r" .. id,
+                        x = x,
+                        y = y,
+                        w = w,
+                        h = h,
+                    }
                 else
                     group.key = group.key .. "," .. id
                 end
@@ -128,6 +159,7 @@ local function visit_fresh(node, x, y, clip, alpha, path)
     local lx, ly = x, y
     local mods = node.mods
     local region = nil
+    local background
     local groups = input_groups(node, path, x, y)
     local function input_region(i, x, y, w, h, c)
         return region_for(groups[i].key, x, y, w, h, c)
@@ -138,21 +170,46 @@ local function visit_fresh(node, x, y, clip, alpha, path)
         local t = m.t
         if t == "transform" then
             local rad = math.rad(m.angle)
-            local a,b,c,d = math.cos(rad)*m.sx, math.sin(rad)*m.sx, -math.sin(rad)*m.sy, math.cos(rad)*m.sy
+            local a, b, c, d =
+                math.cos(rad) * m.sx,
+                math.sin(rad) * m.sx,
+                -math.sin(rad) * m.sy,
+                math.cos(rad) * m.sy
             local key = path .. "|layer" .. i
-            local local_matrix = A.around(a,b,c,d,w*m.px,h*m.py)
-            local world = A.around(a,b,c,d,lx+w*m.px,ly+h*m.py)
-            layers[#layers+1] = {start=#out, clip=clip, matrix=active_matrix,
-                p={kind="layer",key=key,clip=clip.key,x=lx-clip.ox,y=ly-clip.oy,
-                    w=w,h=h,transform=local_matrix}}
-            active_matrix = A.multiply(active_matrix,world)
+            local local_matrix = A.around(a, b, c, d, w * m.px, h * m.py)
+            local world = A.around(a, b, c, d, lx + w * m.px, ly + h * m.py)
+            layers[#layers + 1] = {
+                start = #out,
+                clip = clip,
+                matrix = active_matrix,
+                p = {
+                    kind = "layer",
+                    key = key,
+                    clip = clip.key,
+                    x = lx - clip.ox,
+                    y = ly - clip.oy,
+                    w = w,
+                    h = h,
+                    transform = local_matrix,
+                },
+            }
+            active_matrix = A.multiply(active_matrix, world)
             -- Сам слой не обрезает содержимое; clip() внутри задаёт явную обрезку.
-            clip = {key=key,ox=lx,oy=ly,x0=clip.x0,y0=clip.y0,x1=clip.x1,y1=clip.y1,
-                parent=clip, passthrough=true}
+            clip = {
+                key = key,
+                ox = lx,
+                oy = ly,
+                x0 = clip.x0,
+                y0 = clip.y0,
+                x1 = clip.x1,
+                y1 = clip.y1,
+                parent = clip,
+                passthrough = true,
+            }
             region = nil
         elseif t == "bg" then
             if m.color and (m.color[4] or 1) > 0 then
-                push({
+                background = {
                     key = path .. "|b" .. i,
                     kind = "rect",
                     clip = clip.key,
@@ -162,7 +219,8 @@ local function visit_fresh(node, x, y, clip, alpha, path)
                     h = h,
                     color = mul_alpha(m.color, alpha),
                     radius = Corners.resolve(m.radius, w, h),
-                })
+                }
+                push(background)
             end
         elseif t == "image_bg" then
             if (m.color[4] or 1) * alpha > 0 then
@@ -179,6 +237,26 @@ local function visit_fresh(node, x, y, clip, alpha, path)
                 })
             end
         elseif t == "border" then
+            local radius = Corners.resolve(m.radius, w, h)
+            local bw = max(0, floor(m.width + 0.5))
+            -- Корректируем только соседнюю заливку с тем же контуром и размерами.
+            if
+                background
+                and out[#out] == background
+                and background.clip == clip.key
+                and background.x == lx - clip.ox
+                and background.y == ly - clip.oy
+                and background.w == w
+                and background.h == h
+                and R.shallow_equal(background.shape or background.radius, radius)
+                and Corners.any(radius)
+                and bw > 0
+            then
+                background.under_border = {
+                    width = bw,
+                    alpha = floor((m.color[4] or 1) * alpha * 255 + 0.5) / 255,
+                }
+            end
             push({
                 key = path .. "|o" .. i,
                 kind = "border",
@@ -189,7 +267,7 @@ local function visit_fresh(node, x, y, clip, alpha, path)
                 h = h,
                 width = m.width,
                 color = mul_alpha(m.color, alpha),
-                radius = Corners.resolve(m.radius, w, h),
+                radius = radius,
             })
         elseif t == "shadow" then
             local b = m.blur
@@ -211,14 +289,37 @@ local function visit_fresh(node, x, y, clip, alpha, path)
             local radius = Corners.resolve(m.radius, w, h)
             if t == "clip" and Corners.any(radius) then
                 local key = path .. "|mask" .. i
-                layers[#layers+1] = {start=#out, clip=clip, matrix=active_matrix,
-                    p={kind="layer",key=key,clip=clip.key,x=lx-clip.ox,y=ly-clip.oy,
-                        w=w,h=h,transform=A.identity(),
-                        mask_radius=not (type(radius)=="table" and radius.kind) and radius or nil,
-                        mask_shape=type(radius)=="table" and radius.kind and radius or nil}}
+                layers[#layers + 1] = {
+                    start = #out,
+                    clip = clip,
+                    matrix = active_matrix,
+                    p = {
+                        kind = "layer",
+                        key = key,
+                        clip = clip.key,
+                        x = lx - clip.ox,
+                        y = ly - clip.oy,
+                        w = w,
+                        h = h,
+                        transform = A.identity(),
+                        mask_radius = not (type(radius) == "table" and radius.kind) and radius
+                            or nil,
+                        mask_shape = type(radius) == "table" and radius.kind and radius or nil,
+                    },
+                }
                 active_matrix = active_matrix or A.identity()
-                clip = {key=key,ox=lx,oy=ly,x0=clip.x0,y0=clip.y0,x1=clip.x1,y1=clip.y1,
-                    parent=clip,passthrough=true,rounded_mask=true}
+                clip = {
+                    key = key,
+                    ox = lx,
+                    oy = ly,
+                    x0 = clip.x0,
+                    y0 = clip.y0,
+                    x1 = clip.x1,
+                    y1 = clip.y1,
+                    parent = clip,
+                    passthrough = true,
+                    rounded_mask = true,
+                }
             end
             local x0, y0 = max(clip.x0, lx), max(clip.y0, ly)
             local x1, y1 = min(clip.x1, lx + w), min(clip.y1, ly + h)
@@ -232,10 +333,25 @@ local function visit_fresh(node, x, y, clip, alpha, path)
                 w = w,
                 h = h,
             })
-            clip = { key = key, ox = lx, oy = ly, x0 = x0, y0 = y0, x1 = x1, y1 = y1,
-                parent=clip, inverse=A.inverse(active_matrix), x=lx,y=ly,w=w,h=h, radius=radius }
+            clip = {
+                key = key,
+                ox = lx,
+                oy = ly,
+                x0 = x0,
+                y0 = y0,
+                x1 = x1,
+                y1 = y1,
+                parent = clip,
+                inverse = A.inverse(active_matrix),
+                x = lx,
+                y = ly,
+                w = w,
+                h = h,
+                radius = radius,
+            }
             if t == "scroll" then
                 local r = input_region(i, lx, ly, w, h, clip)
+                clip.scroll, clip.axis = m.state, m.axis
                 r.scroll = m.state
                 r.axis = m.axis
             end
@@ -330,8 +446,15 @@ local function visit_fresh(node, x, y, clip, alpha, path)
                 })
             end
         elseif t == "on_size" or t == "on_placed" or t == "tag" then
-            placed[#placed + 1] = { m = m, key = path .. "|p" .. i, owner = node.placement_owner,
-                x = lx, y = ly, w = w, h = h }
+            placed[#placed + 1] = {
+                m = m,
+                key = path .. "|p" .. i,
+                owner = node.placement_owner,
+                x = lx,
+                y = ly,
+                w = w,
+                h = h,
+            }
         end
         lx = lx + node.lox[i]
         ly = ly + node.loy[i]
@@ -443,11 +566,36 @@ local function visit_fresh(node, x, y, clip, alpha, path)
     elseif kind == "field" then
         local field_clip = clip
         while field_clip do
-            assert(not field_clip.rounded_mask, "native TextInput cannot be placed inside a shaped clip (rounded clip or cut clip); use rounded background/border around the field")
+            assert(
+                not field_clip.rounded_mask,
+                "native TextInput cannot be placed inside a shaped clip (rounded clip or cut clip); use rounded background/border around the field"
+            )
             field_clip = field_clip.parent
         end
-        assert(not active_matrix,"native TextInput cannot be transformed")
+        assert(not active_matrix, "native TextInput cannot be transformed")
+        local field_region = region_for(path .. "|field", lx, ly, cw, ch, clip)
+        field_region.focus = {
+            enabled = p.enabled ~= false,
+            on_key = p.scroll_state and function(key)
+                local scroll, line = p.scroll_state, node.field_line_height
+                if key == "up" then
+                    scroll:scroll_by(-line)
+                elseif key == "down" then
+                    scroll:scroll_by(line)
+                elseif key == "page-up" then
+                    scroll:scroll_by(-math.max(line, scroll.view - line))
+                elseif key == "page-down" then
+                    scroll:scroll_by(math.max(line, scroll.view - line))
+                elseif key == "home" then
+                    scroll:scroll_to(0)
+                elseif key == "end" then
+                    scroll:scroll_to(scroll.max)
+                end
+            end or nil,
+        }
         push({
+            input_key = field_region.key,
+            scroll_state = p.scroll_state,
             key = path .. "|f",
             kind = "field",
             clip = clip.key,
@@ -470,6 +618,7 @@ local function visit_fresh(node, x, y, clip, alpha, path)
             syntax = p.syntax,
             line_numbers = p.line_numbers,
             editable = p.editable,
+            enabled = p.enabled,
             wrap = p.wrap,
             line_height = node.field_line_height,
             presentation = p.presentation,
@@ -499,37 +648,58 @@ local function visit_fresh(node, x, y, clip, alpha, path)
         for idx, c in ipairs(sorted) do
             if c.kind == "anchor" then
                 -- якорь всплывающего слоя: область содержимого родителя
-                local x0,y0,x1,y1=A.bounds(active_matrix,lx,ly,cw,ch)
-                local rect = { x = x0, y = y0, w = x1-x0, h = y1-y0 }
+                local x0, y0, x1, y1 = A.bounds(active_matrix, lx, ly, cw, ch)
+                local rect = {
+                    x = x0,
+                    y = y0,
+                    w = x1 - x0,
+                    h = y1 - y0,
+                }
                 rt_cur.anchors[c.params.id] = rect
                 anchor_log[#anchor_log + 1] = { c.params.id, rect }
             else
                 local ckey = c.key ~= nil and ("k" .. tostring(c.key))
                     or tostring(indices and indices[c] or idx)
-                visit(c, lx, ly, clip, alpha, path .. "/" .. ckey, active_matrix,
-                    {x=lx,y=ly,inverse=A.inverse(active_matrix)})
+                visit(c, lx, ly, clip, alpha, path .. "/" .. ckey, active_matrix, {
+                    x = lx,
+                    y = ly,
+                    inverse = A.inverse(active_matrix),
+                })
             end
         end
     end
-    for i=#layers,1,-1 do
-        local layer=layers[i]
-        local prims={}
-        for j=layer.start+1,#out do
-            local p=out[j]
-            if p.clip==layer.p.key then p.clip="" end
-            prims[#prims+1]=p
-            out[j]=nil
+    for i = #layers, 1, -1 do
+        local layer = layers[i]
+        local prims = {}
+        for j = layer.start + 1, #out do
+            local p = out[j]
+            if p.clip == layer.p.key then
+                p.clip = ""
+            end
+            prims[#prims + 1] = p
+            out[j] = nil
         end
         -- Последовательные преобразования объединяются до растеризации:
         -- текст и изображение выбираются один раз, без потери промежуточных пикселей.
-        if not layer.p.mask_radius and not layer.p.mask_shape and #prims==1 and prims[1].kind=="layer" and not prims[1].mask_radius and not prims[1].mask_shape and prims[1].clip=="" then
-            local inner=prims[1]
-            layer.p.transform=A.multiply(layer.p.transform,A.multiply({1,0,0,1,inner.x,inner.y},inner.transform))
-            prims=inner.prims
+        if
+            not layer.p.mask_radius
+            and not layer.p.mask_shape
+            and #prims == 1
+            and prims[1].kind == "layer"
+            and not prims[1].mask_radius
+            and not prims[1].mask_shape
+            and prims[1].clip == ""
+        then
+            local inner = prims[1]
+            layer.p.transform = A.multiply(
+                layer.p.transform,
+                A.multiply({ 1, 0, 0, 1, inner.x, inner.y }, inner.transform)
+            )
+            prims = inner.prims
         end
-        layer.p.prims=prims
-        out[#out+1]=layer.p
-        active_matrix=layer.matrix
+        layer.p.prims = prims
+        out[#out + 1] = layer.p
+        active_matrix = layer.matrix
     end
 end
 
@@ -543,7 +713,12 @@ end
 
 function visit(node, ax, ay, clip, alpha, path, matrix, space)
     local old_matrix, old_space = active_matrix, active_space
-    active_matrix, active_space = matrix, space or {x=0,y=0,inverse=A.identity()}
+    active_matrix, active_space =
+        matrix, space or {
+            x = 0,
+            y = 0,
+            inverse = A.identity(),
+        }
     local x, y = ax + (node.x or 0), ay + (node.y or 0)
     local o0, r0, p0, a0 = #out, #regions, #placed, #anchor_log
     local rc = node._rc
@@ -598,7 +773,8 @@ function visit(node, ax, ay, clip, alpha, path, matrix, space)
         node._rc = {
             pass = render_pass,
             in_layer = matrix ~= nil,
-            px = (space and space.x) or 0, py = (space and space.y) or 0,
+            px = (space and space.x) or 0,
+            py = (space and space.y) or 0,
             x = x,
             y = y,
             alpha = alpha,
@@ -625,7 +801,7 @@ function visit(node, ax, ay, clip, alpha, path, matrix, space)
         return
     end
     rc.in_layer = matrix ~= nil
-    rc.px,rc.py=(space and space.x) or 0,(space and space.y) or 0
+    rc.px, rc.py = (space and space.x) or 0, (space and space.y) or 0
     rc.pass, rc.x, rc.y, rc.alpha, rc.path = render_pass, x, y, alpha, path
     rc.ck, rc.cox, rc.coy = clip.key, clip.ox, clip.oy
     rc.cx0, rc.cy0, rc.cx1, rc.cy1 = clip.x0, clip.y0, clip.x1, clip.y1
@@ -636,28 +812,49 @@ end
 
 -- Границы содержимого слоя, включая вложенные преобразования и переполнение.
 function Render.bounds(prims)
-    local inf=math.huge
-    local clips={ [""]={ox=0,oy=0,x0=-inf,y0=-inf,x1=inf,y1=inf} }
-    local x0,y0,x1,y1=inf,inf,-inf,-inf
-    for _,p in ipairs(prims) do
-        local c=clips[p.clip or ""] or clips[""]
-        local x,y=c.ox+p.x,c.oy+p.y
-        local a,b,e,f=x,y,x+p.w,y+p.h
-        if p.kind=="layer" then
-            local bx,by,bw,bh=Render.bounds(p.prims)
-            a,b,e,f=A.bounds(p.transform,bx,by,bw,bh)
-            a,b,e,f=a+x,b+y,e+x,f+y
+    local inf = math.huge
+    local clips = {
+        [""] = {
+            ox = 0,
+            oy = 0,
+            x0 = -inf,
+            y0 = -inf,
+            x1 = inf,
+            y1 = inf,
+        },
+    }
+    local x0, y0, x1, y1 = inf, inf, -inf, -inf
+    for _, p in ipairs(prims) do
+        local c = clips[p.clip or ""] or clips[""]
+        local x, y = c.ox + p.x, c.oy + p.y
+        local a, b, e, f = x, y, x + p.w, y + p.h
+        if p.kind == "layer" then
+            local bx, by, bw, bh = Render.bounds(p.prims)
+            a, b, e, f = A.bounds(p.transform, bx, by, bw, bh)
+            a, b, e, f = a + x, b + y, e + x, f + y
         end
-        a,b,e,f=math.max(a,c.x0),math.max(b,c.y0),math.min(e,c.x1),math.min(f,c.y1)
-        if p.kind=="clip" then
-            clips[p.key]={ox=x,oy=y,x0=a,y0=b,x1=e,y1=f}
+        a, b, e, f = math.max(a, c.x0), math.max(b, c.y0), math.min(e, c.x1), math.min(f, c.y1)
+        if p.kind == "clip" then
+            clips[p.key] = {
+                ox = x,
+                oy = y,
+                x0 = a,
+                y0 = b,
+                x1 = e,
+                y1 = f,
+            }
         end
-        if e>a and f>b then
-            x0,y0,x1,y1=math.min(x0,a),math.min(y0,b),math.max(x1,e),math.max(y1,f)
+        if e > a and f > b then
+            x0, y0, x1, y1 = math.min(x0, a), math.min(y0, b), math.max(x1, e), math.max(y1, f)
         end
     end
-    if x0==inf then return 0,0,1,1 end
-    return math.floor(x0),math.floor(y0),math.max(1,math.ceil(x1)-math.floor(x0)),math.max(1,math.ceil(y1)-math.floor(y0))
+    if x0 == inf then
+        return 0, 0, 1, 1
+    end
+    return math.floor(x0),
+        math.floor(y0),
+        math.max(1, math.ceil(x1) - math.floor(x0)),
+        math.max(1, math.ceil(y1) - math.floor(y0))
 end
 
 -- Строит список примитивов и областей ввода. Возвращает dl, regions, placed.
@@ -673,7 +870,15 @@ function Render.run(rt, root)
     focus_visible = input and input.focus_visible
     rt.anchors = {}
     local w, h = rt.width, rt.height
-    local clip = { key = "", ox = 0, oy = 0, x0 = 0, y0 = 0, x1 = w, y1 = h }
+    local clip = {
+        key = "",
+        ox = 0,
+        oy = 0,
+        x0 = 0,
+        y0 = 0,
+        x1 = w,
+        y1 = h,
+    }
     visit(root, 0, 0, clip, 1, "r")
     -- всплывающие слои поверх всего
     for oi, ov in ipairs(rt.overlays) do
@@ -681,17 +886,35 @@ function Render.run(rt, root)
         local anchor = ov.anchor and rt.anchors[ov.anchor] or nil
         local px, py = ov.place(anchor, node.w, node.h, w, h)
         node.x, node.y = floor(px), floor(py)
+        local first_region, first_primitive = #regions + 1, #out + 1
+        local previous_boundary = modal_boundary
         visit(node, 0, 0, clip, 1, "o" .. (ov.key or oi))
+        if ov.interactive == false then
+            modal_boundary = previous_boundary
+        end
+        for i = first_region, #regions do
+            regions[i].disabled = ov.interactive == false
+        end
+        for i = first_primitive, #out do
+            if out[i].kind == "field" then
+                out[i].input_disabled = ov.interactive == false
+            end
+        end
     end
     for i, p in ipairs(out) do
         if p.kind == "field" then
-            p.input_blocked = i <= modal_boundary
+            p.input_blocked = i <= modal_boundary or p.input_disabled == true
         end
     end
     local dl, rg, pl = out, regions, placed
     -- App может дописать в dl примитивы ошибки: отрезки кэша их не задевают
-    rt._render_prev =
-        { pass = render_pass, out = dl, regions = rg, placed = pl, anchors = anchor_log }
+    rt._render_prev = {
+        pass = render_pass,
+        out = dl,
+        regions = rg,
+        placed = pl,
+        anchors = anchor_log,
+    }
     out, regions, placed, rt_cur, prev, anchor_log = nil, nil, nil, nil, nil, nil
     return dl, rg, pl
 end

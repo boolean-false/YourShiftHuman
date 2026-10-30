@@ -75,7 +75,9 @@ local handle
 local Screen = K.component(function()
     local count = K.state(0)
 
-    UI.Panel({ title = "Первый экран" }, function()
+    UI.Panel({
+        title = "Первый экран",
+    }, function()
         K.Text("Нажатий: " .. count.value)
         UI.Button({
             text = "Нажать",
