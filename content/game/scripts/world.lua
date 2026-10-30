@@ -7,6 +7,7 @@ local Production = require("game:production")
 local Delivery = require("game:delivery")
 local Mission = require("game:mission")
 local Session = require("game:session")
+local Sink = require("game:sink")
 
 function on_world_open()
     Session.open()
@@ -19,6 +20,7 @@ function on_world_open()
     world.set_day_time_speed(0)
 
     Source.clear()
+    Sink.clear()
     Smelter.clear()
     Assembler.clear()
     Conveyor.clear()
@@ -56,6 +58,7 @@ function on_world_save()
 end
 
 function on_world_quit()
+    Sink.clear()
     Mission.save()
     Delivery.clear()
     Source.clear()

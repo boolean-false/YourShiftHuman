@@ -222,6 +222,10 @@ function M.create(config)
         processing = {}
     end
 
+    function machine.locations()
+        return models
+    end
+
     return machine
 end
 

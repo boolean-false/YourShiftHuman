@@ -1,6 +1,25 @@
 local Products = require("game:products")
 local Session = require("game:session")
 local M = {}
+local Utils = require("game:utils")
+local locations = {}
+
+function M.register(x, y, z)
+    if block.is_segment(x, y, z) then
+        return
+    end
+    locations[Utils.key(x, y, z)] = { x = x, y = y, z = z }
+end
+
+function M.remove(x, y, z)
+    locations[Utils.key(x, y, z)] = nil
+end
+function M.locations()
+    return locations
+end
+function M.clear()
+    locations = {}
+end
 
 M.types = { "all", "ore", "ingot", "gear", "rod", "gearbox" }
 
@@ -19,13 +38,17 @@ function M.set_type(x, y, z, index)
     if not Session.editing or not M.types[index] or block.get(x, y, z) ~= block.index("game:sink") then
         return false
     end
-    if M.get_type(x, y, z) == index then return false end
+    if M.get_type(x, y, z) == index then
+        return false
+    end
     block.set_user_bits(x, y, z, 0, 3, index - 1)
     return true
 end
 
 function M.can_accept(x, y, z, item_name)
-    if not Products[item_name] then return false end
+    if not Products[item_name] then
+        return false
+    end
     local wanted = M.types[M.get_type(x, y, z)]
     return wanted == "all" or wanted == item_name
 end
