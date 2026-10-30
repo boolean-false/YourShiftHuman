@@ -1,0 +1,43 @@
+local K = require("kompot:kompot")
+local E = require("game:ui/components")
+local Parts = require("game:ui/menu_parts")
+local Theme = require("game:ui/theme")
+local C = Theme.colors
+
+local Hud = K.component(function(p)
+    local top_width = math.max(240, math.min(650, p.w - 440))
+    E.panel({ x = 20, y = 20, width = top_width, height = 96, spacing = 7 }, function()
+        Parts.text(string.format("АКТ %02d / %s", p.index, p.title), "label")
+        Parts.text(p.goals, "body", C.blue)
+        Parts.text(p.status, "caption", C.muted)
+    end)
+    E.panel({ x = p.w - 400, y = 20, width = 380, height = 96, spacing = 8 }, function()
+        Parts.text("ПРОИЗВОДСТВО", "label")
+        K.Row({ spacing = 8 }, function()
+            E.button(p.paused and "ПУСК / SPACE" or "ПАУЗА / SPACE", p.on_run, 151, p.paused and "yellow" or "secondary", not p.completed)
+            E.button("×" .. p.speed, p.on_speed, 61, "secondary", not p.completed)
+            E.button("ОЧИСТИТЬ", p.on_flush, 116, "secondary", not p.completed)
+        end)
+    end)
+    E.panel({ x = 20, y = p.h - 132, width = p.w - 40, height = 112, spacing = 10 }, function()
+        Parts.text(p.hint or "Проверьте путь от подачи до приёмки", "body", p.error and C.red or C.ink)
+        K.Row({ spacing = 7 }, function()
+            local width = math.floor((p.w - 118) / 7)
+            for i, tool in ipairs(p.tools) do
+                local index = i
+                E.button(tool.name, function()
+                    p.on_tool(index)
+                end, width, p.tool == i and "yellow" or "secondary", tool.available and not p.completed)
+            end
+            E.button("СНОС / X", p.on_erase, width, p.erase and "yellow" or "secondary", not p.completed)
+            E.button("КУРАТОР", p.on_curator, width, "secondary", not p.completed)
+            E.button("ПАМЯТКА", p.on_help, width, "secondary")
+        end)
+    end)
+end)
+K.preview("Игровые панели", { width = 1280, height = 760, padding = 0, theme = Theme.theme, group = "Экраны" }, function()
+    Hud({ w = 1280, h = 760, index = 1, title = "Тестовое задание 1", goals = "Шестерёнка: 40 / 60 в мин", status = "Ожидаем стабильный поток", paused = true, speed = 1,
+          tools = { { name = "Конвейер", available = true }, { name = "Разделитель", available = true }, { name = "Объединитель", available = true }, { name = "Фильтр" } }, on_tool = function()
+        end })
+end)
+return Hud

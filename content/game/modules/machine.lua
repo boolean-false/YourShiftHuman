@@ -194,20 +194,20 @@ function M.create(config)
         for _, item_name in ipairs({ "ore", "ingot", "gear", "rod" }) do
             if ingredients[item_name] then
                 if (stock[item_name] or 0) < ingredients[item_name] then
-                    status = "Ждёт: " .. Products[item_name].caption
+                    status = "Ожидает: " .. Products[item_name].caption
                 end
                 inputs[#inputs + 1] = Products[item_name].caption .. " " .. (stock[item_name] or 0) .. "/4"
             end
         end
         if state and (state.output or state.ready) then
-            status = "Ждёт свободный выход"
+            status = "Выход занят"
         end
         local output = config.output or recipes[next(recipes)]
         if config.get_output then
             output = config.get_output(x, y, z)
         end
         return status .. "\nВыпуск: " .. Products[output].caption .. " / до " ..
-                math.floor(1200 / process_ticks) .. " в мин\n" .. table.concat(inputs, " · ")
+                math.floor(1200 / process_ticks) .. " шт/мин\n" .. table.concat(inputs, " · ")
     end
 
     function machine.clear_process()

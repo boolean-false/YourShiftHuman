@@ -1,85 +1,62 @@
 local K = require("kompot:kompot")
-local UI = require("kompot:ui")
+local Theme = require("game:ui/theme")
 local Hover = require("game:hover")
 local Build = require("game:build")
 local Production = require("game:production")
-local EquipmentDialogs = require("game:ui/equipment_dialogs")
-local DeliveryPanel = require("game:ui/delivery_panel")
-local MissionPanel = require("game:ui/mission_panel")
-local CompletionDialog = require("game:ui/completion_dialog")
+local Equipment = require("game:ui/equipment_dialogs")
+local Completion = require("game:ui/completion_dialog")
+local Hud = require("game:ui/factory_hud")
+local Screens = require("game:ui/screens")
+local State = require("game:ui/state")
 local Session = require("game:session")
 local Mission = require("game:mission")
+local Delivery = require("game:delivery")
+local Products = require("game:products")
 local Actions = require("game:selection_actions")
+local Briefing = require("game:briefing")
 local handle
 
-function on_open()
-    handle = K.mount({
-        target = document.root,
-        theme = UI.DEFAULT,
-        interactive = true,
-        content = function()
-
-            K.Row({ spacing = 8, modifier = K.M:padding(8) }, function()
-                K.Column({ spacing = 8 }, function()
-                    UI.Panel({ title = "Транспорт", width = 340 }, function()
-                        local tool = K.poll(function()
-                            return Build.tool or 0
-                        end)
-                        local paused = K.poll(function()
-                            return Production.paused
-                        end)
-                        local completed = K.poll(function()
-                            return Mission.completed
-                        end)
-                        K.Column({ spacing = 4 }, function()
-                            if paused then
-                                K.Text("ПАЗУЗА")
-                            end
-                            UI.Button({
-                                text = "Меню",
-                                on_click = function()
-                                    if not input.is_pressed("key:space") then Session.show_pause() end
-                                end
-                            })
-                            for i, block_name in ipairs(Build.tools) do
-                                local index = i
-                                UI.Button({
-                                    text = i .. " " .. block.caption(block.index(block_name)),
-                                    selected = tool == i,
-                                    enabled = not completed and Mission.available(block_name),
-                                    modifier = K.M:fill_max_width(),
-                                    on_click = function()
-                                        if not input.is_pressed("key:space") then
-                                            Build.choose(index)
-                                        end
-                                    end
-                                })
-                            end
-                            UI.Button({
-                                text = "Очистить потоки",
-                                enabled = not completed,
-                                modifier = K.M:fill_max_width(),
-                                on_click = function()
-                                    if not input.is_pressed("key:space") then
-                                        Actions.flush()
-                                    end
-                                end
-                            })
-                            K.Text(K.poll(function()
-                                return Build.tool and Build.caption() or Hover.caption()
-                            end))
-                        end)
-                    end)
-                    DeliveryPanel()
-                end)
-                MissionPanel()
-            end)
-
-            EquipmentDialogs()
-            CompletionDialog()
-
+local function factory()
+    local viewport = K.poll(function()
+        return gui.get_viewport()
+    end)
+    local data = K.poll(function()
+        local goals = {}
+        for _, part in ipairs({ "gear", "rod", "gearbox" }) do
+            local goal = Mission.current().goals[part]
+            if goal then
+                goals[#goals + 1] = Products[part].caption .. ": " .. Delivery.rate(part) .. " / " .. goal .. " в мин"
+            end
         end
-    })
+        local tools = {}
+        for i, name in ipairs(Build.tools) do
+            tools[i] = { name = block.caption(block.index(name)), available = Mission.available(name) }
+        end
+        return { index = Mission.index, title = Mission.current().title, goals = table.concat(goals, " · "), status = Mission.status(),
+                 paused = Production.paused, completed = Mission.completed, speed = math.max(Production.speed, Mission.speed()),
+                 tool = Build.tool, erase = Build.erase, tools = tools,
+                 hint = Build.reason or Build.message or Hover.message or (Build.erase and "ЛКМ: провести по транспорту · ПКМ: отменить" or Build.moving and "Выберите новое место · ПКМ: отменить" or Build.tool and Build.caption() or "Проверьте путь от подачи до приёмки"),
+                 error = Build.reason ~= nil or Build.message ~= nil }
+    end)
+    data.w, data.h = viewport[1], viewport[2]
+    data.on_run, data.on_speed, data.on_flush = Production.toggle, Production.cycle_speed, Actions.flush
+    data.on_tool, data.on_erase = Build.choose, Build.choose_erase
+    data.on_curator = function()
+        Briefing.open("briefing")
+    end
+    data.on_help = function()
+        State.open("help")
+    end
+    Hud(data)
+    Equipment()
+    if not Session.pause_open then
+        Screens({ w = viewport[1], h = viewport[2] })
+    end
+    Completion()
+end
+
+function on_open()
+    handle = K.mount({ target = document.root, theme = Theme.theme, interactive = true, content = factory })
     Build.ui_handle = handle
 end
 
@@ -90,3 +67,4 @@ function on_close()
         handle = nil
     end
 end
+

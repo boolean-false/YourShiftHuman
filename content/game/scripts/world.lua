@@ -13,6 +13,8 @@ function on_world_open()
     Mission.open()
     Delivery.clear()
     Production.paused = true
+    Production.speed = 1
+    require("game:ui/state").reset()
     world.set_day_time(.5)
     world.set_day_time_speed(0)
 
@@ -24,13 +26,18 @@ function on_world_open()
 end
 
 function on_world_tick()
-    if Session.editing or Production.paused or Mission.completed then
+    if Session.editing or
+            Session.preview or
+            Production.paused or
+            Mission.completed then
         return
     end
 
     -- Ускоряем весь завод
-    for _ = 1, Mission.speed() do
-        if Production.paused or Mission.completed then break end
+    for _ = 1, math.max(Mission.speed(), Production.speed) do
+        if Production.paused or Mission.completed then
+            break
+        end
         Delivery.tick()
         Source.tick()
         Smelter.tick()
@@ -38,7 +45,9 @@ function on_world_tick()
         Assembler.tick()
         Conveyor.tick()
         Mission.tick()
-        if not Mission.checking then break end
+        if not Mission.checking and Production.speed == 1 then
+            break
+        end
     end
 end
 
