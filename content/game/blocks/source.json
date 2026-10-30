@@ -1,12 +1,22 @@
 {
-    "caption": "Пункт доставки",
-    "material": "base:metal",
-    "model": "none",
-    "size": [1, 2, 1],
-    "hitbox": [0, 0, 0, 1, 1.7, 1],
-    "light-passing": true,
-    "sky-light-passing": true,
-    "rotation": "pane",
-    "tick-interval": 20,
-    "base:durability": 0.2
+  "caption": "Пункт доставки",
+  "material": "base:metal",
+  "model": "none",
+  "size": [
+    1,
+    2,
+    1
+  ],
+  "hitbox": [
+    0,
+    0,
+    0,
+    1,
+    1.7,
+    1
+  ],
+  "light-passing": true,
+  "sky-light-passing": true,
+  "rotation": "pane",
+  "base:durability": 0.2
 }

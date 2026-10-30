@@ -3,6 +3,7 @@ local Camera = require("game:camera")
 local Room = require("game:room")
 local cursors = {}
 local dialogs = {
+    ["game:source"] = true,
     ["game:press"] = true,
     ["game:smelter"] = true,
     ["game:assembler"] = true,

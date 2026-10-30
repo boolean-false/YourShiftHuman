@@ -8,10 +8,11 @@ local M = {
     completed = false,
     ticks = 0,
     windows = 0,
+    checking = false,
 }
 
-local warmup_ticks = 60 * 20
 local window_ticks = 30 * 20
+local flow_ticks = 5 * 20
 
 local last = {}
 
@@ -36,6 +37,8 @@ function M.reset_check()
     M.completed = false
     M.ticks = 0
     M.windows = 0
+    M.checking = false
+    M.flow_start = nil
     last = {}
 end
 
@@ -97,31 +100,56 @@ function M.tick()
         return
     end
     M.ticks = M.ticks + 1
-    if M.ticks < warmup_ticks then
+    if not M.checking then
+        local flowing, enough = true, true
+        for part, goal in pairs(M.current().goals) do
+            if Delivery.total(part) == 0 then
+                flowing = false
+            end
+            if Delivery.rate(part, 5) < goal then
+                enough = false
+            end
+        end
+        if flowing and not M.flow_start then
+            M.flow_start = M.ticks
+        end
+
+        if M.flow_start and M.ticks - M.flow_start >= flow_ticks and enough then
+            M.checking = true
+            M.ticks = 0
+            for part in pairs(M.current().goals) do
+                last[part] = Delivery.total(part)
+            end
+        end
         return
     end
-    if (M.ticks - warmup_ticks) % window_ticks ~= 0 then
+    if M.ticks % window_ticks ~= 0 then
         return
     end
 
     local passed = true
     for part, goal in pairs(M.current().goals) do
         local total = Delivery.total(part)
-        if M.ticks > warmup_ticks and (total - last[part]) * 2 < goal then
+        if (total - last[part]) * 2 < goal then
             passed = false
         end
         last[part] = total
     end
-    if M.ticks == warmup_ticks then
+    if not passed then
+        M.reset_check()
         return
     end
 
-    M.windows = passed and M.windows + 1 or 0
+    M.windows = M.windows + 1
     if M.windows == 3 then
         M.completed = true
         Production.paused = true
         M.save()
     end
+end
+
+function M.speed()
+    return M.checking and not M.completed and 8 or 1
 end
 
 function M.status()
@@ -131,10 +159,10 @@ function M.status()
     if M.completed then
         return M.is_last() and "Все задания выполнены" or "Выполнено"
     end
-    if M.ticks < warmup_ticks then
-        return "Разгон: " .. math.ceil((warmup_ticks - M.ticks) / 20) .. " с"
+    if not M.checking then
+        return "Ждём нужный выпуск"
     end
-    return "Проверка: " .. M.windows .. "/3"
+    return "Проверка: " .. M.windows .. "/3 · ×8"
 end
 
 function M.locked(block_name)

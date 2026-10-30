@@ -1,9 +1,9 @@
 local Conveyor = require("game:conveyor")
-local Utils = require("game:utils")
 local Source = require("game:source")
-local Production = require("game:production")
-local Room = require("game:room")
-local Session = require("game:session")
+
+function on_interact(x, y, z)
+    return events.emit("game:block_settings", x, y, z) or false
+end
 
 function on_placed(x, y, z)
     Source.register(x, y, z)
@@ -19,12 +19,3 @@ function on_block_removed(x, y, z)
     Source.remove_model(x, y, z)
 end
 
-function on_block_tick(x, y, z, tps)
-    if Session.editing or Production.paused or
-            block.is_segment(x, y, z) or
-            not Room.contains(x, y, z) then
-        return
-    end
-    local dx, dz = Utils.direction(x, y, z)
-    Conveyor.feed(x + dx, y, z + dz, dx, dz, "ore")
-end

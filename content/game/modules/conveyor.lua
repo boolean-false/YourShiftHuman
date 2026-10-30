@@ -12,7 +12,7 @@ local Merger = require("game:merger")
 local Filter = require("game:filter")
 local Sink = require("game:sink")
 local items = {}
-local speed = 1.5 -- Блоков в сек
+local speed = 4 -- Блоков в сек
 
 -- Станки принимают продукцию через свои порты.
 local function processor_at(x, y, z)

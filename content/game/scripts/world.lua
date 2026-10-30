@@ -27,12 +27,19 @@ function on_world_tick()
     if Session.editing or Production.paused or Mission.completed then
         return
     end
-    Delivery.tick()
-    Smelter.tick()
-    Press.tick()
-    Assembler.tick()
-    Conveyor.tick()
-    Mission.tick()
+
+    -- Ускоряем весь завод
+    for _ = 1, Mission.speed() do
+        if Production.paused or Mission.completed then break end
+        Delivery.tick()
+        Source.tick()
+        Smelter.tick()
+        Press.tick()
+        Assembler.tick()
+        Conveyor.tick()
+        Mission.tick()
+        if not Mission.checking then break end
+    end
 end
 
 function on_world_save()

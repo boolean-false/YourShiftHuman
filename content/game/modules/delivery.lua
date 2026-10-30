@@ -21,14 +21,15 @@ function M.total(item_name)
     return totals[item_name] or 0
 end
 
-function M.rate(item_name)
+function M.rate(item_name, seconds)
+    seconds = seconds or 30
     local count = 0
     for _, delivery in ipairs(deliveries) do
-        if delivery.item_name == item_name then
+        if delivery.item_name == item_name and delivery.tick > ticks - seconds * 20 then
             count = count + 1
         end
     end
-    return count * 2
+    return count * 60 / seconds
 end
 
 function M.clear()
