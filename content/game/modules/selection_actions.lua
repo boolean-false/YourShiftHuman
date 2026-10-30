@@ -134,11 +134,13 @@ function M.cycle_source()
 end
 
 local function corner(object, rotation)
-    local sx, _, sz = block.get_size(object.id)
-    local rx, _, rz = block.get_X(object.id, rotation)
-    local fx, _, fz = block.get_Z(object.id, rotation)
-    return object.x + math.min(0, rx * (sx - 1)) + math.min(0, fx * (sz - 1)),
-    object.z + math.min(0, rz * (sx - 1)) + math.min(0, fz * (sz - 1))
+    local width, _, depth = block.get_size(object.id)
+    local right_x, _, right_z = block.get_X(object.id, rotation)
+    local forward_x, _, forward_z = block.get_Z(object.id, rotation)
+
+    local offset_x = math.min(0, right_x * (width - 1)) + math.min(0, forward_x * (depth - 1))
+    local offset_z = math.min(0, right_z * (width - 1)) + math.min(0, forward_z * (depth - 1))
+    return object.x + offset_x, object.z + offset_z
 end
 
 local function update_belts(object, rotation)
@@ -161,7 +163,7 @@ local function can_rotate(object, x, z, rotation)
                 local px, py, pz = x + rx * dx + fx * dz, object.y + dy, z + rz * dx + fz * dz
                 local id = block.get(px, py, pz)
                 if id == -1 then
-                    return false, "Чанк ещё не загружен"
+                    return false, "Этот участок ещё загружается"
                 end
                 local ox, oy, oz = block.seek_origin(px, py, pz)
                 local own = id == object.id and ox == object.x and oy == object.y and oz == object.z
@@ -180,7 +182,7 @@ function M.rotate(pid)
         return
     end
     if Mission.locked(block.name(object.id)) then
-        Hover.message = "Оборудование закреплено"
+        Hover.message = "Это оборудование закреплено"
         return
     end
     if block.get_rotation_profile(object.id) ~= "pane" then
@@ -214,13 +216,24 @@ function M.rotate(pid)
     update_belts(object, rotation)
 end
 
+function M.move()
+    local object = selected()
+    if not object or Mission.locked(block.name(object.id)) then
+        return
+    end
+    local Build = require("game:build")
+    Build.cancel()
+    Build.moving = { x = object.x, y = object.y, z = object.z, id = object.id }
+    Hover.close_dialog()
+end
+
 function M.remove()
     local object = selected()
     if not object then
         return
     end
     if Mission.locked(block.name(object.id)) then
-        Hover.message = "Оборудование закреплено"
+        Hover.message = "Это оборудование закреплено"
         return
     end
     local rotation = block.get_rotation(object.x, object.y, object.z)

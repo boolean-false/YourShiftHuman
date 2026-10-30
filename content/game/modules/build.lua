@@ -26,17 +26,22 @@ function M.cancel_path()
 end
 
 function M.cancel()
+    M.moving = nil
+    M.erase = false
     M.tool = nil
     M.message = nil
     M.cancel_path()
 end
 
 function M.choose(index)
+    M.moving = nil
+    M.erase = false
+    Hover.clear_selection()
     if hud.is_paused() or menu.page ~= "" then
         return
     end
     if not Mission.available(M.tools[index]) then
-        Hover.message = "Этот транспорт недоступен в задании"
+        Hover.message = "Этот транспорт недоступен в текущем цехе"
         return
     end
     if M.tool == index then
@@ -69,37 +74,37 @@ end
 -- Проверяем весь путь до изменения мира, чтоб не строить его частично
 local function can_place(cells)
     if not Mission.available(M.tools[M.tool]) then
-        return false, "Этот транспорт недоступен в задании"
+        return false, "Этот транспорт недоступен в текущем цехе"
     end
     local belt = block.index(M.tools[1])
     local seen = {}
     for i, cell in ipairs(cells) do
         if not Room.contains(cell.x, cell.y, cell.z) then
-            return false, "За пределами"
+            return false, "За границей цеха"
         end
         local key = Utils.key(cell.x, cell.y, cell.z)
         if seen[key] then
-            return false, "Маршрут пересекает сам себя"
+            return false, "Лента пересекает свой маршрут"
         end
         seen[key] = true
 
         if i > 1 then
             local previous = cells[i - 1]
             if cell.y ~= previous.y or math.abs(cell.x - previous.x) + math.abs(cell.z - previous.z) ~= 1 then
-                return false, "Лента должна быть непрерывной"
+                return false, "Между секциями не должно быть разрывов"
             end
         end
         local id = block.get(cell.x, cell.y, cell.z)
         local floor = block.get(cell.x, cell.y - 1, cell.z)
         if id == -1 or floor == -1 then
-            return false, "Чанк ещё не загружен"
+            return false, "Этот участок ещё загружается"
         end
         if not block.is_solid_at(cell.x, cell.y - 1, cell.z) then
-            return false, "Под блоком нужен пол"
+            return false, "Здесь нет пола для установки"
         end
         local existing_belt = M.tool == 1 and id == belt
         if not existing_belt and not block.is_replaceable_at(cell.x, cell.y, cell.z) then
-            return false, "Место занято оборудованием"
+            return false, "Место занято"
         end
     end
     return true
@@ -212,6 +217,30 @@ function M.pointer(cell, down, blocked, pid)
     local clicked = down and not M.down
     local released = not down and M.down
     M.down = down
+    if M.moving then
+        local object = M.moving
+        if clicked and cell and not blocked and Room.contains(cell.x, cell.y, cell.z) and
+                block.is_replaceable_at(cell.x, cell.y, cell.z) and block.is_solid_at(cell.x, cell.y - 1, cell.z) then
+            if block.get(object.x, object.y, object.z) == object.id then
+                local state = block.get_states(object.x, object.y, object.z)
+                Actions.clear_flows()
+                block.set(object.x, object.y, object.z, block.index("core:air"), 0)
+                block.place(cell.x, cell.y, cell.z, object.id, state, pid)
+                Conveyor.update_nearby(object.x, object.y, object.z)
+                Conveyor.update_nearby(cell.x, cell.y, cell.z)
+            end
+            M.cancel()
+            Hover.clear_selection()
+        end
+        return
+    end
+    if M.erase then
+        if down and cell and not blocked then
+            Hover.select(cell.x, cell.y, cell.z)
+            Actions.remove()
+        end
+        return
+    end
     if not M.tool then
         return
     end
@@ -238,6 +267,20 @@ function M.pointer(cell, down, blocked, pid)
 end
 
 function M.preview(cell)
+    if M.moving then
+        if cell then
+            local valid = Room.contains(cell.x, cell.y, cell.z) and block.is_replaceable_at(cell.x, cell.y, cell.z) and
+                    block.is_solid_at(cell.x, cell.y - 1, cell.z)
+            Hover.preview({ cell }, block.get_rotation(M.moving.x, M.moving.y, M.moving.z), valid)
+        end
+        return
+    end
+    if M.erase then
+        if cell then
+            Hover.preview({ cell }, 0, false)
+        end
+        return
+    end
     if not M.tool or not cell then
         return
     end
@@ -245,6 +288,12 @@ function M.preview(cell)
     local ok, why = can_place(cells)
     M.reason = why
     Hover.preview(cells, M.rotation, ok)
+end
+
+function M.choose_erase()
+    M.cancel()
+    Hover.clear_selection()
+    M.erase = true
 end
 
 return M

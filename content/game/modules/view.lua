@@ -104,6 +104,9 @@ function M.update()
     local space_pressed = space and not M.space_down
     M.space_down = space
     local tool_pressed
+    local erase = input.is_pressed("key:x")
+    local erase_pressed = erase and not M.erase_down
+    M.erase_down = erase
     for i = 1, #Build.tools do
         local down = input.is_pressed("key:" .. i)
         if down and not tool_keys[i] then
@@ -147,9 +150,6 @@ function M.update()
         elseif cancel then
             Hover.close_dialog()
         end
-        Build.cancel_path()
-        Hover.hide()
-        return
     end
 
     if space_pressed then
@@ -157,6 +157,9 @@ function M.update()
     end
     if tool_pressed then
         Build.choose(tool_pressed)
+    end
+    if erase_pressed then
+        Build.choose_erase()
     end
     if cancel then
         Build.cancel()
@@ -180,7 +183,7 @@ function M.update()
         Build.pointer(nil, left, true, M.pid)
         Hover.hide()
     else
-        Hover.update(clicked and not right and not Build.tool)
+        Hover.update(clicked and not right and not Build.tool and not Build.erase and not Build.moving)
         Build.pointer(Hover.cell, left and not right, Hover.cell == nil, M.pid)
         Build.preview(Hover.cell)
     end
@@ -243,7 +246,9 @@ function M.open(pid)
     end
 
     input.add_callback("key:escape", function()
-        if not M.active or not M.opened then return false end
+        if not M.active or not M.opened or Session.preview then
+            return false
+        end
         if UIState.page ~= "" then
             UIState.close()
         elseif hud.is_open("game:pause_menu") then
@@ -252,7 +257,7 @@ function M.open(pid)
             hud.resume()
         elseif Hover.dialog_open then
             Hover.close_dialog()
-        elseif Build.tool or Hover.selected then
+        elseif Build.tool or Build.erase or Build.moving or Hover.selected then
             Build.cancel()
             Hover.clear_selection()
         else
@@ -264,7 +269,9 @@ end
 
 function M.close()
     M.active = false
-    if hud.is_open("game:pause_menu") then hud.close("game:pause_menu") end
+    if hud.is_open("game:pause_menu") then
+        hud.close("game:pause_menu")
+    end
     leave()
 end
 
