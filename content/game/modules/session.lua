@@ -46,11 +46,39 @@ local function profile_path()
 end
 
 local function write_profile(index, completed)
-    file.write(profile_path(), json.tostring({ version = 1, index = index, completed = completed }))
+    local profile = read_json(profile_path()) or {}
+    profile.version, profile.index, profile.completed = 1, index, completed
+    if not completed then
+        profile.done = false
+    end
+    profile.records = profile.records or {}
+    profile.unlocked = math.max(profile.unlocked or 1, index)
+    if completed then
+        profile.records[tostring(index)] = true
+        profile.unlocked = math.max(profile.unlocked, math.min(index + 1, #Missions))
+    end
+    file.write(profile_path(), json.tostring(profile))
+end
+
+function M.progress()
+    local profile = read_json(profile_path()) or {}
+    profile.records = profile.records or {}
+    profile.unlocked = profile.unlocked or profile.index or 1
+    if profile.completed and valid_index(profile.index) then
+        profile.records[tostring(profile.index)] = true
+        profile.unlocked = math.max(profile.unlocked, math.min(profile.index + 1, #Missions))
+    end
+    return profile
+end
+
+function M.finish_campaign()
+    local profile = M.progress()
+    profile.done = true
+    file.write(profile_path(), json.tostring(profile))
 end
 
 function M.save_progress(index, completed)
-    if not M.managed or M.editing then
+    if not M.managed or M.editing or M.preview then
         return
     end
     write_profile(index, completed)
@@ -79,7 +107,7 @@ function M.queue(action, index)
     if not valid_index(index) then
         return false
     end
-    if action ~= "play" and action ~= "edit" and action ~= "export" and action ~= "continue" and
+    if action ~= "new" and action ~= "play" and action ~= "edit" and action ~= "export" and action ~= "continue" and
             action ~= "menu" and action ~= "editor_menu" and action ~= "quit" and action ~= "save" then
         return false
     end
@@ -87,8 +115,10 @@ function M.queue(action, index)
         return false
     end
     if (action == "edit" or action == "editor_menu" or action == "export" or action == "save") and
-            not pack.is_installed("editor") then return false end
-    if action == "play" and not M.has_level(index) then
+            not pack.is_installed("editor") then
+        return false
+    end
+    if (action == "play" or action == "new") and not M.has_level(index) then
         M.message = "Уровень ещё не сохранён"
         return false
     end
@@ -127,6 +157,8 @@ function M.show_pause()
     M.pause_restore = Production.paused
     Production.paused = true
     M.pause_open, M.pause_time = true, 0
+    require("game:ui/state").reset()
+    M.save_requested = true
     hud.show_overlay(layout, false)
 end
 
@@ -176,12 +208,14 @@ function M.strip_editor(folder)
     local path = file.join(folder, "packs.list")
     local packs = {}
     for _, id in ipairs(file.readlines(path)) do
-        if not id:match("^%s*editor%s*$") then packs[#packs + 1] = id end
+        if not id:match("^%s*editor%s*$") then
+            packs[#packs + 1] = id
+        end
     end
     file.write(path, table.concat(packs, "\n") .. "\n")
 end
 
-local function start_level(app, index)
+local function start_level(app, index, intro)
     if file.isdir(work_folder) then
         local marker = read_json(work_folder .. "/data/game/play.json")
         if not marker or marker.version ~= 1 or not valid_index(marker.index) then
@@ -198,6 +232,7 @@ local function start_level(app, index)
     }))
     write_profile(index, false)
     app.open_world(work_name)
+    require("game:briefing").open(intro and "intro" or "briefing")
 end
 
 local function resume_level(app)
@@ -238,6 +273,7 @@ function M.start(app)
     current.menu_open, current.had_world = true, false
     current.managed, current.editing, current.busy = false, false, false
     current.menu_page = "main"
+    require("game:ui/state").reset()
     menu:reset()
     menu.page = "shift_main"
     menu.visible = true
@@ -245,6 +281,10 @@ function M.start(app)
 end
 
 function M.update(app)
+    if M.save_requested and world.is_open() then
+        M.save_requested = false
+        app.save_world()
+    end
     local request = M.request
     if not request then
         if M.had_world and not world.is_open() then
@@ -283,6 +323,9 @@ function M.update(app)
         resume_level(app)
     elseif request.action == "edit" then
         require("editor:worlds").open(app, request.index)
+    elseif request.action == "new" then
+        file.write(profile_path(), json.tostring({ version = 1, index = 1, completed = false, unlocked = 1, records = {} }))
+        start_level(app, 1, true)
     else
         start_level(app, request.index)
     end

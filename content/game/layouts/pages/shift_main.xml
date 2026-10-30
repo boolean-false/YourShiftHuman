@@ -1,1 +1,1 @@
-<container id="root" color="#00000000" size="440,600"/>
+<container id="root" color="#00000000" size-func="unpack(gui.get_viewport())"/>

@@ -5,6 +5,7 @@ local Actions = require("game:selection_actions")
 local Build = require("game:build")
 local Production = require("game:production")
 local Mission = require("game:mission")
+local UIState = require("game:ui/state")
 local Session = require("game:session")
 local Room = require("game:room")
 local disabled_bindings = {}
@@ -111,7 +112,7 @@ function M.update()
         tool_keys[i] = down
     end
 
-    if not M.opened or Session.menu_blocked or Session.busy or hud.is_paused() or menu.page ~= "" then
+    if not M.opened or UIState.page ~= "" or Session.menu_blocked or Session.busy or hud.is_paused() or menu.page ~= "" then
         Build.cancel_path()
         Hover.hide()
         return
@@ -243,7 +244,9 @@ function M.open(pid)
 
     input.add_callback("key:escape", function()
         if not M.active or not M.opened then return false end
-        if hud.is_open("game:pause_menu") then
+        if UIState.page ~= "" then
+            UIState.close()
+        elseif hud.is_open("game:pause_menu") then
             Session.close_pause()
         elseif hud.is_paused() then
             hud.resume()

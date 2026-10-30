@@ -43,9 +43,10 @@ function M.reset_check()
 end
 
 function M.open()
+    M.saved_dialogue = nil
     M.index = Session.managed and Session.index or 1
     M.reset_check()
-    if Session.editing then
+    if Session.editing or Session.preview then
         return
     end
 
@@ -68,15 +69,20 @@ function M.open()
     end
     M.index = data.index
     M.completed = data.completed
+    M.saved_dialogue = data.dialogue
 end
 
--- Сохраняем только задание и результат
+-- Сохраняем задание, результат и незаконченный разговор.
 function M.save()
+    if Session.preview then
+        return
+    end
     local path = pack.data_file("game", "mission.json")
     file.write(path, json.tostring({
         version = 1,
         index = M.index,
-        completed = M.completed
+        completed = M.completed,
+        dialogue = require("game:briefing").snapshot()
     }))
     Session.save_progress(M.index, M.completed)
 end
@@ -157,12 +163,12 @@ function M.status()
         return "Редактор"
     end
     if M.completed then
-        return M.is_last() and "Все задания выполнены" or "Выполнено"
+        return M.is_last() and "Все заказы сданы" or "Заказ сдан"
     end
     if not M.checking then
-        return "Ждём нужный выпуск"
+        return "Ожидаем стабильный поток"
     end
-    return "Проверка: " .. M.windows .. "/3 · ×8"
+    return "Замеры: " .. M.windows .. "/3 · ×8"
 end
 
 function M.locked(block_name)

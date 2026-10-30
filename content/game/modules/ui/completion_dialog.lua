@@ -1,34 +1,39 @@
 local K = require("kompot:kompot")
-local UI = require("kompot:ui")
 local Mission = require("game:mission")
 local Session = require("game:session")
 local Actions = require("game:selection_actions")
+local Complete = require("game:ui/completion_screen")
+local Result = require("game:ui/result_screen")
 
 return K.component(function()
-    local visible = K.poll(function()
-        return Session.managed and not Session.editing and Mission.completed
+    local state = K.remember(function()
+        return { result = Session.progress().done == true }
     end)
-    local last = K.poll(function()
-        return Mission.is_last()
+    local data = K.poll(function()
+        return { visible = Session.managed and not Session.editing and Mission.completed, last = Mission.is_last(),
+                 ready = not Session.busy and (Mission.is_last() or Session.has_level(Mission.index + 1)), result = state.result }
     end)
-    local ready = K.poll(function()
-        return not Session.busy and (Mission.is_last() or Session.has_level(Mission.index + 1))
+    local viewport = K.poll(function()
+        return gui.get_viewport()
     end)
-    UI.Dialog({
-        visible = visible,
-        title = last and "Все задания выполнены" or "Задание выполнено",
-        on_dismiss = function()
-            Session.queue("menu")
-        end,
-        dismiss = { text = "В главное меню" }
-    }, function()
-        if not last then
-            UI.Button({
-                text = ready and "Следующий уровень" or "Следующий уровень не готов",
-                enabled = ready,
-                modifier = K.M:fill_max_width(),
-                on_click = Actions.next_mission
-            })
-        end
-    end)
+    Complete({ visible = data.visible and not data.result, w = viewport[1], h = viewport[2], last = data.last, ready = data.ready,
+               on_menu = function()
+                   Session.queue("menu")
+               end,
+               on_next = function()
+                   if Mission.is_last() then
+                       Session.finish_campaign();
+                       state.result = true
+                   else
+                       Actions.next_mission()
+                   end
+               end })
+    local count = 0
+    for _ in pairs(Session.progress().records) do
+        count = count + 1
+    end
+    Result({ visible = data.visible and data.result, w = viewport[1], h = viewport[2], count = count,
+             on_close = function()
+                 Session.queue("menu")
+             end })
 end)
