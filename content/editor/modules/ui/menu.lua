@@ -1,23 +1,29 @@
 local K = require("kompot:kompot")
-local UI = require("kompot:ui")
 local Session = require("game:session")
-
+local Menu = require("editor:ui/menu_screen")
 return K.component(function()
-    local visible = K.poll(function() return Session.pause_open end)
-    local busy = K.poll(function() return Session.busy end)
-    UI.Dialog({
-        visible = visible,
-        title = "Редактор · уровень " .. Session.index,
-        on_dismiss = Session.close_pause,
-        dismiss = { text = "Продолжить" }
-    }, function()
-        K.Column({ spacing = 4 }, function()
-            UI.Button({ text = "Сохранить", enabled = not busy, on_click = function() Session.queue("save", Session.index) end })
-            UI.Button({ text = "Экспорт", enabled = not busy, on_click = function() Session.queue("export", Session.index) end })
-            UI.Button({ text = "Проверить уровень", enabled = not busy, on_click = function() Session.queue("play", Session.index) end })
-            UI.Button({ text = "Выбрать уровень", enabled = not busy, on_click = function() Session.queue("editor_menu") end })
-            UI.Button({ text = "Главное меню", enabled = not busy, on_click = function() Session.queue("menu") end })
-            K.Text(K.poll(function() return Session.message or "" end))
-        end)
+    local data = K.poll(function()
+        return { visible = Session.pause_open, index = Session.index, busy = Session.busy, message = Session.message }
     end)
+    local viewport = K.poll(function()
+        return gui.get_viewport()
+    end)
+    data.w, data.h = viewport[1], viewport[2]
+    data.on_save = function()
+        Session.queue("save", Session.index)
+    end
+    data.on_export = function()
+        Session.queue("export", Session.index)
+    end
+    data.on_play = function()
+        Session.queue("play", Session.index)
+    end
+    data.on_levels = function()
+        Session.queue("editor_menu")
+    end
+    data.on_menu = function()
+        Session.queue("menu")
+    end
+    data.on_resume = Session.close_pause
+    Menu(data)
 end)

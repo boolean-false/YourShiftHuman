@@ -1,0 +1,21 @@
+local K = require("kompot:kompot")
+local E = require("game:ui/components")
+local Parts = require("game:ui/menu_parts")
+local Theme = require("game:ui/theme")
+
+local Menu = K.component(function(p)
+    E.modal({ visible = p.visible, w = p.w, h = p.h, width = 500, height = 600,
+              badge = "РЕЖИМ РЕДАКТИРОВАНИЯ", title = "Уровень " .. p.index }, function()
+        E.button("СОХРАНИТЬ", p.on_save, nil, "primary", not p.busy)
+        E.button("ЭКСПОРТ УРОВНЯ", p.on_export, nil, "secondary", not p.busy)
+        E.button("ЗАПУСТИТЬ УРОВЕНЬ", p.on_play, nil, "yellow", not p.busy)
+        E.button("ВЫБРАТЬ УРОВЕНЬ", p.on_levels, nil, "secondary", not p.busy)
+        E.button("В ГЛАВНОЕ МЕНЮ", p.on_menu, nil, "secondary", not p.busy)
+        E.button("ВЕРНУТЬСЯ В РЕДАКТОР", p.on_resume, nil, "secondary")
+        Parts.text(p.message or "", "caption", Theme.colors.muted)
+    end)
+end)
+K.preview("Меню редактора", { width = 1000, height = 760, padding = 0, theme = Theme.theme, group = "Редактор" }, function()
+    Menu({ visible = true, w = 1000, h = 760, index = 1, message = "Сохранено" })
+end)
+return Menu

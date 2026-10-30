@@ -1,22 +1,14 @@
 local K = require("kompot:kompot")
-local UI = require("kompot:ui")
+local Theme = require("game:ui/theme")
 local Session = require("game:session")
+local Hint = require("editor:ui/hint")
 local handle
-
 function on_open()
-    handle = K.mount({
-        target = document.root,
-        theme = UI.DEFAULT,
-        interactive = false,
-        content = function()
-            K.Column({ spacing = 4, modifier = K.M:padding(8) }, function()
-                K.Text("Редактор · уровень " .. Session.index)
-                K.Text("ПКМ - настройки · Esc - меню")
-            end)
-        end
-    })
+    handle = K.mount({ target = document.root, theme = Theme.theme, interactive = false,
+                       content = function()
+                           Hint({ index = Session.index })
+                       end })
 end
-
 function on_close()
     if handle then
         handle:dispose();

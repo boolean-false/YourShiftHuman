@@ -1,5 +1,5 @@
 local K = require("kompot:kompot")
-local UI = require("kompot:ui")
+local Theme = require("game:ui/theme")
 local Session = require("game:session")
 local EditorMenu = require("editor:ui/menu")
 local handle
@@ -7,7 +7,7 @@ local handle
 function on_open()
     handle = K.mount({
         target = document.root,
-        theme = UI.DEFAULT,
+        theme = Theme.theme,
         interactive = true,
         content = EditorMenu
     })
@@ -20,3 +20,4 @@ function on_close()
     end
     Session.resume()
 end
+
