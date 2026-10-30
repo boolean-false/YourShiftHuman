@@ -6,21 +6,25 @@ return K.component(function()
     local editor = K.poll(function()
         return Session.menu_page == "editor" and pack.is_installed("editor")
     end)
+
     local busy = K.poll(function()
         return Session.busy
     end)
+
+    local ready = K.poll(function()
+        return Session.can_continue()
+    end)
+
+    local progress = K.poll(function()
+        return Session.has_progress()
+    end)
+
     K.Box({ modifier = K.M:fill_max_size(), align = "center" }, function()
         UI.Panel({ title = editor and "Редактор уровней" or "Your Shift, Human", width = 420 }, function()
             K.Column({ spacing = 8 }, function()
                 if editor then
                     require("editor:ui/level_list")()
                 else
-                    local ready = K.poll(function()
-                        return Session.can_continue()
-                    end)
-                    local progress = K.poll(function()
-                        return Session.has_progress()
-                    end)
                     UI.Button({
                         text = progress and "Продолжить" or "Играть",
                         enabled = not busy and ready,
