@@ -240,6 +240,7 @@ function M.start(app)
     current.menu_page = "main"
     menu:reset()
     menu.page = "shift_main"
+    menu.visible = true
     gui.set_active_frame("core:main")
 end
 
