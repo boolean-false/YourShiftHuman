@@ -14,6 +14,7 @@ local Delivery = require("game:delivery")
 local Products = require("game:products")
 local Actions = require("game:selection_actions")
 local Briefing = require("game:briefing")
+local PortLabels = require("game:ui/port_labels")
 local handle
 
 local function factory()
@@ -48,6 +49,7 @@ local function factory()
         State.open("help")
     end
     Hud(data)
+    PortLabels()
     Equipment()
     if not Session.pause_open then
         Screens({ w = viewport[1], h = viewport[2] })

@@ -108,20 +108,54 @@ function M.ray(mx, my, height)
     if not camera then
         return nil
     end
-    local view = gui.get_viewport()
-    local nx, ny = 2 * mx / view[1] - 1, 1 - 2 * my / view[2]
-    local ty = math.tan(math.rad(camera:get_fov()) * camera:get_zoom() / 2)
-    local tx = ty * view[1] / view[2]
-    local front, right, up = camera:get_front(), camera:get_right(), camera:get_up()
-    local position = camera:get_pos()
-    local dx = front[1] + right[1] * nx * tx + up[1] * ny * ty
-    local dy = front[2] + right[2] * nx * tx + up[2] * ny * ty
-    local dz = front[3] + right[3] * nx * tx + up[3] * ny * ty
-    if dy >= -.001 then
+    local screen = gui.get_viewport()
+
+    -- Центр экрана это 0, края от -1 до 1
+    local mouse_x = mx / screen[1] * 2 - 1
+    local mouse_y = 1 - my / screen[2] * 2
+
+    local half_angle = math.rad(camera:get_fov() * camera:get_zoom()) / 2
+    local vertical_spread = math.tan(half_angle)
+    local horizontal_spread = vertical_spread * screen[1] / screen[2]
+
+    -- От направления камеры отклоняем луч к курсору
+    local right_offset = vec3.mul(camera:get_right(), mouse_x * horizontal_spread)
+    local up_offset = vec3.mul(camera:get_up(), mouse_y * vertical_spread)
+    local direction = vec3.add(camera:get_front(), right_offset)
+    direction = vec3.add(direction, up_offset)
+    if direction[2] >= -.001 then
         return nil
     end
-    local t = (M.y + (height or .23) - position[2]) / dy
-    return position[1] + dx * t, position[3] + dz * t
+
+    local position = camera:get_pos()
+    local belt_height = M.y + (height or .23)
+    local distance = (belt_height - position[2]) / direction[2]
+    local point = vec3.add(position, vec3.mul(direction, distance))
+    return point[1], point[3]
+end
+
+-- Проекция точки мира на экран для подписей
+function M.project(x, y, z)
+    if not camera then
+        return nil
+    end
+    local offset = vec3.sub({ x, y, z }, camera:get_pos())
+    local depth = vec3.dot(offset, camera:get_front())
+    -- Точки за камерой не показываем
+    if depth <= .01 then
+        return nil
+    end
+    -- Насколько точка правее и выше камеры.
+    local horizontal = vec3.dot(offset, camera:get_right())
+    local vertical = vec3.dot(offset, camera:get_up())
+
+    local screen = gui.get_viewport()
+    local half_angle = math.rad(camera:get_fov() * camera:get_zoom()) / 2
+    local scale = screen[2] / (2 * math.tan(half_angle) * depth)
+
+    local screen_x = screen[1] / 2 + horizontal * scale
+    local screen_y = screen[2] / 2 - vertical * scale
+    return screen_x, screen_y
 end
 
 return M
