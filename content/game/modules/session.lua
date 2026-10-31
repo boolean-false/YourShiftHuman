@@ -2,6 +2,8 @@ local Missions = require("game:missions")
 local M = { managed = false, editing = false, index = 1, busy = false }
 local work_name = "yourshifthuman_play"
 local work_folder = "user:worlds/" .. work_name
+local menu_name = "yourshifthuman_menu"
+local menu_folder = "user:worlds/" .. menu_name
 
 local function read_json(path)
     if not file.isfile(path) then
@@ -90,6 +92,10 @@ function M.open()
     M.menu_blocked = false
     M.managed = world.get_generator() == "game:room"
     M.editing = M.managed and pack.is_installed("editor")
+    M.preview = read_json("world:data/game/menu.json") ~= nil
+    if M.preview then
+        M.editing = false
+    end
     M.index = valid_index(world.get_seed()) and world.get_seed() or 1
     local marker = read_json("world:data/game/play.json")
     if marker and marker.version == 1 and valid_index(marker.index) then
@@ -137,7 +143,7 @@ local function close_world(app)
     else
         require("game:view").close()
     end
-    app.close_world(true)
+    app.close_world(not M.preview)
     -- При выходе движок выгружает контент. Меню тоже нужны наши модули и Kompot.
     if not app.is_content_loaded() then
         app.load_content()
@@ -265,13 +271,35 @@ function M.has_progress()
             marker.version == 1 and marker.index == profile.index and file.isfile(work_folder .. "/world.json") or false
 end
 
+local function open_menu_world(app)
+    if not M.has_level(1) then
+        return
+    end
+    if file.isdir(menu_folder) then
+        local marker = read_json(menu_folder .. "/data/game/menu.json")
+        if not marker or marker.version ~= 1 then
+            return
+        end
+        file.remove_tree(menu_folder)
+    end
+    M.copy_level(1, menu_folder)
+    M.strip_editor(menu_folder)
+    file.mkdirs(menu_folder .. "/data/game")
+    file.write(menu_folder .. "/data/game/menu.json", json.tostring({ version = 1 }))
+    app.open_world(menu_name)
+end
+
 function M.start(app)
     if not app.is_content_loaded() then
         app.load_content()
     end
+    -- Фоном служит отдельная копия первого цеха. Исходник не сохраняем и не меняем.
+    if not world.is_open() then
+        open_menu_world(app)
+    end
     local current = require("game:session")
-    current.menu_open, current.had_world = true, false
-    current.managed, current.editing, current.busy = false, false, false
+    current.menu_open, current.had_world = true, world.is_open()
+    current.managed, current.editing, current.busy = current.preview == true, false, false
     current.menu_page = "main"
     require("game:ui/state").reset()
     menu:reset()
