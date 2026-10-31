@@ -33,8 +33,8 @@ local function factory()
         for i, name in ipairs(Build.tools) do
             tools[i] = { name = block.caption(block.index(name)), available = Mission.available(name) }
         end
-        return { index = Mission.index, title = Mission.current().title, goals = table.concat(goals, " · "), status = Mission.status(),
-                 paused = Production.paused, completed = Mission.completed, speed = math.max(Production.speed, Mission.speed()),
+        return { index = Mission.index, title = Mission.current().title, goals = table.concat(goals, " · "), progress = Mission.progress(),
+                 paused = Production.paused, completed = Mission.completed, speed = Mission.speed(), accelerating = Mission.accelerating,
                  tool = Build.tool, erase = Build.erase, tools = tools,
                  hint = Build.reason or Build.message or Hover.message or (Build.erase and "ЛКМ: провести по транспорту · ПКМ: отменить" or Build.moving and "Выберите новое место · ПКМ: отменить" or Build.tool and Build.caption() or "Проверьте путь от подачи до приёмки"),
                  error = Build.reason ~= nil or Build.message ~= nil }

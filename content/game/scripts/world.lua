@@ -15,6 +15,7 @@ function on_world_open()
     Delivery.clear()
     Production.paused = true
     Production.speed = 1
+    Production.ticks = 0
     require("game:ui/state").reset()
     require("game:environment").open()
 
@@ -35,10 +36,12 @@ function on_world_tick()
     end
 
     -- Ускоряем весь завод
-    for _ = 1, math.max(Mission.speed(), Production.speed) do
+    Mission.update_speed()
+    for _ = 1, Mission.speed() do
         if Production.paused or Mission.completed then
             break
         end
+        Production.ticks = Production.ticks + 1
         Delivery.tick()
         Source.tick()
         Smelter.tick()
@@ -46,9 +49,6 @@ function on_world_tick()
         Assembler.tick()
         Conveyor.tick()
         Mission.tick()
-        if not Mission.checking and Production.speed == 1 then
-            break
-        end
     end
 end
 

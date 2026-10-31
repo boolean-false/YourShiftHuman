@@ -22,7 +22,7 @@ function M.total(item_name)
 end
 
 function M.rate(item_name, seconds)
-    seconds = seconds or 30
+    seconds = seconds or 6
     local count = 0
     for _, delivery in ipairs(deliveries) do
         if delivery.item_name == item_name and delivery.tick > ticks - seconds * 20 then
@@ -30,6 +30,30 @@ function M.rate(item_name, seconds)
         end
     end
     return count * 60 / seconds
+end
+
+function M.has_tempo(goals)
+    for part, goal in pairs(goals) do
+        local arrivals = {}
+        for i = #deliveries, 1, -1 do
+            if deliveries[i].item_name == part then
+                arrivals[#arrivals + 1] = deliveries[i].tick
+                if #arrivals == 3 then
+                    break
+                end
+            end
+        end
+        if #arrivals < 3 then
+            return false
+        end
+
+        local interval = 60 * 20 / goal
+        if ticks - arrivals[1] > interval + 2 or
+                arrivals[1] - arrivals[3] > interval * 2 + 2 then
+            return false
+        end
+    end
+    return true
 end
 
 function M.clear()

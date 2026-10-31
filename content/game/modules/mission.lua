@@ -9,10 +9,12 @@ local M = {
     ticks = 0,
     windows = 0,
     checking = false,
+    accelerating = false,
+    boost = 1,
 }
 
-local window_ticks = 30 * 20
-local flow_ticks = 5 * 20
+local window_seconds = 6
+local window_ticks = window_seconds * 20
 
 local last = {}
 
@@ -38,7 +40,8 @@ function M.reset_check()
     M.ticks = 0
     M.windows = 0
     M.checking = false
-    M.flow_start = nil
+    M.accelerating = false
+    M.boost = 1
     last = {}
 end
 
@@ -101,26 +104,34 @@ function M.advance()
     return Session.queue("play", M.index + 1)
 end
 
+-- Увидели нормальную подачу в приёмку, дальше не заставляем ждать
+function M.update_speed()
+    if not M.accelerating and Delivery.has_tempo(M.current().goals) then
+        M.accelerating = true
+        M.boost = Production.speed
+    end
+    if M.accelerating then
+        M.boost = math.min(16, M.boost + 1)
+    end
+end
+
+function M.speed()
+    return M.accelerating and M.boost or Production.speed
+end
+
 function M.tick()
     if M.completed or Session.editing then
         return
     end
     M.ticks = M.ticks + 1
     if not M.checking then
-        local flowing, enough = true, true
-        for part, goal in pairs(M.current().goals) do
+        local flowing = true
+        for part in pairs(M.current().goals) do
             if Delivery.total(part) == 0 then
                 flowing = false
             end
-            if Delivery.rate(part, 5) < goal then
-                enough = false
-            end
         end
-        if flowing and not M.flow_start then
-            M.flow_start = M.ticks
-        end
-
-        if M.flow_start and M.ticks - M.flow_start >= flow_ticks and enough then
+        if flowing then
             M.checking = true
             M.ticks = 0
             for part in pairs(M.current().goals) do
@@ -136,17 +147,17 @@ function M.tick()
     local passed = true
     for part, goal in pairs(M.current().goals) do
         local total = Delivery.total(part)
-        if (total - last[part]) * 2 < goal then
+        local required = math.ceil(goal * window_seconds / 60 - .000001)
+        if total - last[part] < required then
             passed = false
         end
         last[part] = total
     end
+    M.windows = passed and M.windows + 1 or 0
     if not passed then
-        M.reset_check()
-        return
+        M.accelerating = false
+        M.boost = 1
     end
-
-    M.windows = M.windows + 1
     if M.windows == 3 then
         M.completed = true
         Production.paused = true
@@ -154,21 +165,14 @@ function M.tick()
     end
 end
 
-function M.speed()
-    return M.checking and not M.completed and 8 or 1
-end
-
-function M.status()
-    if Session.editing then
-        return "Редактор"
-    end
+function M.progress()
     if M.completed then
-        return M.is_last() and "Все заказы сданы" or "Заказ сдан"
+        return 1
     end
     if not M.checking then
-        return "Ожидаем стабильный поток"
+        return 0
     end
-    return "Замеры: " .. M.windows .. "/3 · ×8"
+    return (M.windows + M.ticks % window_ticks / window_ticks) / 3
 end
 
 function M.locked(block_name)
