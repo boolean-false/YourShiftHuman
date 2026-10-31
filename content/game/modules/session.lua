@@ -221,6 +221,14 @@ function M.strip_editor(folder)
     file.write(path, table.concat(packs, "\n") .. "\n")
 end
 
+local function open_world(app, name)
+    app.open_world(name)
+    -- Открытие может ждать загрузки контента или конвертации мира
+    while not world.is_open() do
+        app.tick()
+    end
+end
+
 local function start_level(app, index, intro)
     if file.isdir(work_folder) then
         local marker = read_json(work_folder .. "/data/game/play.json")
@@ -238,7 +246,7 @@ local function start_level(app, index, intro)
         dialogue = { mode = intro and "intro" or "briefing", step = 1, elapsed = 0 }
     }))
     write_profile(index, false)
-    app.open_world(work_name)
+    open_world(app, work_name)
 end
 
 local function resume_level(app)
@@ -247,7 +255,7 @@ local function resume_level(app)
     local marker = read_json(work_folder .. "/data/game/play.json")
     if marker and marker.version == 1 and marker.index == index and file.isfile(work_folder .. "/world.json") then
         M.strip_editor(work_folder)
-        app.open_world(work_name)
+        open_world(app, work_name)
     elseif M.has_level(index) then
         start_level(app, index)
     else
@@ -286,7 +294,7 @@ local function open_menu_world(app)
     M.strip_editor(menu_folder)
     file.mkdirs(menu_folder .. "/data/game")
     file.write(menu_folder .. "/data/game/menu.json", json.tostring({ version = 1 }))
-    app.open_world(menu_name)
+    open_world(app, menu_name)
 end
 
 function M.start(app, editor_menu)

@@ -18,6 +18,35 @@ def add_folder(archive, folder, destination):
             archive.write(path, (destination / path.relative_to(folder)).as_posix())
 
 
+def clean_world(level):
+    indices = json.loads((level / "indices.json").read_text(encoding="utf-8-sig"))
+    removed_items = {
+        index for index, name in enumerate(indices.get("items", []))
+        if name.split(":", 1)[0] in EXCLUDED_PACKS
+    }
+    for kind in ("blocks", "items", "entities"):
+        names = indices.get(kind, [])
+        while names and names[-1].split(":", 1)[0] in EXCLUDED_PACKS:
+            names.pop()
+        if any(name.split(":", 1)[0] in EXCLUDED_PACKS for name in names):
+            raise ValueError(
+                f"Мир {level.name}: {kind} требуют перенумерации. "
+                "Пересохрани мир без contour и editor перед сборкой"
+            )
+
+    result = {"indices.json": json.dumps(indices, ensure_ascii=False, indent=2)}
+    player_path = level / "player.json"
+    if player_path.is_file():
+        player = json.loads(player_path.read_text(encoding="utf-8-sig"))
+        for entry in player.get("players", []):
+            slots = entry.get("inventory", {}).get("slots", [])
+            for index, slot in enumerate(slots):
+                if slot.get("id") in removed_items:
+                    slots[index] = {"id": 0}
+        result["player.json"] = json.dumps(player, ensure_ascii=False, indent=2)
+    return result
+
+
 def build(output, worlds):
     project_text = (ROOT / "project.toml").read_text(encoding="utf-8-sig")
     project = tomllib.loads(project_text)
@@ -38,6 +67,7 @@ def build(output, worlds):
     for level in levels:
         if not (level / "world.json").is_file():
             raise ValueError(f"В уровне {level.name} нет world.json")
+    prepared_worlds = {level.name: clean_world(level) for level in levels}
     for name in ("icon.png", "start.lua"):
         if not (ROOT / name).is_file():
             raise ValueError(f"Не найден {name}")
@@ -56,7 +86,9 @@ def build(output, worlds):
                         continue
                     relative = path.relative_to(level)
                     destination = (Path("worlds") / level.name / relative).as_posix()
-                    if relative.as_posix() == "packs.list":
+                    if relative.as_posix() in prepared_worlds[level.name]:
+                        archive.writestr(destination, prepared_worlds[level.name][relative.as_posix()])
+                    elif relative.as_posix() == "packs.list":
                         names = path.read_text(encoding="utf-8-sig").splitlines()
                         names = [name for name in names if name.strip() not in EXCLUDED_PACKS]
                         archive.writestr(destination, "\n".join(names) + "\n")

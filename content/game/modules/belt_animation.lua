@@ -5,7 +5,7 @@ local belts = {}
 function M.open()
     belts = {}
     for _, name in ipairs({ "conveyor_line", "conveyor_turn_left", "conveyor_turn_right", "splitter", "merger", "filter" }) do
-        local folder = "game:textures/blocks/belt_frames/" .. name .. "/"
+        local folder = "game:frames/" .. name .. "/"
         local config = json.parse(file.read(folder .. "animation.json"))
         local belt = { texture = assets.to_canvas("blocks:" .. name), frames = {}, duration = 0 }
         for _, frame in ipairs(config.frames) do
