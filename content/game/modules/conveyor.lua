@@ -110,15 +110,11 @@ function M.update_nearby(x, y, z)
     M.update_shape(x, y, z - 1)
 end
 
--- Пока предмет едет, обе секции считаем занятыми
+-- У каждой секции свой предмет, соседнюю заранее не занимаем
 local function is_busy(x, y, z, except)
     for _, belt_item in ipairs(items) do
         if belt_item ~= except and belt_item.y == y then
             if belt_item.x == x and belt_item.z == z then
-                return true
-            end
-
-            if belt_item.p > 0 and belt_item.x + belt_item.dx == x and belt_item.z + belt_item.dz == z then
                 return true
             end
         end
@@ -134,7 +130,7 @@ local function input_ready(x, y, z, dx, dz)
     end
     local points_here = Utils.same_direction(x, y, z, dx, dz)
     if id == block.index("game:source") then
-        return Source.is_output(x, y, z, dx, dz)
+        return Source.is_output(x, y, z, dx, dz) and Source.has_output(x, y, z)
     end
     local processor = processor_at(x, y, z)
     if processor then
@@ -158,7 +154,7 @@ local function input_ready(x, y, z, dx, dz)
                     not Filter.is_output(x, y, z, dx, dz, belt_item.item_name) then
                 return false
             end
-            return belt_item.p == 0 or (belt_item.dx == dx and belt_item.dz == dz)
+            return belt_item.p >= 1
         end
     end
     return false
@@ -181,11 +177,6 @@ local function can_receive(x, y, z, dx, dz, item_name, except)
     elseif id == block.index("game:merger") then
         if not Merger.is_input(x, y, z, dx, dz) then
             return false
-        end
-        -- Уже начатый переезд не прерываем появлением предмета на другом входе.
-        if except and except.p > 0 and except.x + except.dx == x and
-                except.y == y and except.z + except.dz == z then
-            return true
         end
         return Merger.can_accept(x, y, z, dx, dz, function(offset_x, offset_z)
             return input_ready(x + offset_x, y, z + offset_z, -offset_x, -offset_z)
@@ -232,19 +223,27 @@ function M.insert(x, y, z, item_name)
         z = z,
         item_name = item_name,
         dx = 0,
-        dz = 0, -- dx, dz - направление движения к след секции
-        p = 0, -- путь от центра секции до следующей от 0 до 1
+        dz = 0, -- dx, dz - направление заезда на эту секцию
+        p = 1, -- путь от предыдущей секции до центра этой
     }
 
     return true
 end
 
 -- Доставка и станки подают продукцию на свободную ленту.
-function M.feed(x, y, z, dx, dz, item_name)
+function M.feed(x, y, z, dx, dz, item_name, visual)
     if not is_transport(x, y, z) or not can_receive(x, y, z, dx, dz, item_name) then
         return false
     end
     local inserted = M.insert(x, y, z, item_name)
+    if inserted then
+        local belt_item = items[#items]
+        belt_item.dx, belt_item.dz, belt_item.p = dx, dz, 0
+        if visual then
+            belt_item.entity = visual.entity
+            belt_item.start_x, belt_item.start_z = visual.x, visual.z
+        end
+    end
     if inserted and block.get(x, y, z) == block.index("game:merger") then
         Merger.received(x, y, z, dx, dz)
     end
@@ -258,75 +257,81 @@ local function remove_visual(belt_item)
     belt_item.entity = nil
 end
 
--- Двигаем предметы ТПС у нас 20, поэтому вызывается 20 раз в сек
+-- Сначала все доезжают до центра своих секций
 function M.tick()
     for i = #items, 1, -1 do
         local belt_item = items[i]
         local x, y, z = belt_item.x, belt_item.y, belt_item.z
         local id = block.get(x, y, z)
-        if not Room.contains(x, y, z) then
-            -- вне текущей площадки не лвигаем
-        elseif id == -1 then
-            -- при -1 чанк выгружен, поэтому стоим и не рыпаемся
-        elseif not is_transport(x, y, z) then
-            -- При сносе ленты убираем её продукцию вместе с моделью.
+        if id ~= -1 and not is_transport(x, y, z) then
             remove_visual(belt_item)
             table.remove(items, i)
-        else
+        elseif id ~= -1 and Room.contains(x, y, z) then
+            belt_item.p = math.min(1, belt_item.p + speed / 20)
+        end
+    end
+
+    -- Решаем передачи вместе, чтобы порядок предметов не менял темп линии
+    local moves, reserved = {}, {}
+    for _, belt_item in ipairs(items) do
+        local x, y, z = belt_item.x, belt_item.y, belt_item.z
+        if belt_item.p >= 1 and Room.contains(x, y, z) and is_transport(x, y, z) then
+            local function can_send(dx, dz)
+                return not reserved[Utils.key(x + dx, y, z + dz)] and
+                    can_receive(x + dx, y, z + dz, dx, dz, belt_item.item_name, belt_item)
+            end
+            local id = block.get(x, y, z)
             local dx, dz, slot
             local from_splitter = id == block.index("game:splitter")
             if from_splitter then
-                dx, dz, slot = Splitter.choose_output(x, y, z, function(out_x, out_z)
-                    return can_receive(x + out_x, y, z + out_z, out_x, out_z, belt_item.item_name, belt_item)
-                end)
+                dx, dz, slot = Splitter.choose_output(x, y, z, can_send)
             elseif id == block.index("game:filter") then
                 dx, dz = Filter.output(x, y, z, belt_item.item_name)
             else
                 dx, dz = Utils.direction(x, y, z)
             end
-
-            if not dx then
-                -- Нет доступного выхода. Предмет остаётся в центре
-                belt_item.p = 0
-            else
-                if dx ~= belt_item.dx or dz ~= belt_item.dz then
-                    -- После поворота секции начинаем движение от центра
-                    belt_item.p = 0
-                end
-                belt_item.dx, belt_item.dz = dx, dz
+            if dx and can_send(dx, dz) then
                 local nx, nz = x + dx, z + dz
-
-                if block.get(nx, y, nz) ~= -1 then
-                    local is_sink = block.get(nx, y, nz) == block.index("game:sink")
-                    local processor = processor_at(nx, y, nz)
-                    local can_move = can_receive(nx, y, nz, dx, dz, belt_item.item_name, belt_item)
-                    if can_move then
-                        belt_item.p = belt_item.p + speed / 20 -- Расстояние за один тик
-                        if belt_item.p >= 1 then
-                            if from_splitter then
-                                Splitter.sent(x, y, z, slot)
-                            end
-                            if block.get(nx, y, nz) == block.index("game:merger") then
-                                Merger.received(nx, y, nz, dx, dz)
-                            end
-                            if is_sink or processor then
-                                if processor then
-                                    processor.accept(nx, y, nz, belt_item.item_name)
-                                elseif is_sink then
-                                    Delivery.receive(belt_item.item_name)
-                                end
-                                remove_visual(belt_item)
-                                table.remove(items, i)
-                            else
-                                -- доводим до центра следующей секции, затем следуем по её направлению
-                                belt_item.x, belt_item.z, belt_item.p = nx, nz, 0
-                            end
-                        end
-                    else
-                        belt_item.p = 0
-                    end
-                end
+                reserved[Utils.key(nx, y, nz)] = true
+                moves[#moves + 1] = {
+                    item = belt_item, x = nx, y = y, z = nz, dx = dx, dz = dz,
+                    splitter = from_splitter, slot = slot
+                }
             end
+        end
+    end
+
+    for _, move in ipairs(moves) do
+        local belt_item = move.item
+        local x, y, z = move.x, move.y, move.z
+        local processor = processor_at(x, y, z)
+        -- Два входа сборщика могут одновременно принести один и тот же ресурс
+        if not processor or processor.can_accept(x, y, z, move.dx, move.dz, belt_item.item_name) then
+            if move.splitter then
+                Splitter.sent(belt_item.x, belt_item.y, belt_item.z, move.slot)
+            end
+            if block.get(x, y, z) == block.index("game:merger") then
+                Merger.received(x, y, z, move.dx, move.dz)
+            end
+            if processor then
+                if processor.accept(x, y, z, belt_item.item_name, belt_item) then
+                    belt_item.entity = nil
+                end
+                belt_item.delivered = true
+            elseif block.get(x, y, z) == block.index("game:sink") then
+                Delivery.receive(belt_item.item_name)
+                belt_item.delivered = true
+            else
+                belt_item.x, belt_item.z, belt_item.p = x, z, 0
+                belt_item.start_x, belt_item.start_z = nil, nil
+                belt_item.dx, belt_item.dz = move.dx, move.dz
+            end
+        end
+    end
+    for i = #items, 1, -1 do
+        if items[i].delivered then
+            remove_visual(items[i])
+            table.remove(items, i)
         end
     end
 end
@@ -337,15 +342,20 @@ function M.render()
         if is_transport(belt_item.x, belt_item.y, belt_item.z) then
             local position = {
                 -- Экспорт VCM уже содержит сдвиг центра на .5 по X и Z.
-                belt_item.x + belt_item.dx * belt_item.p,
+                belt_item.x - belt_item.dx * (1 - belt_item.p),
                 belt_item.y + .25,
-                belt_item.z + belt_item.dz * belt_item.p
+                belt_item.z - belt_item.dz * (1 - belt_item.p)
             }
+            if belt_item.start_x then
+                position[1] = belt_item.start_x + (belt_item.x - belt_item.start_x) * belt_item.p
+                position[3] = belt_item.start_z + (belt_item.z - belt_item.start_z) * belt_item.p
+            end
             if not belt_item.entity or not entities.exists(belt_item.entity:get_uid()) then
                 -- Если модель есть, то просто меняем её позицию. Иначе создаем модельку
                 belt_item.entity = entities.spawn("game:belt_item", position)
-                belt_item.entity.skeleton:set_model(0, Products[belt_item.item_name].model)
             end
+            belt_item.entity.skeleton:set_visible(true)
+            belt_item.entity.skeleton:set_model(0, Products[belt_item.item_name].model)
             belt_item.entity.transform:set_pos(position)
         else
             remove_visual(belt_item)

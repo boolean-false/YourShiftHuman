@@ -2,6 +2,7 @@ local Utils = require("game:utils")
 local Room = require("game:room")
 local Products = require("game:products")
 local Production = require("game:production")
+local Item = require("game:machine_item")
 local M = {}
 
 function M.create(config)
@@ -76,15 +77,17 @@ function M.create(config)
                 (not state or (state.stock[item_name] or 0) < 4) and Utils.same_direction(ox, oy, oz, dx, dz)
     end
 
-    function machine.accept(x, y, z, item_name)
+    function machine.accept(x, y, z, item_name, belt_item)
         x, y, z = block.seek_origin(x, y, z)
         local key = Utils.key(x, y, z)
         local state = processing[key]
         if not state then
-            state = { x = x, y = y, z = z, stock = {}, ticks = 0 }
+            state = { x = x, y = y, z = z, stock = {}, ticks = 0, queue = {} }
             processing[key] = state
         end
         state.stock[item_name] = (state.stock[item_name] or 0) + 1
+        state.queue[#state.queue + 1] = Item.create(item_name, belt_item, x, z)
+        return true
     end
 
     function machine.has_output(x, y, z)
@@ -106,6 +109,10 @@ function M.create(config)
 
     function machine.remove_model(x, y, z)
         local key = Utils.key(x, y, z)
+        if processing[key] then
+            Item.clear(processing[key])
+            processing[key] = nil
+        end
         local model = models[key]
         if model and model.entity and entities.exists(model.entity:get_uid()) then
             model.entity:despawn()
@@ -123,22 +130,37 @@ function M.create(config)
             elseif id == -1 then
                 -- В выгруженном чанке обработка стоит.
             elseif id ~= block.index(config.block_name) then
+                Item.clear(state)
                 processing[key] = nil
             else
+                local ix, _, iz = machine.port(x, y, z, false)
+                local ox, _, oz = machine.port(x, y, z, true)
+                local work_x, work_z = (ix + ox) / 2, (iz + oz) / 2
                 if not state.output then
                     if not state.input then
                         for item_name in pairs(recipes) do
                             if (state.stock[item_name] or 0) > 0 then
                                 state.input = item_name
+                                for i, item in ipairs(state.queue) do
+                                    if item.item_name == item_name then
+                                        state.item = table.remove(state.queue, i)
+                                        break
+                                    end
+                                end
                                 break
                             end
                         end
                     end
                     if state.input then
+                        if state.item then Item.move(state.item, work_x, work_z) end
                         state.ticks = state.ticks + 1
                         if state.ticks == process_ticks then
                             state.stock[state.input] = state.stock[state.input] - 1
                             state.output = config.get_output and config.get_output(x, y, z, state.input) or recipes[state.input]
+                            if state.item then
+                                state.item.item_name = state.output
+                                state.item.x, state.item.z = work_x, work_z
+                            end
                             state.input = nil
                         end
                     end
@@ -147,11 +169,13 @@ function M.create(config)
                 if state.output then
                     local px, py, pz = machine.port(x, y, z, true)
                     local dx, dz = Utils.direction(x, y, z)
-                    if Conveyor.feed(px + dx, py, pz + dz, dx, dz, state.output) then
+                    if Conveyor.feed(px + dx, py, pz + dz, dx, dz, state.output, state.item) then
+                        state.item = nil
                         state.output = nil
                         state.ticks = 0
                     end
                 end
+                for _, item in ipairs(state.queue) do Item.move(item, ix, iz) end
             end
         end
     end
@@ -175,8 +199,14 @@ function M.create(config)
                 model.entity.skeleton:reset_pose()
                 local state = state_at(x, y, z)
                 local track = config.animation and animation.get_track(config.animation)
-                if state and state.ticks > 0 and state.ticks < process_ticks and track then
-                    track.func(model.entity.skeleton, (state.ticks / 20) % track.duration)
+                if state and state.ticks > 0 and track then
+                    track.func(model.entity.skeleton, math.min(state.ticks / 20, track.duration))
+                end
+                if state and state.queue then
+                    for _, item in ipairs(state.queue) do
+                        Item.render(item, y, item.age < 5)
+                    end
+                    if state.item then Item.render(state.item, y, true) end
                 end
             end
         end
@@ -211,10 +241,12 @@ function M.create(config)
     end
 
     function machine.clear_process()
+        for _, state in pairs(processing) do Item.clear(state) end
         processing = {}
     end
 
     function machine.clear()
+        machine.clear_process()
         for _, model in pairs(models) do
             machine.remove_model(model.x, model.y, model.z)
         end

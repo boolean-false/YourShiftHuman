@@ -17,7 +17,9 @@ local clear = M.clear
 
 function M.register(x, y, z)
     register_model(x, y, z)
-    if block.is_segment(x, y, z) or block.get(x, y, z) ~= block.index(M.block_name) then return end
+    if block.is_segment(x, y, z) or block.get(x, y, z) ~= block.index(M.block_name) then
+        return
+    end
     local key = Utils.key(x, y, z)
     sources[key] = sources[key] or { x = x, y = y, z = z, ticks = 0 }
 end
@@ -52,6 +54,11 @@ end
 
 M.types = { "ore", "ingot", "gear", "rod", "gearbox" }
 
+function M.has_output(x, y, z)
+    local source = sources[Utils.key(x, y, z)]
+    return source ~= nil and source.ticks >= 5
+end
+
 function M.get_type(x, y, z)
     local index = block.get_user_bits(x, y, z, 0, 3) + 1
     return M.types[index] and index or 1
@@ -66,7 +73,9 @@ function M.set_type(x, y, z, index)
     if not Session.editing or not M.types[index] or block.get(x, y, z) ~= block.index(M.block_name) then
         return false
     end
-    if M.get_type(x, y, z) == index then return false end
+    if M.get_type(x, y, z) == index then
+        return false
+    end
     block.set_user_bits(x, y, z, 0, 3, index - 1)
     return true
 end
