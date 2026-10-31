@@ -32,7 +32,7 @@ local Portrait = K.component(function(p)
         end
     end })
 end)
-K.preview("Терминал куратора", { width = 520, height = 330, theme = Theme.theme, group = "Элементы" }, function()
+K.preview("Терминал диспетчера", { width = 520, height = 330, theme = Theme.theme, group = "Элементы" }, function()
     Portrait({ width = 480, height = 290, time = 1, speaking = true })
 end)
 return Portrait
