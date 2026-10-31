@@ -36,7 +36,8 @@ function M.output(x, y, z, item_name)
         return nil
     end
     local selected = M.parts[M.get_type(x, y, z)].id
-    local side = item_name == selected and -1 or 1
+    -- Выбранная деталь уходит налево по ходу движения
+    local side = item_name == selected and 1 or -1
     local dx, dz = Utils.direction(x, y, z)
     return dz * side, -dx * side
 end

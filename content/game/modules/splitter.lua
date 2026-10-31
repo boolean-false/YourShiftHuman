@@ -35,7 +35,8 @@ end
 -- Обходим выходы по выбранной пропорции, пропуская занятые.
 function M.choose_output(x, y, z, can_send)
     local dx, dz = Utils.direction(x, y, z)
-    local sides = {{-dz, dx}, {dz, -dx}}
+    -- Сначала лево по ходу движения, потом право
+    local sides = {{dz, -dx}, {-dz, dx}}
     local outputs = M.ratios[M.get_ratio(x, y, z)].outputs
     local first = next_slot[Utils.key(x, y, z)] or 1
     for i = 0, #outputs - 1 do

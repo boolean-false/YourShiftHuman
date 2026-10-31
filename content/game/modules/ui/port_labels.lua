@@ -107,7 +107,7 @@ return K.component(function()
         machine_ports(machine, x, y, z)
     elseif name == "game:splitter" or name == "game:filter" then
         port_label(x, y, z, -dx, -dz, "ВХ", C.green)
-        port_label(x, y, z, dz, -dx, "П", C.blue)
-        port_label(x, y, z, -dz, dx, "Л", C.green)
+        port_label(x, y, z, dz, -dx, "Л", C.green)
+        port_label(x, y, z, -dz, dx, "П", C.blue)
     end
 end)
