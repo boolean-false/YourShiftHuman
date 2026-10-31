@@ -8,6 +8,7 @@ local View = require("game:view")
 local Session = require("game:session")
 
 function on_hud_open()
+    require("game:belt_animation").open()
     require("game:environment").apply(gfx)
     if not Session.editing then
         View.open(hud.get_player())
@@ -23,6 +24,7 @@ end
 
 -- Обновляем модели продукции и оборудования каждый кадр.
 function on_hud_render()
+    require("game:belt_animation").render()
     if not Session.editing and not Session.preview then
         Session.update_pause()
         View.update()
@@ -36,5 +38,6 @@ function on_hud_render()
 end
 
 function on_hud_close()
+    require("game:belt_animation").close()
     if not Session.editing then View.close() end
 end
