@@ -3,6 +3,7 @@ local Press = require("game:press")
 local Assembler = require("game:assembler")
 local Smelter = require("game:smelter")
 local Source = require("game:source")
+local Sink = require("game:sink")
 local View = require("game:view")
 local Session = require("game:session")
 
@@ -30,6 +31,7 @@ function on_hud_render()
     Assembler.render()
     Smelter.render()
     Source.render()
+    Sink.render()
 end
 
 function on_hud_close()

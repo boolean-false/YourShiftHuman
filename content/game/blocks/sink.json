@@ -1,13 +1,9 @@
 {
-    "caption": "Приемщик",
+    "caption": "Приёмка",
     "material": "base:metal",
-    "texture-faces": [
-        "conveyor_side",
-        "conveyor_side",
-        "conveyor_side",
-        "red_lamp",
-        "conveyor_side",
-        "conveyor_side"
-    ],
+    "model": "none",
+    "rotation": "pane",
+    "light-passing": true,
+    "sky-light-passing": true,
     "base:durability": 0.2
 }

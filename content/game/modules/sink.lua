@@ -1,24 +1,14 @@
 local Products = require("game:products")
 local Session = require("game:session")
-local M = {}
-local Utils = require("game:utils")
-local locations = {}
-
-function M.register(x, y, z)
-    if block.is_segment(x, y, z) then
-        return
-    end
-    locations[Utils.key(x, y, z)] = { x = x, y = y, z = z }
-end
+local Machine = require("game:machine")
+local M = Machine.create({
+    block_name = "game:sink",
+    entity_name = "game:sink_visual",
+    size = 1
+})
 
 function M.remove(x, y, z)
-    locations[Utils.key(x, y, z)] = nil
-end
-function M.locations()
-    return locations
-end
-function M.clear()
-    locations = {}
+    M.remove_model(x, y, z)
 end
 
 M.types = { "all", "ore", "ingot", "gear", "rod", "gearbox" }

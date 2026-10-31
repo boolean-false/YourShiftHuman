@@ -5,6 +5,7 @@
     "assembler_visual",
     "smelter_visual",
     "source_visual",
+    "sink_visual",
     "build_cursor"
   ],
   "items": [],
