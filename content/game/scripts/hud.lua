@@ -8,6 +8,7 @@ local View = require("game:view")
 local Session = require("game:session")
 
 function on_hud_open()
+    require("game:environment").apply(gfx)
     if not Session.editing then
         View.open(hud.get_player())
         if Session.preview then

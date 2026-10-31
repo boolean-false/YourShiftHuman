@@ -1,5 +1,6 @@
 app.set_title("Your Shift, Human.")
 app.load_content()
+require("game:environment").configure(app)
 require("game:session").start(app)
 
 while true do

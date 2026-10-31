@@ -16,8 +16,7 @@ function on_world_open()
     Production.paused = true
     Production.speed = 1
     require("game:ui/state").reset()
-    world.set_day_time(.5)
-    world.set_day_time_speed(0)
+    require("game:environment").open()
 
     Source.clear()
     Sink.clear()
