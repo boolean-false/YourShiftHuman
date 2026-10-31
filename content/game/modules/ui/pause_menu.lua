@@ -29,8 +29,8 @@ return K.component(function()
         end })
     Screens({ w = w, h = h })
     Confirm({ visible = State.page == "restart", w = w, h = h, busy = Session.busy,
-              title = "Вернуть исходную схему?", text = "Все изменения в этом цехе будут отменены. Сданные заказы останутся в истории.",
-              confirm = "ВЕРНУТЬ ИСХОДНУЮ СХЕМУ", cancel = "ОСТАВИТЬ МОЮ СХЕМУ",
+              title = "Вернуть исходную схему?", text = "Правки в этом цехе будут потеряны. Отметки о пройденных цехах сохранятся.",
+              confirm = "ВЕРНУТЬ ИСХОДНУЮ СХЕМУ", cancel = "ОТМЕНА",
               on_confirm = function()
                   Session.queue("play", Session.index)
               end, on_cancel = function()

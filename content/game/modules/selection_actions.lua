@@ -182,7 +182,7 @@ function M.rotate(pid)
         return
     end
     if Mission.locked(block.name(object.id)) then
-        Hover.message = "Это оборудование закреплено"
+        Hover.message = "Это оборудование нельзя двигать, поворачивать или убирать"
         return
     end
     if block.get_rotation_profile(object.id) ~= "pane" then
@@ -233,7 +233,7 @@ function M.remove()
         return
     end
     if Mission.locked(block.name(object.id)) then
-        Hover.message = "Это оборудование закреплено"
+        Hover.message = "Это оборудование нельзя двигать, поворачивать или убирать"
         return
     end
     local rotation = block.get_rotation(object.x, object.y, object.z)

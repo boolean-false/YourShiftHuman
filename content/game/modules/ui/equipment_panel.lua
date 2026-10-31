@@ -5,7 +5,7 @@ local Theme = require("game:ui/theme")
 local C = Theme.colors
 
 local Body = K.component(function(p)
-    Parts.text("СОСТОЯНИЕ ОБОРУДОВАНИЯ", "caption", C.muted)
+    Parts.text("ОБОРУДОВАНИЕ", "caption", C.muted)
     Parts.text(p.title, "title")
     if p.status then
         Parts.text(p.status, "body", C.blue)
@@ -45,12 +45,12 @@ local Body = K.component(function(p)
     end
     if p.transport then
         K.Row({ spacing = 8 }, function()
-            E.button("R / ПОВОРОТ", p.on_rotate, 128, "secondary", not p.completed)
-            E.button("ПЕРЕНОС", p.on_move, 128, "secondary", not p.completed)
+            E.button("R / ПОВЕРНУТЬ", p.on_rotate, 128, "secondary", not p.completed)
+            E.button("ПЕРЕНЕСТИ", p.on_move, 128, "secondary", not p.completed)
         end)
-        E.button("ДЕМОНТАЖ", p.on_remove, nil, "danger", not p.completed)
+        E.button("УБРАТЬ", p.on_remove, nil, "danger", not p.completed)
     elseif p.kind == "press" or p.kind == "smelter" or p.kind == "assembler" then
-        Parts.text("СТАНОК ЗАКРЕПЛЁН", "caption", C.muted)
+        Parts.text("СТАНОК НЕЛЬЗЯ ПЕРЕМЕЩАТЬ", "caption", C.muted)
     end
     E.button("ЗАКРЫТЬ", p.on_close, nil, "secondary")
 end)
@@ -90,8 +90,8 @@ end)
 K.preview("Фильтр", { width = 900, height = 760, padding = 0, theme = Theme.theme, group = "Оборудование" }, function()
     Equipment({ visible = true, w = 900, h = 760, title = "Фильтр", kind = "filter", product = "Слиток", transport = true })
 end)
-K.preview("Пункт доставки", { width = 700, height = 600, padding = 0, theme = Theme.theme, group = "Оборудование" }, function()
-    Equipment({ visible = true, editing = true, w = 700, h = 600, title = "Пункт доставки", kind = "source", product = "Руда" })
+K.preview("Подача", { width = 700, height = 600, padding = 0, theme = Theme.theme, group = "Оборудование" }, function()
+    Equipment({ visible = true, editing = true, w = 700, h = 600, title = "Подача", kind = "source", product = "Руда" })
 end)
 K.preview("Приёмка", { width = 700, height = 600, padding = 0, theme = Theme.theme, group = "Оборудование" }, function()
     Equipment({ visible = true, editing = true, w = 700, h = 600, title = "Приёмка", kind = "sink", product = "Шестерёнка" })

@@ -37,7 +37,7 @@ return K.component(function(p)
     end
     Confirm({ visible = page == "case-confirm", w = p.w, h = p.h, busy = Session.busy,
               title = "Открыть цех " .. (State.pending or 1) .. "?",
-              text = "Вы начнёте этот цех с исходной схемы. Текущая незавершённая работа будет заменена. Сданные заказы останутся в истории.",
+              text = "Этот цех откроется с исходной схемой. Текущая схема будет потеряна. Отметки о пройденных цехах сохранятся.",
               confirm = "ОТКРЫТЬ ЦЕХ", cancel = "НАЗАД К СПИСКУ",
               on_confirm = function()
                   Session.queue("play", State.pending)

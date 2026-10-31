@@ -50,7 +50,7 @@ K.preview("Текст", {
 }, function()
     K.Column({ spacing = 12, modifier = K.M:fill_max_size():background(C.paper):padding(12) }, function()
         M.text("Ваша смена, человек", "heading")
-        M.text("По отчёту всё работает", "title", C.blue)
+        M.text("Само не починится", "title", C.blue)
         M.text("Обычный текст")
         M.text("Служебная подпись", "caption", C.muted)
     end)
@@ -71,7 +71,7 @@ K.preview("Плашка", {
     theme = Theme.theme,
     group = "Элементы меню"
 }, function()
-    M.badge("НАРЯД НА РУЧНУЮ ПРОВЕРКУ", 370)
+    M.badge("БЕЗ ТЕБЯ НЕ РАЗОБРАТЬСЯ", 370)
 end)
 
 K.preview("Панель", {

@@ -41,7 +41,7 @@ function M.choose(index)
         return
     end
     if not Mission.available(M.tools[index]) then
-        Hover.message = "Этот транспорт недоступен в текущем цехе"
+        Hover.message = "Этот инструмент недоступен в этом цехе"
         return
     end
     if M.tool == index then
@@ -74,24 +74,24 @@ end
 -- Проверяем весь путь до изменения мира, чтоб не строить его частично
 local function can_place(cells)
     if not Mission.available(M.tools[M.tool]) then
-        return false, "Этот транспорт недоступен в текущем цехе"
+        return false, "Этот инструмент недоступен в этом цехе"
     end
     local belt = block.index(M.tools[1])
     local seen = {}
     for i, cell in ipairs(cells) do
         if not Room.contains(cell.x, cell.y, cell.z) then
-            return false, "За границей цеха"
+            return false, "Здесь заканчивается цех"
         end
         local key = Utils.key(cell.x, cell.y, cell.z)
         if seen[key] then
-            return false, "Лента пересекает свой маршрут"
+            return false, "Конвейер не может пересекать сам себя"
         end
         seen[key] = true
 
         if i > 1 then
             local previous = cells[i - 1]
             if cell.y ~= previous.y or math.abs(cell.x - previous.x) + math.abs(cell.z - previous.z) ~= 1 then
-                return false, "Между секциями не должно быть разрывов"
+                return false, "Соедини соседние клетки без разрывов"
             end
         end
         local id = block.get(cell.x, cell.y, cell.z)
@@ -100,7 +100,7 @@ local function can_place(cells)
             return false, "Этот участок ещё загружается"
         end
         if not block.is_solid_at(cell.x, cell.y - 1, cell.z) then
-            return false, "Здесь нет пола для установки"
+            return false, "Здесь нет пола"
         end
         local existing_belt = M.tool == 1 and id == belt
         if not existing_belt and not block.is_replaceable_at(cell.x, cell.y, cell.z) then
