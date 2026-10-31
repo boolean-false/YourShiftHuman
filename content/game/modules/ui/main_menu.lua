@@ -7,11 +7,12 @@ local Briefing = require("game:briefing")
 local Confirm = require("game:ui/confirm_dialog")
 local E = require("game:ui/components")
 local Parts = require("game:ui/menu_parts")
+local Sound = require("game:sound")
 
 return K.component(function()
     local data = K.poll(function()
         return { editor = Session.menu_page == "editor", progress = Session.has_progress(), ready = Session.can_continue(),
-                 first_ready = Session.has_level(1), busy = Session.busy, message = Session.message or "", page = State.page }
+                 first_ready = Session.has_level(1), busy = Session.busy, message = Session.message or "", page = State.page, music = Sound.music }
     end)
     local viewport = K.poll(function()
         return gui.get_viewport()
@@ -27,6 +28,7 @@ return K.component(function()
         end)
     elseif State.page == "" or State.page == "new" then
         data.w, data.h = w, h
+        data.on_music = Sound.toggle_music
         data.on_continue = function()
             Session.queue("continue")
         end

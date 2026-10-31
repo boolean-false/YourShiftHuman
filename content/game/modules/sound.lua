@@ -1,5 +1,5 @@
 local M = { music = true, sound = true }
-local loaded, stream, speaking = false, nil, -1
+local loaded, speaking = false, -1
 
 local function path()
     return pack.shared_file("game", "settings.json")
@@ -49,17 +49,38 @@ function M.syllable(elapsed)
     end
 end
 
-function M.update()
+-- Плеер живёт в start.lua и не теряется при смене мира.
+function M.update(player, dt)
     M.load()
     local Session = require("game:session")
     local State = require("game:ui/state")
-    local active = M.music and world.is_open() and not Session.preview and not Session.editing and
-            not Session.pause_open and State.page == "" and not require("game:production").paused
-    if active and not stream then
-        stream = audio.play_stream_2d("game:sounds/shift.wav", .2, 1, "music", true)
-    elseif not active and stream then
-        audio.stop(stream);
-        stream = nil
+    local target = .16
+    if State.page == "curator" then
+        target = .035
+    elseif Session.editing then
+        target = .07
+    elseif Session.menu_open or Session.pause_open or require("game:production").paused then
+        target = .10
+    end
+    if not M.music then
+        target = 0
+    end
+
+    if player.stream and not audio.is_playing(player.stream) then
+        player.stream = nil
+    end
+    if M.music and not player.stream then
+        player.volume = 0
+        player.stream = audio.play_stream_2d("game:sounds/shift.wav", 0, 1, "music", true)
+    end
+    local blend = 1 - math.exp(-4 * math.min(dt, .1))
+    player.volume = player.volume + (target - player.volume) * blend
+    if player.stream then
+        audio.set_volume(player.stream, player.volume)
+        if target == 0 and player.volume < .001 then
+            audio.stop(player.stream)
+            player.stream = nil
+        end
     end
 end
 return M
