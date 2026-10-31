@@ -4,11 +4,12 @@ local E = require("game:ui/components")
 local Theme = require("game:ui/theme")
 local Complete = K.component(function(p)
     E.modal({ visible = p.visible, w = p.w, h = p.h, width = 540, height = 360,
-              badge = "ВЫПУСК ПОДТВЕРЖДЁН", title = p.last and "Последний заказ закрыт" or "Норма выполнена" }, function()
-        Parts.text("Три замера подряд подтвердили нужный выпуск. Результат сохранён.")
+              badge = "ПРОВЕРКА ПРОЙДЕНА", title = p.last and "Последний цех готов" or "Линия работает" }, function()
+        Parts.text("Нужный темп выдержан в трёх замерах подряд. Прогресс сохранён.")
+        if p.verdict then Parts.text(p.verdict, "body", Theme.colors.muted) end
         E.button(p.last and "ИТОГИ СМЕНЫ" or "СЛЕДУЮЩИЙ ЦЕХ", p.on_next, nil, "primary", p.ready)
         if not p.ready then
-            Parts.text("Следующий цех ещё не подготовлен", "caption", Theme.colors.muted)
+            Parts.text("Следующий цех пока недоступен", "caption", Theme.colors.muted)
         end
         E.button("В ГЛАВНОЕ МЕНЮ", p.on_menu, nil, "secondary")
     end)

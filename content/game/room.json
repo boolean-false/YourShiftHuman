@@ -6,6 +6,11 @@
     "areas": [
         { "width": 18, "depth": 12 },
         { "width": 18, "depth": 12 },
-        { "width": 22, "depth": 16 }
+        { "width": 22, "depth": 16 },
+        { "width": 24, "depth": 17 },
+        { "width": 24, "depth": 17 },
+        { "width": 20, "depth": 15 },
+        { "width": 24, "depth": 17 },
+        { "width": 30, "depth": 19 }
     ]
 }

@@ -17,6 +17,7 @@ return K.component(function()
         return gui.get_viewport()
     end)
     Complete({ visible = data.visible and not data.result, w = viewport[1], h = viewport[2], last = data.last, ready = data.ready,
+        verdict = Mission.current().verdict,
                on_menu = function()
                    Session.queue("menu")
                end,

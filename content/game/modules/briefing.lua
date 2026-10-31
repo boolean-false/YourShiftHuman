@@ -33,8 +33,9 @@ function M.view()
                 goals[#goals + 1] = Products[part].caption .. " " .. mission.goals[part] .. "/мин"
             end
         end
-        node = { title = mission.title, text = mission.text or "Проследите путь от подачи до приёмки. Переложите транспорт так, чтобы линия держала указанный выпуск.",
-                 choices = { { label = "Приступить к работе" } } }
+        node = { title = mission.title, text = mission.text or "Проследи путь деталей до приёмки. Соедини станки так, чтобы линия держала нужный темп.",
+                 choices = { { label = "К работе" } } }
+        if mission.rule then node.text = node.text .. "\n\n" .. mission.rule end
         node.text = node.text .. "\n\n" .. table.concat(goals, " · ")
     end
     local body = (M.reply and M.reply .. "\n\n" or "") .. node.text

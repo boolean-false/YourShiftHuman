@@ -11,7 +11,7 @@ local Buttons = K.component(function(p)
     E.button("НАЗАД", p.on_back, nil, "secondary")
 end)
 K.preview("Выбор уровня редактора", { width = 440, height = 260, theme = Theme.theme, group = "Редактор" }, function()
-    Buttons({ levels = { { title = "Тестовое задание 1" }, { title = "Тестовое задание 2" }, { title = "Тестовое задание 3" } }, on_select = function()
+    Buttons({ levels = { { title = "Первые детали" }, { title = "Вторая плавильня" }, { title = "Через стену" } }, on_select = function()
     end })
 end)
 return Buttons
