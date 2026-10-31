@@ -31,6 +31,10 @@ function on_hud_render()
     if not Session.editing and not Session.preview then
         Session.update_pause()
         View.update()
+        if require("game:mission").completed and not hud.is_open("game:completion") then
+            require("game:ui/state").reset()
+            hud.show_overlay("game:completion", false)
+        end
     end
     Conveyor.render()
     Press.render()

@@ -38,16 +38,14 @@ local Body = K.component(function(p)
     elseif p.kind == "source" or p.kind == "sink" then
         if p.editing then
             E.button((p.kind == "source" and "ПОДАЧА: " or "ПРИНИМАТЬ: ") .. p.product,
-                p.on_cycle, nil, "yellow")
+                    p.on_cycle, nil, "yellow")
         else
             Parts.text((p.kind == "source" and "Подаёт: " or "Принимает: ") .. p.product, "body", C.blue)
         end
     end
     if p.transport then
-        K.Row({ spacing = 8 }, function()
-            E.button("R / ПОВЕРНУТЬ", p.on_rotate, 128, "secondary", not p.completed)
-            E.button("ПЕРЕНЕСТИ", p.on_move, 128, "secondary", not p.completed)
-        end)
+        E.button("R / ПОВЕРНУТЬ", p.on_rotate, nil, "secondary", not p.completed)
+        E.button("ПЕРЕНЕСТИ", p.on_move, nil, "secondary", not p.completed)
         E.button("УБРАТЬ", p.on_remove, nil, "danger", not p.completed)
     elseif p.kind == "press" or p.kind == "smelter" or p.kind == "assembler" then
         Parts.text("СТАНОК НЕЛЬЗЯ ПЕРЕМЕЩАТЬ", "caption", C.muted)

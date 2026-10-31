@@ -4,7 +4,6 @@ local Hover = require("game:hover")
 local Build = require("game:build")
 local Production = require("game:production")
 local Equipment = require("game:ui/equipment_dialogs")
-local Completion = require("game:ui/completion_dialog")
 local Hud = require("game:ui/factory_hud")
 local Screens = require("game:ui/screens")
 local State = require("game:ui/state")
@@ -54,7 +53,6 @@ local function factory()
     if not Session.pause_open then
         Screens({ w = viewport[1], h = viewport[2] })
     end
-    Completion()
 end
 
 function on_open()

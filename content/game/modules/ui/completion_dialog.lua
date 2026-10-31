@@ -10,14 +10,14 @@ return K.component(function()
         return { result = Session.progress().done == true }
     end)
     local data = K.poll(function()
-        return { visible = Session.managed and not Session.editing and Mission.completed, last = Mission.is_last(),
-                 ready = not Session.busy and (Mission.is_last() or Session.has_level(Mission.index + 1)), result = state.result }
+        return { visible = not Session.editing and Mission.completed, last = Mission.is_last(),
+                 ready = Mission.is_last() or Session.has_level(Mission.index + 1), busy = Session.busy, result = state.result }
     end)
     local viewport = K.poll(function()
         return gui.get_viewport()
     end)
-    Complete({ visible = data.visible and not data.result, w = viewport[1], h = viewport[2], last = data.last, ready = data.ready,
-        verdict = Mission.current().verdict,
+    Complete({ visible = data.visible and not data.result, w = viewport[1], h = viewport[2], last = data.last, ready = data.ready, busy = data.busy,
+               verdict = Mission.current().verdict,
                on_menu = function()
                    Session.queue("menu")
                end,

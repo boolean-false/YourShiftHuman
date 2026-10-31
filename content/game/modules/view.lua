@@ -120,6 +120,13 @@ function M.update()
         Hover.hide()
         return
     end
+    if Mission.completed then
+        Build.cancel()
+        Hover.clear_selection()
+        Hover.hide()
+        return
+    end
+
     if not hud.is_open("game:view_input") then
         if hud.is_inventory_open() then
             Build.cancel_path()
@@ -130,13 +137,6 @@ function M.update()
     end
 
     hide_player()
-
-    if Mission.completed then
-        Build.cancel()
-        Hover.clear_selection()
-        Hover.hide()
-        return
-    end
 
     if Hover.dialog_closed then
         Hover.dialog_closed = false
@@ -249,6 +249,9 @@ function M.open(pid)
         if not M.active or not M.opened or Session.preview then
             return false
         end
+        if Mission.completed then
+            return true
+        end
         if UIState.page ~= "" then
             UIState.close()
         elseif hud.is_open("game:pause_menu") then
@@ -268,6 +271,9 @@ function M.open(pid)
 end
 
 function M.close()
+    if hud.is_open("game:completion") then
+        hud.close("game:completion")
+    end
     M.active = false
     if hud.is_open("game:pause_menu") then
         hud.close("game:pause_menu")
