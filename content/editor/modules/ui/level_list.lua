@@ -11,6 +11,6 @@ return K.component(function()
                   Session.queue("edit", index)
               end,
               on_back = function()
-                  Session.menu_page = "main"
+                  Session.queue("menu")
               end })
 end)

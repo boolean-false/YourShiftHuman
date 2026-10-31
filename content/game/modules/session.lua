@@ -120,12 +120,12 @@ function M.queue(action, index)
     if (action == "export" or action == "save") and (not M.editing or index ~= M.index) then
         return false
     end
-    if (action == "edit" or action == "editor_menu" or action == "export" or action == "save") and
+    if (action == "edit" or action == "export" or action == "save") and
             not pack.is_installed("editor") then
         return false
     end
     if (action == "play" or action == "new") and not M.has_level(index) then
-        M.message = "Уровень ещё не сохранён"
+        M.message = "Цех пока недоступен"
         return false
     end
     M.busy = true
@@ -251,7 +251,7 @@ local function resume_level(app)
     elseif M.has_level(index) then
         start_level(app, index)
     else
-        M.message = "Уровень не готов"
+        M.message = "Цех пока недоступен"
         M.start(app)
     end
 end
@@ -289,18 +289,18 @@ local function open_menu_world(app)
     app.open_world(menu_name)
 end
 
-function M.start(app)
+function M.start(app, editor_menu)
     if not app.is_content_loaded() then
         app.load_content()
     end
     -- Фоном служит отдельная копия первого цеха. Исходник не сохраняем и не меняем.
-    if not world.is_open() then
+    if not editor_menu and not world.is_open() then
         open_menu_world(app)
     end
     local current = require("game:session")
     current.menu_open, current.had_world = true, world.is_open()
     current.managed, current.editing, current.busy = current.preview == true, false, false
-    current.menu_page = "main"
+    current.menu_page = editor_menu and pack.is_installed("editor") and "editor" or "main"
     require("game:ui/state").reset()
     menu:reset()
     menu.page = "shift_main"
@@ -336,10 +336,7 @@ function M.update(app)
     close_world(app)
     M.had_world = false
     if request.action == "menu" or request.action == "editor_menu" then
-        M.start(app)
-        if request.action == "editor_menu" then
-            require("game:session").menu_page = "editor"
-        end
+        M.start(app, request.action == "editor_menu")
         return
     elseif request.action == "quit" then
         app.quit()

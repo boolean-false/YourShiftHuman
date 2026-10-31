@@ -11,27 +11,24 @@ local Main = K.component(function(p)
         K.Column({ spacing = 20, modifier = K.M:fill_max_size():vertical_scroll(scroll) }, function()
             K.Row({ spacing = 15, align = "center" }, function()
                 Parts.mark()
-                Parts.text("КОНТРОЛЬ ПРОИЗВОДСТВА\nДЕЖУРНЫЙ ПЕРСОНАЛ: 1", "caption", C.blue)
+                Parts.text("ЗАВОД НА АВТОПИЛОТЕ\nЧЕЛОВЕК НА СМЕНЕ: 1", "caption", C.blue)
             end)
             E.line()
             Parts.text("Ваша смена,\nчеловек", "display")
-            Parts.badge("НАРЯД НА РУЧНУЮ ПРОВЕРКУ", math.min(370, width - 36))
-            Parts.text("По отчёту всё работает", "title", C.blue)
-            Parts.text("Заводы перешли на автоматическое управление. Сырьё поступает, отчёты сходятся, а из цехов ничего не выходит. Вы единственный, кого ещё можно отправить разобраться на месте.", "body", C.muted)
+            Parts.badge("БЕЗ ТЕБЯ НЕ РАЗОБРАТЬСЯ", math.min(370, width - 36))
+            Parts.text("Само не починится", "title", C.blue)
+            Parts.text("ИИ взял завод под своё управление. Станки работают, конвейеры крутятся, а склад пуст. Найди ошибки в схемах и наладь выпуск. Диспетчер обещал помочь.", "body", C.muted)
             if p.progress then
                 E.button("ПРОДОЛЖИТЬ СМЕНУ", p.on_continue, nil, "primary", p.ready and not p.busy)
             end
             E.button("НОВАЯ СМЕНА", p.on_new, nil, p.progress and "secondary" or "primary", p.first_ready and not p.busy)
             K.Row({ spacing = 8 }, function()
                 local bw = (width - 60) / 4
-                E.button("КУРАТОР", p.on_curator, bw, "secondary")
+                E.button("СВЯЗЬ", p.on_curator, bw, "secondary")
                 E.button("ЦЕХА", p.on_cases, bw, "secondary")
-                E.button("ПАМЯТКА", p.on_help, bw, "secondary")
+                E.button("СПРАВКА", p.on_help, bw, "secondary")
                 E.button("ВЫХОД", p.on_quit, bw, "secondary", not p.busy)
             end)
-            if p.editor then
-                E.button("РЕДАКТОР УРОВНЕЙ", p.on_editor, nil, "secondary", not p.busy)
-            end
             if p.message and p.message ~= "" then
                 Parts.text(p.message, "caption", C.muted)
             end

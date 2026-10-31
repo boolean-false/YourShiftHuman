@@ -26,7 +26,7 @@ return K.component(function()
             require("editor:ui/level_list")()
         end)
     elseif State.page == "" or State.page == "new" then
-        data.w, data.h, data.editor = w, h, pack.is_installed("editor")
+        data.w, data.h = w, h
         data.on_continue = function()
             Session.queue("continue")
         end
@@ -49,14 +49,11 @@ return K.component(function()
         data.on_quit = function()
             Session.queue("quit")
         end
-        data.on_editor = function()
-            Session.menu_page = "editor"
-        end
         Main(data)
     end
     Screens({ w = w, h = h })
     Confirm({ visible = State.page == "new", w = w, h = h, title = "Новая смена?",
-              text = "Начнёте с первого цеха. Текущее прохождение и отметки о сданных заказах будут удалены.", confirm = "НАЧАТЬ НОВУЮ СМЕНУ",
+              text = "Начать с первого цеха? Текущая схема и весь прогресс будут удалены.", confirm = "НАЧАТЬ ЗАНОВО",
               on_confirm = function()
                   Session.queue("new", 1)
               end, on_cancel = State.close })
