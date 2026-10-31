@@ -1,0 +1,8 @@
+{
+    "root": {
+        "offset": [0, -0.5, 0],
+        "nodes": [
+            { "name": "body", "model": "sink.body" }
+        ]
+    }
+}

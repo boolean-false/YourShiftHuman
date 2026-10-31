@@ -1,0 +1,226 @@
+@bone name "body" move (0, -0.5, 0) {
+    @box from (-0.5, 0, -0.5) to (0.5, 0.25, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:conveyor_side" region (0, 0, 1, 1)
+        @part tags (east) texture "blocks:conveyor_side" region (0, 0, 1, 1)
+        @part tags (south) texture "blocks:conveyor_side" region (0, 0, 1, 1)
+        @part tags (west) texture "blocks:conveyor_side" region (0, 0, 1, 1)
+        @part tags (top) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (-0.5, 0.25, -0.5) to (-0.1875, 0.251875, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (west) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (top) texture "blocks:conveyor_line" region (0, 0, 0.3125, 1)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (0.1875, 0.25, -0.5) to (0.5, 0.251875, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (west) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (top) texture "blocks:conveyor_line" region (0, 0, 0.3125, 1)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (-0.5, 0.25, -0.5) to (0.5, 0.2525, -0.1875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (west) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (top) texture "blocks:conveyor_line" region (0, 0, 0.3125, 1)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (-0.5, 0.25, 0.1875) to (0.5, 0.2525, 0.5) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (west) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (top) texture "blocks:conveyor_line" region (0, 0, 0.3125, 1)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (-0.19375, 0.25, -0.19375) to (0.19375, 0.78125, 0.19375) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (east) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (south) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (west) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (top) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.6240234375, 0.6259765625, 0.625)
+    }
+    @box from (-0.46875, 0.25, -0.46875) to (-0.33125, 0.71875, -0.33125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+    }
+    @box from (-0.48125, 0.253125, -0.48125) to (-0.31875, 0.34375, -0.31875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.46875, 0.25, 0.33125) to (-0.33125, 0.71875, 0.46875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+    }
+    @box from (-0.48125, 0.253125, 0.31875) to (-0.31875, 0.34375, 0.48125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (0.33125, 0.25, -0.46875) to (0.46875, 0.71875, -0.33125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+    }
+    @box from (0.31875, 0.253125, -0.48125) to (0.48125, 0.34375, -0.31875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (0.33125, 0.25, 0.33125) to (0.46875, 0.71875, 0.46875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+    }
+    @box from (0.31875, 0.253125, 0.31875) to (0.48125, 0.34375, 0.48125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.46875, 0.71875, -0.46875) to (0.46875, 0.78125, 0.46875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.46875, 0.78125, -0.46875) to (0.46875, 1.03125, 0.46875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.125, 0.8740234375, 0.1259765625, 0.875)
+    }
+    @box from (-0.4125, 1.03125, -0.4125) to (0.4125, 1.125, 0.4125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+    }
+    @box from (-0.30625, 1.125, -0.30625) to (0.30625, 1.14375, 0.30625) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.2875, 0.825, -0.478125) to (0.2875, 0.98125, -0.46875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.2875, 0.825, 0.46875) to (0.2875, 0.98125, 0.478125) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.478125, 0.825, -0.2875) to (-0.46875, 0.98125, 0.2875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+    }
+    @box from (-0.4825, 0.8625, -0.190625) to (-0.478125, 0.94375, -0.121875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.4825, 0.8625, -0.034375) to (-0.478125, 0.94375, 0.034375) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (-0.4825, 0.8625, 0.121875) to (-0.478125, 0.94375, 0.190625) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (0.46875, 0.825, -0.2875) to (0.478125, 0.98125, 0.2875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.375, 0.8740234375, 0.3759765625, 0.875)
+    }
+    @box from (0.478125, 0.8625, -0.190625) to (0.4825, 0.94375, -0.121875) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (0.478125, 0.8625, -0.034375) to (0.4825, 0.94375, 0.034375) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+    @box from (0.478125, 0.8625, 0.121875) to (0.4825, 0.94375, 0.190625) origin (0, 0, 0) {
+        @part tags (north) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (east) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (south) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (west) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (top) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+        @part tags (bottom) texture "blocks:press" region (0.625, 0.8740234375, 0.6259765625, 0.875)
+    }
+}
