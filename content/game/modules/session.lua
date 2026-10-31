@@ -234,11 +234,11 @@ local function start_level(app, index, intro)
     file.mkdirs(work_folder .. "/data/game")
     file.write(work_folder .. "/data/game/play.json", json.tostring({ version = 1, index = index }))
     file.write(work_folder .. "/data/game/mission.json", json.tostring({
-        version = 1, index = index, completed = false
+        version = 1, index = index, completed = false,
+        dialogue = { mode = intro and "intro" or "briefing", step = 1, elapsed = 0 }
     }))
     write_profile(index, false)
     app.open_world(work_name)
-    require("game:briefing").open(intro and "intro" or "briefing")
 end
 
 local function resume_level(app)

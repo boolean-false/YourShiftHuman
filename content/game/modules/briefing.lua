@@ -35,7 +35,9 @@ function M.view()
         end
         node = { title = mission.title, text = mission.text or "Проследи путь деталей до приёмки. Соедини станки так, чтобы линия держала нужный темп.",
                  choices = { { label = "К работе" } } }
-        if mission.rule then node.text = node.text .. "\n\n" .. mission.rule end
+        if mission.rule then
+            node.text = node.text .. "\n\n" .. mission.rule
+        end
         node.text = node.text .. "\n\n" .. table.concat(goals, " · ")
     end
     local body = (M.reply and M.reply .. "\n\n" or "") .. node.text
@@ -94,5 +96,6 @@ function M.restore(data)
     M.mode, M.step = data.mode, data.step
     M.elapsed, M.reply = tonumber(data.elapsed) or 0, type(data.reply) == "string" and data.reply or nil
     require("game:ui/state").open("curator")
+    require("game:sound").talk("ai_connect")
 end
 return M

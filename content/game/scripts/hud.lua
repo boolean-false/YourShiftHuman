@@ -11,13 +11,16 @@ function on_hud_open()
     require("game:belt_animation").open()
     require("game:environment").apply(gfx)
     if not Session.editing then
+        if not Session.preview then
+            local dialogue = require("game:mission").saved_dialogue
+            if dialogue then
+                require("game:briefing").restore(dialogue)
+            end
+        end
         View.open(hud.get_player())
         if Session.preview then
             hud.close("game:view")
             hud.close("game:view_input")
-        else
-            local dialogue = require("game:mission").saved_dialogue
-            if dialogue then require("game:briefing").restore(dialogue) end
         end
     end
 end
@@ -39,5 +42,7 @@ end
 
 function on_hud_close()
     require("game:belt_animation").close()
-    if not Session.editing then View.close() end
+    if not Session.editing then
+        View.close()
+    end
 end
